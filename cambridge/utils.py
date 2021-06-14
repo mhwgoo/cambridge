@@ -1,3 +1,6 @@
+"""
+This module contains utility functions.
+"""
 import cProfile, pstats, io
 
 

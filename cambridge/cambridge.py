@@ -1,24 +1,22 @@
 import argparse
-import requests
 import time
-
+import requests
 from bs4 import BeautifulSoup
 from log import logger
 from utils import replace_all
 from console import console
 
 
-from ipdb import set_trace
+"""
+This is the terminal version of cambridge dictionary from https://dictionary.cambridge.org.
+
+Parsing takes less than 0.4 seconds.
+Most of the time is spent on fetching webpage.
+Total time is between 1 to 5 seconds depending on network performance.
+"""
 
 DICT_BASE_URL = "https://dictionary.cambridge.org/dictionary/english/"
 SPELLCHECK_BASE_URL = "https://dictionary.cambridge.org/spellcheck/english/?q="
-
-"""
-Parsing takes less than 0.4 seconds.
-Most time is spent on fetching webpage.
-Total time is between 1 to 5 seconds depending on network performance.
-Multiprocessing and threading don't work well with parsing job.
-"""
 
 
 def parse_args():

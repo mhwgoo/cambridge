@@ -2,8 +2,8 @@
 logger set up
 """
 import os
-from pathlib import Path
 import logging
+from pathlib import Path
 
 try:
     data = Path(os.environ["XDG_DATA_HOME"]).absolute() / "cambridge"

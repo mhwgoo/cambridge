@@ -2,9 +2,10 @@ import argparse
 import time
 import requests
 from bs4 import BeautifulSoup
-from log import logger
-from utils import replace_all
-from console import console
+
+from .log import logger
+from .utils import replace_all
+from .console import console
 
 
 """

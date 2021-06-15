@@ -9,7 +9,7 @@ from .console import console
 
 
 """
-This is the terminal version of cambridge dictionary from https://dictionary.cambridge.org.
+Cambridge is a terminal version of Cambridge Dictionary. Its dictionary data comes from https://dictionary.cambridge.org.
 
 Parsing takes less than 0.4 seconds.
 Most of the time is spent on fetching webpage.

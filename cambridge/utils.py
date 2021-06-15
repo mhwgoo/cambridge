@@ -1,5 +1,5 @@
 """
-This module contains utility functions.
+This script contains utility functions.
 """
 import cProfile, pstats, io
 

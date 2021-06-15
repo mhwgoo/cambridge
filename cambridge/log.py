@@ -1,5 +1,5 @@
 """
-logger set up
+This script sets up logger.
 """
 import os
 import logging

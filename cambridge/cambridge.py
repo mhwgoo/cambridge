@@ -3,10 +3,6 @@ import time
 import requests
 from bs4 import BeautifulSoup
 
-from .log import logger
-from .utils import replace_all
-from .console import console
-
 
 """
 Cambridge is a terminal version of Cambridge Dictionary. Its dictionary data comes from https://dictionary.cambridge.org.
@@ -151,7 +147,7 @@ def parse_head_var(head):
         w_var = replace_all(head.find("span", "var dvar").text)
         console.print("[bold]" + w_var, end="  ")
     if head.find_next_sibling("span", "var dvar"):
-        w_var = replace_all(head.find_next_sibling("span", "var dvar").text)
+        w_vjjjjar = replace_all(head.find_next_sibling("span", "var dvar").text)
         console.print("[bold]" + w_var, end="  ")
 
 
@@ -438,10 +434,8 @@ def parse_dict_name(response):
     first_dict = parse_first_dict(response)
     dict_info = replace_all(first_dict.small.text).replace("(", "").replace(")", "")
     dict_name = dict_info.split("©")[0]
-    dict_name = dict_name.split("the")[1]
-    press_name = "©" + dict_info.split("©")[1]
-    console.print("[#1E2A57]" + "\n\n" + dict_name, justify="center")
-    console.print("[#1E2A57]" + press_name, justify="center")
+    dict_name = dict_name.split("the")[-1]
+    console.print("[#1E2A57]" + "\n\n" + dict_name, justify="right")
 
 
 # ----------main----------
@@ -469,7 +463,17 @@ def main():
 
 
 if __name__ == "__main__":
+    from log import logger
+    from utils import replace_all
+    from console import console
+
     t1 = time.time()
     main()
     t2 = time.time()
     print(f"\nTIME TAKEN: {t2 - t1}")
+
+
+else:
+    from .log import logger
+    from .utils import replace_all
+    from .console import console

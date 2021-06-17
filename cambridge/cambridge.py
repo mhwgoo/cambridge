@@ -433,7 +433,7 @@ def parse_dict_name(response):
     dict_info = replace_all(first_dict.small.text).replace("(", "").replace(")", "")
     dict_name = dict_info.split("©")[0]
     dict_name = dict_name.split("the")[-1]
-    console.print("[#1E2A57]" + "\n\n" + dict_name, justify="right")
+    console.print("[#1E2A57]" + "\n\n" + dict_name + "\n", justify="right")
 
 
 # ----------main----------

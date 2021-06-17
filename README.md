@@ -27,7 +27,7 @@ pip install cambridge
 
 ## Usage
 ```bash
-cambridge -w <the word/phrase you want to search>  
+cambridge <the word/phrase you want to search>  
 ```
 
 

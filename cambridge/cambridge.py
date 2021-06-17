@@ -21,9 +21,7 @@ def parse_args():
         description="Terminal Version of Cambridge Dictionary"
     )
     parser.add_argument(
-        "-w",
-        "--word",
-        required=True,
+        "words",
         nargs="+",  # it makes -w input value in dict data structure even with only one word
         help="A word or a phrase you want to look up",
     )
@@ -47,8 +45,8 @@ def fetch(url, session):
 
 
 def parse_spellcheck(args, session):
-    word = " ".join(args.word)
-    query_word = "+".join(args.word)
+    word = " ".join(args.words)
+    query_word = "+".join(args.words)
     url = SPELLCHECK_BASE_URL + query_word
     response = fetch(url, session)
     soup = BeautifulSoup(response.text, "lxml")
@@ -442,24 +440,27 @@ def parse_dict_name(response):
 
 
 def main():
-    args = parse_args()
-    query_word = "-".join(args.word)
-    url = DICT_BASE_URL + query_word
-    with requests.Session() as session:
-        response = fetch(url, session)
-        if response.url == DICT_BASE_URL:
-            parse_spellcheck(args, session)
-        elif response.url != url and response.url != DICT_BASE_URL:
-            response = fetch(response.url, session)
-            for block in parse_dict_blocks(response):
-                parse_dict_head(block)
-                parse_dict_body(block)
-            parse_dict_name(response)
-        else:
-            for block in parse_dict_blocks(response):
-                parse_dict_head(block)
-                parse_dict_body(block)
-            parse_dict_name(response)
+    try:
+        args = parse_args()
+        query_word = "-".join(args.words)
+        url = DICT_BASE_URL + query_word
+        with requests.Session() as session:
+            response = fetch(url, session)
+            if response.url == DICT_BASE_URL:
+                parse_spellcheck(args, session)
+            elif response.url != url and response.url != DICT_BASE_URL:
+                response = fetch(response.url, session)
+                for block in parse_dict_blocks(response):
+                    parse_dict_head(block)
+                    parse_dict_body(block)
+                parse_dict_name(response)
+            else:
+                for block in parse_dict_blocks(response):
+                    parse_dict_head(block)
+                    parse_dict_body(block)
+                parse_dict_name(response)
+    except KeyboardInterrupt:
+        print("\nStopped by user")
 
 
 if __name__ == "__main__":

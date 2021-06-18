@@ -13,7 +13,7 @@ Since I spend most time of my day using terminal, I'm tired of pulling out a dic
 Therefore, I wrote this terminal app with features to my satisfaction.
 
 ## Feature Highlights
-1. **SIMPLE**. Only one argument `-w`. You can simply look up a word, or a phrase by typing multiple words.
+1. **SIMPLE**. Only one positional argument following 4-character endpoint prompt `camb`. The argument can be a word, or a phrase by typing multiple words.
 2. **FAST**. It usually takes 1 ~ 5 secs with the lousy network service by my network supplier(parsing and displaying takes less than 0.4 secs). Much faster than fetching the same content by web browser under the same network within the same time period.
 3. **ESSENTIAL**. No excessive info to distract from essential meanings and usage, like ads, quizzes, pics, and other useless data.
 4. **ONE DICT**. Not many dictionaries with similar definitions take too much space and time and make people dizzy. Only the first and the most important dictionary Cambridge Organization displays on its website. It can absolutely meets our needs, clear and to the point.

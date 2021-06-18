@@ -22,7 +22,7 @@ Therefore, I wrote this terminal app with features to my satisfaction.
 
 ## Installation
 ```python
-pip install cambridge
+pip install cambridge or pip3 install cambridge
 ```
 
 ## Usage

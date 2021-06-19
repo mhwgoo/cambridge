@@ -45,19 +45,19 @@ def fetch(url, session):
 
 
 def parse_spellcheck(args, session):
-    word = " ".join(args.words)
+    word = " ".join(args.words).upper()
     query_word = "+".join(args.words)
     url = SPELLCHECK_BASE_URL + query_word
     response = fetch(url, session)
     soup = BeautifulSoup(response.text, "lxml")
     content = soup.find("div", "hfl-s lt2b lmt-10 lmb-25 lp-s_r-20")
     print()
-    console.rule("[bold #005faf]" + " " + word + " ")
+    console.print("[bold #3C8DAD on #DDDDDD]" + word)
     title = content.h1.text.upper().strip()
     console.print("[bold]" + "\n" + title)
     for ul in content.find_all("ul", "hul-u"):
         notice = ul.find_previous_sibling().text
-        console.print("[bold #005faf]" + "\n" + notice)
+        console.print("[bold #3C8DAD]" + "\n" + notice)
         for i in ul.find_all("li"):
             suggestion = replace_all(i.text)
             console.print("[#b2b2b2]" + "  • " + suggestion)
@@ -165,10 +165,10 @@ def parse_dict_head(block):
             word = parse_head_title(head)
         if w_type:
             print()
-            console.rule("[bold #005faf]" + " " + word + " " + w_type)
+            console.print("[bold #3C8DAD on #DDDDDD]" + word + " " + w_type)
         else:
             print()
-            console.rule("[bold #005faf]" + " " + word)
+            console.print("[bold #3C8DAD on #DDDDDD]" + word)
 
         if head.find("span", "uk dpron-i"):
             parse_head_pron(head)
@@ -188,13 +188,13 @@ def parse_dict_head(block):
         print()
         print()
     else:
-        console.rule("[bold #FFE797]" + " " + word)
+        console.print("[bold #3C8DAD on #DDDDDD]" + word)
 
 
 # ----------parse dict body----------
 def parse_def_title(block):
     d_title = replace_all(block.find("h3", "dsense_h").text).upper()
-    console.print("[bold #005faf]" + "\n" + d_title)
+    console.print("[bold #3C8DAD]" + "\n" + d_title)
 
 
 def parse_ptitle(block):
@@ -216,21 +216,22 @@ def parse_def_info(def_block):
         if "phrase-body" in def_block.parent.attrs["class"]:
             print("  " + "\033[1m" + def_info + " " + "\033[0m", end="")
         else:
-            print("\033[1m" + def_info + " " + "\033[0m", end="")
+            # print("\033[1m" + def_info + " " + "\033[0m", end="")
+            print(def_info + " ", end="")
 
 
 def parse_meaning(def_block):
     meaning = replace_all(def_block.find("div", "def ddef_d db").text)
-    console.print("[bold #ffe797]" + meaning)
+    console.print("[#F5A962]" + meaning)
 
 
 def parse_pmeaning(def_block):
     meaning = replace_all(def_block.find("div", "def ddef_d db").text)
-    console.print("[bold #ffe797]" + "  " + meaning)
+    console.print("[#F5A962]" + "  " + meaning)
 
 
 def parse_example(def_block):
-    # NOTE
+    # NOTE:
     # suppose the first "if" has already run
     # and, the second is also "if", rather than "elif"
     # then, codes under "else" will also be run
@@ -355,7 +356,7 @@ def parse_idiom(block):
     if block.find("div", "xref idioms hax dxref-w lmt-25 lmb-25"):
         idiom_block = block.find("div", "xref idioms hax dxref-w lmt-25 lmb-25")
     idiom_title = idiom_block.h3.text.upper()
-    console.print("[bold #afafff]" + "\n" + idiom_title)
+    console.print("[bold #b2b2b2]" + "\n" + idiom_title)
     for idiom in idiom_block.find_all(
         "div",
         [
@@ -373,7 +374,7 @@ def parse_phrasal_verb(block):
     if block.find("div", "xref phrasal_verb hax dxref-w lmt-25 lmb-25"):
         pv_block = block.find("div", "xref phrasal_verb hax dxref-w lmt-25 lmb-25")
     pv_title = pv_block.h3.text.upper()
-    console.print("[bold #afafff]" + "\n" + pv_title)
+    console.print("[bold #b2b2b2]" + "\n" + pv_title)
     for pv in pv_block.find_all(
         "div",
         ["item lc lc1 lc-xs6-12 lpb-10 lpr-10", "item lc lc1 lpb-10 lpr-10"],
@@ -433,7 +434,7 @@ def parse_dict_name(response):
     dict_info = replace_all(first_dict.small.text).replace("(", "").replace(")", "")
     dict_name = dict_info.split("©")[0]
     dict_name = dict_name.split("the")[-1]
-    console.print("[#1E2A57]" + "\n\n" + dict_name + "\n", justify="right")
+    console.print("[#125D98]" + "\n\n" + dict_name + "\n", justify="right")
 
 
 # ----------main----------

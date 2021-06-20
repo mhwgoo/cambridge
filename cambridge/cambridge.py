@@ -312,9 +312,16 @@ def parse_compare(def_block):
         compare_block = def_block.find("div", "xref compare hax dxref-w")
     compare = compare_block.strong.text.upper()
     console.print("[bold #b2b2b2]" + "\n  " + compare)
-    for word in compare_block.find_all("div", "item lc lc1 lpb-10 lpr-10"):
-        word = word.text
-        console.print("[#b2b2b2]" + "  • " + word)
+    for word in compare_block.find_all(
+        "div", ["item lc lc1 lpb-10 lpr-10", "item lc lc1 lc-xs6-12 lpb-10 lpr-10"]
+    ):
+        item = word.a.text
+        usage = word.find("span", "x-lab dx-lab")
+        if usage:
+            usage = usage.text
+            console.print("[#b2b2b2]" + "  • " + item + "[/#b2b2b2]" + usage)
+        else:
+            console.print("[#b2b2b2]" + "  • " + item)
 
 
 def parse_usage_note(def_block):

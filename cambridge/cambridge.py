@@ -108,8 +108,9 @@ def parse_head_type(head):
 
 
 def parse_head_pron(head):
-    w_pron_uk = head.find("span", "uk dpron-i").find("span", "pron dpron").text
-    w_pron_uk = replace_all(w_pron_uk)
+    w_pron_uk = head.find("span", "uk dpron-i").find("span", "pron dpron")
+    if w_pron_uk:
+        w_pron_uk = replace_all(w_pron_uk.text)
     # In bs4, not found element returns None, not raise error, so try block is not right
     w_pron_us = head.find("span", "us dpron-i").find("span", "pron dpron")
     if w_pron_us:
@@ -170,7 +171,7 @@ def parse_dict_head(block):
             print()
             console.print("[bold #3C8DAD on #DDDDDD]" + word)
 
-        if head.find("span", "uk dpron-i"):
+        if head.find("span", "uk dpron-i").find("span", "pron dpron"):
             parse_head_pron(head)
 
         if head.find("span", "irreg-infls dinfls"):

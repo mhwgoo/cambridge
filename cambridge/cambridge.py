@@ -171,8 +171,9 @@ def parse_dict_head(block):
             print()
             console.print("[bold #3C8DAD on #DDDDDD]" + word)
 
-        if head.find("span", "uk dpron-i").find("span", "pron dpron"):
-            parse_head_pron(head)
+        if head.find("span", "uk dpron-i"):
+            if head.find("span", "uk dpron-i").find("span", "pron dpron"):
+                parse_head_pron(head)
 
         if head.find("span", "irreg-infls dinfls"):
             parse_head_tense(head)
@@ -222,13 +223,27 @@ def parse_def_info(def_block):
 
 
 def parse_meaning(def_block):
-    meaning = replace_all(def_block.find("div", "def ddef_d db").text)
-    console.print("[#F5A962]" + meaning)
+    meaning_b = def_block.find("div", "def ddef_d db")
+    if meaning_b.find("span", "lab dlab"):
+        usage_b = meaning_b.find("span", "lab dlab")
+        usage = replace_all(usage_b.text)
+        meaning_words = replace_all(meaning_b.text).split(usage)[-1]
+        console.print(usage + "[#F5A962]" + meaning_words)
+    else:
+        meaning_words = replace_all(meaning_b.text)
+        console.print("[#F5A962]" + meaning_words)
 
 
 def parse_pmeaning(def_block):
-    meaning = replace_all(def_block.find("div", "def ddef_d db").text)
-    console.print("[#F5A962]" + "  " + meaning)
+    meaning_b = def_block.find("div", "def ddef_d db")
+    if meaning_b.find("span", "lab dlab"):
+        usage_b = meaning_b.find("span", "lab dlab")
+        usage = replace_all(usage_b.text)
+        meaning_words = replace_all(meaning_b.text).split(usage)[-1]
+        console.print(usage + "[#F5A962]" + meaning_words)
+    else:
+        meaning_words = replace_all(meaning_b.text)
+        console.print("[#F5A962]" + meaning_words)
 
 
 def parse_example(def_block):

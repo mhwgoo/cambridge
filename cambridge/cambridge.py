@@ -218,7 +218,6 @@ def parse_def_info(def_block):
         if "phrase-body" in def_block.parent.attrs["class"]:
             print("  " + "\033[1m" + def_info + " " + "\033[0m", end="")
         else:
-            # print("\033[1m" + def_info + " " + "\033[0m", end="")
             print(def_info + " ", end="")
 
 
@@ -228,10 +227,10 @@ def parse_meaning(def_block):
         usage_b = meaning_b.find("span", "lab dlab")
         usage = replace_all(usage_b.text)
         meaning_words = replace_all(meaning_b.text).split(usage)[-1]
-        console.print(usage + "[#F5A962]" + meaning_words)
+        print(usage + "\033[33m" + meaning_words + "\033[0m")
     else:
         meaning_words = replace_all(meaning_b.text)
-        console.print("[#F5A962]" + meaning_words)
+        print("\033[33m" + meaning_words + "\033[0m")
 
 
 def parse_pmeaning(def_block):
@@ -240,10 +239,10 @@ def parse_pmeaning(def_block):
         usage_b = meaning_b.find("span", "lab dlab")
         usage = replace_all(usage_b.text)
         meaning_words = replace_all(meaning_b.text).split(usage)[-1]
-        console.print(usage + "[#F5A962]" + meaning_words)
+        print("  " + usage + "\033[33m" + meaning_words + "\033[0m")
     else:
         meaning_words = replace_all(meaning_b.text)
-        console.print("[#F5A962]" + meaning_words)
+        print("  " + "\033[33m" + meaning_words + "\033[0m")
 
 
 def parse_example(def_block):

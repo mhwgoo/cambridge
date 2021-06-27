@@ -9,7 +9,7 @@ Cambridge is a terminal version of Cambridge Dictionary. Its dictionary data com
 
 Parsing takes less than 0.4 seconds.
 Most of the time is spent on fetching webpage.
-Total time is between 1 to 5 seconds depending on network performance.
+Total time is mostly between 0.5 to 3 seconds, occasionally 5 secs at most depending on network performance.
 """
 
 DICT_BASE_URL = "https://dictionary.cambridge.org/dictionary/english/"
@@ -146,7 +146,7 @@ def parse_head_var(head):
         w_var = replace_all(head.find("span", "var dvar").text)
         console.print("[bold]" + w_var, end="  ")
     if head.find_next_sibling("span", "var dvar"):
-        w_vjjjjar = replace_all(head.find_next_sibling("span", "var dvar").text)
+        w_var = replace_all(head.find_next_sibling("span", "var dvar").text)
         console.print("[bold]" + w_var, end="  ")
 
 

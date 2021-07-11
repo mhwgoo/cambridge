@@ -34,14 +34,23 @@ def fetch(url, session):
         "User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/29.0.1547.62 Safari/537.36"
     }
     session.headers.update(headers)
-    try:
-        r = session.get(url)
-    except requests.exceptions.ConnectTimeout:
-        logger.error("Timeout fetching %s", url)
-    except Exception as e:
-        logger.error("Error fetching %s", url, exec_info=e)
-    else:
-        return r
+    attempt = 0
+    while True:
+        if attempt == 3:
+            logger.info("Maximum amount of retries reached")
+        try:
+            r = session.get(url)
+            attempt += 1
+        except requests.exceptions.ConnectTimeout:
+            logger.error("Timed out during fetching %s. Retrying...", url)
+            time.sleep(0.1)
+        except requests.exceptions.ConnectionError:
+            logger.error("%s terminated connection. Retrying...", url)
+            time.sleep(0.1)
+        except Exception:
+            logger.exception("Error occured during fetching %s", url)
+        else:
+            return r
 
 
 def parse_spellcheck(args, session):

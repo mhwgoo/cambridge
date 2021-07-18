@@ -110,9 +110,11 @@ def parse_head_type(head):
             ).text
         )
         w_type = replace_all(w_type).upper()
-    if head.find("div", "posgram dpos-g hdib lmr-5"):
+    elif head.find("div", "posgram dpos-g hdib lmr-5"):
         posgram = head.find("div", "posgram dpos-g hdib lmr-5")
         w_type = replace_all(posgram.text).upper()
+    else:
+        w_type = None
     return w_type
 
 

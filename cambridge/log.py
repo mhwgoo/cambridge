@@ -5,10 +5,7 @@ import os
 import logging
 from pathlib import Path
 
-try:
-    data = Path(os.environ["XDG_DATA_HOME"]).absolute() / "cambridge"
-except KeyError:
-    data = Path(os.environ["HOME"]).absolute() / ".local" / "share" / "cambridge"
+data = Path.home() / ".local" / "share" / "cambridge"
 
 data.mkdir(parents=True, exist_ok=True)
 

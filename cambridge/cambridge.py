@@ -1,6 +1,7 @@
 import argparse
 import time
 import requests
+import sys
 from bs4 import BeautifulSoup
 
 
@@ -37,7 +38,8 @@ def fetch(url, session):
     attempt = 0
     while True:
         if attempt == 3:
-            logger.info("Maximum amount of retries reached")
+            logger.info("Maximum amount of url fetch retries reached")
+            sys.exit(0)
         try:
             r = session.get(url)
             attempt += 1
@@ -74,8 +76,19 @@ def parse_spellcheck(args, session):
 
 def parse_first_dict(response):
     soup = BeautifulSoup(response.text, "lxml")
-    first_dict = soup.find("div", "pr dictionary")
-    return first_dict
+
+    attempt = 0
+    while True:
+        if attempt == 3:
+            logger.info("Something went wrong with beautifulsoup. Please try later")
+            sys.exit(0)
+        first_dict = soup.find("div", "pr dictionary")
+        attempt += 1
+        if not first_dict:
+            logger.error("Beautifulsoup found None after response for the word has been successfully fetched. Retrying...")
+            time.sleep(0.1)
+        else:
+            return first_dict
 
 
 def parse_dict_blocks(response):

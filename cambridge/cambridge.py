@@ -13,7 +13,7 @@ Most of the time is spent on fetching webpage.
 Total time is mostly between 0.5 to 3 seconds, occasionally 5 secs at most depending on network performance.
 """
 
-DICT_BASE_URL = "https://dictionary.cambridge.org/dictionary/english/"
+DICT_BASE_URL = "https://dictionary.cambridge.org/dictionary/english/"  # if no result found in cambridge database, response.url is this.
 SPELLCHECK_BASE_URL = "https://dictionary.cambridge.org/spellcheck/english/?q="
 
 
@@ -40,7 +40,6 @@ def fetch(url, session):
         "User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/29.0.1547.62 Safari/537.36"
     }
     session.headers.update(headers)
-    breakpoint()
     attempt = 1
     while True:
         try:
@@ -512,12 +511,13 @@ def main():
             response = fetch(url, session)
             if response.url == DICT_BASE_URL:
                 parse_spellcheck(args, session)
-            elif response.url != url and response.url != DICT_BASE_URL:
-                response = fetch(response.url, session)
-                for block in parse_dict_blocks(response):
-                    parse_dict_head(block)
-                    parse_dict_body(block)
-                parse_dict_name(response)
+            # NOTE: Didn't see this scenario.
+            # elif response.url != url and response.url != DICT_BASE_URL:
+            #    response = fetch(response.url, session)
+            #    for block in parse_dict_blocks(response):
+            #        parse_dict_head(block)
+            #        parse_dict_body(block)
+            #    parse_dict_name(response)
             else:
                 for block in parse_dict_blocks(response):
                     parse_dict_head(block)

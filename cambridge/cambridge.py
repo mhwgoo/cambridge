@@ -30,29 +30,44 @@ def parse_args():
     return args
 
 
+def get_query_word(args):
+    query_word = "-".join(args.words)
+    return query_word
+
+
 def fetch(url, session):
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/29.0.1547.62 Safari/537.36"
     }
     session.headers.update(headers)
-    attempt = 0
+    breakpoint()
+    attempt = 1
     while True:
-        if attempt == 3:
-            logger.info("Maximum amount of url fetch retries reached")
-            sys.exit(0)
         try:
-            r = session.get(url)
-            attempt += 1
-        except requests.exceptions.ConnectTimeout:
-            logger.error("Timed out during fetching %s. Retrying...", url)
-            time.sleep(0.1)
-        except requests.exceptions.ConnectionError:
-            logger.error("%s terminated connection. Retrying...", url)
-            time.sleep(0.1)
-        except Exception:
-            logger.exception("Error occured during fetching %s", url)
+            r = session.get(url, timeout=9.05)
+        except requests.exceptions.ConnectTimeout as e:
+            attempt = call_on_error(e, url, attempt)
+        except requests.exceptions.ConnectionError as e:
+            attempt = call_on_error(e, url, attempt)
+        except requests.exceptions.ReadTimeout as e:
+            attempt = call_on_error(e, url, attempt)
+        except Exception as e:
+            attempt = call_on_error(e, url, attempt)
         else:
+            logger.info("Fetched URL [%s] successfully.\n", r.url)
             return r
+
+
+def call_on_error(error, url, attempt):
+    if attempt == 4:
+        logger.info("Maximum amount of url fetch retries reached. Quit out.\n")
+        sys.exit("Something went wrong with your internet connection: \n" + str(error))
+    logger.error(
+        str(error) + " during fetching URL [%s]. Retrying %d times ...\n", url, attempt
+    )
+    time.sleep(0.1)
+    attempt += 1
+    return attempt
 
 
 def parse_spellcheck(args, session):
@@ -85,7 +100,9 @@ def parse_first_dict(response):
         first_dict = soup.find("div", "pr dictionary")
         attempt += 1
         if not first_dict:
-            logger.error("Beautifulsoup found None after response for the word has been successfully fetched. Retrying...")
+            logger.error(
+                "Beautifulsoup found None after response for the word has been successfully fetched. Retrying..."
+            )
             time.sleep(0.1)
         else:
             return first_dict
@@ -489,7 +506,7 @@ def parse_dict_name(response):
 def main():
     try:
         args = parse_args()
-        query_word = "-".join(args.words)
+        query_word = get_query_word(args)
         url = DICT_BASE_URL + query_word
         with requests.Session() as session:
             response = fetch(url, session)

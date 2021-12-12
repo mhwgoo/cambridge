@@ -13,7 +13,7 @@ logging.basicConfig(
     filename=str(data / "dict.log"),
     filemode="a",
     format="%(asctime)s - %(pathname)s[line:%(lineno)d] - %(levelname)s: %(message)s",
-    level=logging.DEBUG,
+    level=logging.INFO,
 )
 
 logger = logging.getLogger("cambridge")

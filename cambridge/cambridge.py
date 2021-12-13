@@ -53,6 +53,8 @@ def fetch(url, session):
         except Exception as e:
             attempt = call_on_error(e, url, attempt)
         else:
+            if r.url == DICT_BASE_URL:
+                return r
             logger.info("Fetched URL [%s] successfully.\n", r.url)
             return r
 

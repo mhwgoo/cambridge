@@ -8,3 +8,6 @@ class ParsedNoneError(Exception):
 
     def __init__(self):
         self.message = "Got None wth content in place"
+
+    def __str__(self):
+        return self.message

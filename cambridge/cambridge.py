@@ -61,7 +61,7 @@ def call_on_error(error, url, attempt, op):
         logger.info("Maximum amount of [%s] retries reached. Quit out.\n", op)
         sys.exit("Something went wrong. Please try later: \n" + str(error))
     logger.error(
-        str(error) + " during [%s] document from <%s>. Retrying %d times ...\n",
+        str(error) + "[%s] document from <%s>. Retrying %d times ...\n",
         op,
         url,
         attempt,
@@ -96,9 +96,7 @@ def parse_first_dict(response):
     while True:
         first_dict = soup.find("div", "pr dictionary")
         if not first_dict:
-            attempt = call_on_error(
-                ParsedNoneError.message, response.url, attempt, "PARSING"
-            )
+            attempt = call_on_error(ParsedNoneError(), response.url, attempt, "PARSING")
         else:
             return first_dict
 
@@ -515,7 +513,7 @@ def main():
             #        parse_dict_body(block)
             #    parse_dict_name(response)
             else:
-                logger.info("Fetched URL [%s] successfully.\n", response.url)
+                logger.info("Fetched URL <%s> successfully.\n", response.url)
                 for block in parse_dict_blocks(response):
                     parse_dict_head(block)
                     parse_dict_body(block)

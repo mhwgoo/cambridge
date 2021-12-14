@@ -59,11 +59,9 @@ def fetch(url, session):
 def call_on_error(error, url, attempt, op):
     if attempt == 4:
         logger.info("Maximum amount of [%s] retries reached. Quit out.\n", op)
-        sys.exit(
-            "Something went wrong with [%s]. Please try later: \n" + str(error), op
-        )
+        sys.exit("Something went wrong. Please try later: \n" + str(error))
     logger.error(
-        str(error) + " during [%s] <%s> content. Retrying %d times ...\n",
+        str(error) + " during [%s] document from <%s>. Retrying %d times ...\n",
         op,
         url,
         attempt,
@@ -96,12 +94,11 @@ def parse_first_dict(response):
     soup = BeautifulSoup(response.text, "lxml")
     attempt = 1
     while True:
-        try:
-            first_dict = soup.find("div", "pr dictionary")
-            if not first_dict:
-                raise ParsedNoneError
-        except ParsedNoneError as e:
-            attempt = call_on_error(e, response.url, attempt, "PARSING")
+        first_dict = soup.find("div", "pr dictionary")
+        if not first_dict:
+            attempt = call_on_error(
+                ParsedNoneError.message, response.url, attempt, "PARSING"
+            )
         else:
             return first_dict
 

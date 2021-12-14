@@ -53,9 +53,6 @@ def fetch(url, session):
         except Exception as e:
             attempt = call_on_error(e, url, attempt)
         else:
-            if r.url == DICT_BASE_URL:
-                return r
-            logger.info("Fetched URL [%s] successfully.\n", r.url)
             return r
 
 
@@ -498,7 +495,7 @@ def parse_dict_name(response):
     dict_info = replace_all(first_dict.small.text).replace("(", "").replace(")", "")
     dict_name = dict_info.split("©")[0]
     dict_name = dict_name.split("the")[-1]
-    console.print("[#125D98]" + "\n\n" + dict_name + "\n", justify="right")
+    console.print("[#125D98]" + dict_name + "\n", justify="right")
 
 
 # ----------main----------
@@ -521,6 +518,7 @@ def main():
             #        parse_dict_body(block)
             #    parse_dict_name(response)
             else:
+                logger.info("Fetched URL [%s] successfully.\n", response.url)
                 for block in parse_dict_blocks(response):
                     parse_dict_head(block)
                     parse_dict_body(block)

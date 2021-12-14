@@ -45,23 +45,28 @@ def fetch(url, session):
         try:
             r = session.get(url, timeout=9.05)
         except requests.exceptions.ConnectTimeout as e:
-            attempt = call_on_error(e, url, attempt)
+            attempt = call_on_error(e, url, attempt, "FETCHING")
         except requests.exceptions.ConnectionError as e:
-            attempt = call_on_error(e, url, attempt)
+            attempt = call_on_error(e, url, attempt, "FETCHING")
         except requests.exceptions.ReadTimeout as e:
-            attempt = call_on_error(e, url, attempt)
+            attempt = call_on_error(e, url, attempt, "FETCHING")
         except Exception as e:
-            attempt = call_on_error(e, url, attempt)
+            attempt = call_on_error(e, url, attempt, "FETCHING")
         else:
             return r
 
 
-def call_on_error(error, url, attempt):
+def call_on_error(error, url, attempt, op):
     if attempt == 4:
-        logger.info("Maximum amount of url fetch retries reached. Quit out.\n")
-        sys.exit("Something went wrong with your internet connection: \n" + str(error))
+        logger.info("Maximum amount of [%s] retries reached. Quit out.\n", op)
+        sys.exit(
+            "Something went wrong with [%s]. Please try later: \n" + str(error), op
+        )
     logger.error(
-        str(error) + " during fetching URL [%s]. Retrying %d times ...\n", url, attempt
+        str(error) + " during [%s] <%s> content. Retrying %d times ...\n",
+        op,
+        url,
+        attempt,
     )
     time.sleep(0.1)
     attempt += 1
@@ -89,19 +94,14 @@ def parse_spellcheck(args, session):
 
 def parse_first_dict(response):
     soup = BeautifulSoup(response.text, "lxml")
-
-    attempt = 0
+    attempt = 1
     while True:
-        if attempt == 3:
-            logger.info("Something went wrong with beautifulsoup. Please try later")
-            sys.exit(0)
-        first_dict = soup.find("div", "pr dictionary")
-        attempt += 1
-        if not first_dict:
-            logger.error(
-                "Beautifulsoup found None after response for the word has been successfully fetched. Retrying..."
-            )
-            time.sleep(0.1)
+        try:
+            first_dict = soup.find("div", "pr dictionary")
+            if not first_dict:
+                raise ParsedNoneError
+        except ParsedNoneError as e:
+            attempt = call_on_error(e, response.url, attempt, "PARSING")
         else:
             return first_dict
 
@@ -531,6 +531,7 @@ if __name__ == "__main__":
     from log import logger
     from utils import replace_all
     from console import console
+    from errors import ParsedNoneError
 
     t1 = time.time()
     main()
@@ -542,3 +543,4 @@ else:
     from .log import logger
     from .utils import replace_all
     from .console import console
+    from .errors import ParsedNoneError

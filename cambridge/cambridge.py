@@ -59,9 +59,10 @@ def fetch(url, session):
 def call_on_error(error, url, attempt, op):
     if attempt == 4:
         logger.info("Maximum amount of [%s] retries reached. Quit out.\n", op)
-        sys.exit("Something went wrong. Please try later: \n" + str(error))
+        print("Something went wrong. Please try later: \n\n" + str(error))
+        sys.exit()
     logger.error(
-        str(error) + "[%s] document from <%s>. Retrying %d times ...\n",
+        str(error) + " - [%s] document from <%s>. Retrying %d times ...\n",
         op,
         url,
         attempt,
@@ -96,7 +97,13 @@ def parse_first_dict(response):
     while True:
         first_dict = soup.find("div", "pr dictionary")
         if not first_dict:
-            attempt = call_on_error(ParsedNoneError(), response.url, attempt, "PARSING")
+            if "isn’t in the Cambridge Dictionary yet. You can help!" in response.text:
+                print("\n" + str(NoResultError()) + "\n")
+                sys.exit()
+            else:
+                attempt = call_on_error(
+                    ParsedNoneError(), response.url, attempt, "PARSING"
+                )
         else:
             return first_dict
 
@@ -505,13 +512,6 @@ def main():
             response = fetch(url, session)
             if response.url == DICT_BASE_URL:
                 parse_spellcheck(args, session)
-            # NOTE: Didn't see this scenario.
-            # elif response.url != url and response.url != DICT_BASE_URL:
-            #    response = fetch(response.url, session)
-            #    for block in parse_dict_blocks(response):
-            #        parse_dict_head(block)
-            #        parse_dict_body(block)
-            #    parse_dict_name(response)
             else:
                 logger.info("Fetched URL <%s> successfully.\n", response.url)
                 for block in parse_dict_blocks(response):
@@ -526,7 +526,7 @@ if __name__ == "__main__":
     from log import logger
     from utils import replace_all
     from console import console
-    from errors import ParsedNoneError
+    from errors import ParsedNoneError, NoResultError
 
     t1 = time.time()
     main()
@@ -538,4 +538,4 @@ else:
     from .log import logger
     from .utils import replace_all
     from .console import console
-    from .errors import ParsedNoneError
+    from .errors import ParsedNoneError, NoResultError

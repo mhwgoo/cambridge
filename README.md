@@ -1,6 +1,8 @@
 # Cambridge
 
-Cambridge is a terminal version of Cambridge Dictionary. The dictionary data comes from https://dictionary.cambridge.org.
+Cambridge is a terminal version of Cambridge Dictionary.
+
+The dictionary data comes from https://dictionary.cambridge.org.
 
 ## Screenshots
 ### Look up a word

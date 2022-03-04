@@ -1,8 +1,10 @@
 import argparse
+import logging
 import time
 import requests
 import sys
 from bs4 import BeautifulSoup
+import cProfile, pstats, io
 
 
 """
@@ -23,8 +25,14 @@ def parse_args():
     )
     parser.add_argument(
         "words",
-        nargs="+",  # it makes -w input value in dict data structure even with only one word
+        nargs="+",
         help="A word or a phrase you want to look up",
+    )
+    parser.add_argument(
+        "-d",
+        "--debug",
+        action="store_true",
+        help="Switch to debug mode to inspect possible problems",
     )
     args = parser.parse_args()
     return args
@@ -501,11 +509,11 @@ def parse_dict_name(response):
 
 
 # ----------main----------
-
-
 def main():
     try:
         args = parse_args()
+        if args.debug:
+            logger.setLevel(logging.DEBUG)
         query_word = get_query_word(args)
         url = DICT_BASE_URL + query_word
         with requests.Session() as session:

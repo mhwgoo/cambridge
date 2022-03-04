@@ -9,14 +9,14 @@ Cambridge is a terminal version of Cambridge Dictionary. The dictionary data com
 ![look up a phrase](/screenshots/phrase.png)
 
 ## Why This
-I'm a terminal person tired of pulling out a dict app or browser, inputting words in the search bar, hitting the search button and waiting the result to render with a bunch of unnecessary static files coming along. Not only time taken is long, but also switching apps back and forth is annoying. So I wrote this console application with features to my satisfaction.
+I'm a terminal person tired of pulling out a GUI app or browser, inputting words in the search bar, hitting the search button and then waiting for the result to render with a bunch of unnecessary static files coming along. Not only is the time taken long, but also switching apps back and forth can be annoying. So I wrote this console application with features to my satisfaction.
 
 ## Feature Highlights
-1. **EASY**: Only one positional argument, which can be a word, or a phrase of multiple words.
-2. **FAST**: It usually takes 0.5 ~ 3 secs including the time for webpage fetching, depending on your network speed.
+1. **EASY**: Only needs one positional argument, which can be a word or a phrase.
+2. **FAST**: It usually takes 0.5 ~ 3 secs including the time for webpage fetching, depending on the network speed.
 3. **NEAT**: No unnecessary info, like ads, quizzes, pics, etc.
-4. **DIRECT**: Only the first dictionary that Cambridge Organization displays on its website without too many similar dictionaries making people dizzy as the website does.
-5. **CONSIDERATE**. If not found, a list of related word suggestions will be displayed.
+4. **DIRECT**: It fetches the first dictionary on the Cambridge Organization webpage without similar dictionaries with similar meanings making people dizzy.
+5. **CONSIDERATE**: If not found, a list of related word suggestions will be displayed.
 ![not found](/screenshots/not_found.png)
 
 ## Installation

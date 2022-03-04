@@ -32,7 +32,7 @@ def parse_args():
         "-d",
         "--debug",
         action="store_true",
-        help="Switch to debug mode to inspect possible problems",
+        help="switch to debug mode to inspect possible problems",
     )
     args = parser.parse_args()
     return args

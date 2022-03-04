@@ -58,10 +58,10 @@ def fetch(url, session):
 
 def call_on_error(error, url, attempt, op):
     if attempt == 4:
-        logger.info("Maximum amount of [%s] retries reached. Quit out.\n", op)
-        print("Something went wrong. Please try later: \n\n" + str(error))
+        logger.debug("Maximum amount of [%s] retries reached. Quit out.\n", op)
+        logger.error("Something went wrong. Please try later: \n\n" + str(error))
         sys.exit()
-    logger.error(
+    logger.debug(
         str(error) + " - [%s] document from <%s>. Retrying %d times ...\n",
         op,
         url,
@@ -513,7 +513,7 @@ def main():
             if response.url == DICT_BASE_URL:
                 parse_spellcheck(args, session)
             else:
-                logger.info("Fetched URL <%s> successfully.\n", response.url)
+                logger.debug("Fetched URL <%s> successfully.\n", response.url)
                 for block in parse_dict_blocks(response):
                     parse_dict_head(block)
                     parse_dict_body(block)

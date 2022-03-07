@@ -3,9 +3,9 @@ import logging
 import time
 import requests
 import sys
+import sqlite3
+from pathlib import Path
 from bs4 import BeautifulSoup
-import cProfile, pstats, io
-
 
 """
 Cambridge is a terminal version of Cambridge Dictionary. Its dictionary data comes from https://dictionary.cambridge.org.
@@ -18,6 +18,9 @@ Total time is mostly between 0.5 to 3 seconds, occasionally 5 secs at most depen
 DICT_BASE_URL = "https://dictionary.cambridge.org/dictionary/english/"  # if no result found in cambridge database, response.url is this.
 SPELLCHECK_BASE_URL = "https://dictionary.cambridge.org/spellcheck/english/?q="
 
+RESQUEST_URL = ""
+RESPONSE_TEXT = ""
+RESPONSE_URL = ""
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -34,13 +37,17 @@ def parse_args():
         action="store_true",
         help="switch to debug mode to inspect possible problems",
     )
+
+    # TODO: add word review arg
     args = parser.parse_args()
     return args
 
-
+# query_word is a string converted from a list of args.words for query
+# input_word is a string converted from a list of args.words for storage
 def get_query_word(args):
+    input_word = " ".join(args.words)
     query_word = "-".join(args.words)
-    return query_word
+    return input_word, query_word
 
 
 def fetch(url, session):
@@ -66,11 +73,11 @@ def fetch(url, session):
 
 def call_on_error(error, url, attempt, op):
     if attempt == 4:
-        logger.debug("Maximum amount of [%s] retries reached. Quit out.\n", op)
-        logger.error("Something went wrong. Please try later: \n\n" + str(error))
+        logger.debug("Maximum amount of [%s] retries reached. Quit out.", op)
+        logger.error("Something went wrong. Please try later: " + str(error))
         sys.exit()
     logger.debug(
-        str(error) + " - [%s] document from <%s>. Retrying %d times ...\n",
+        str(error) + " - [%s] document from <%s>. Retrying %d times ...",
         op,
         url,
         attempt,
@@ -99,25 +106,26 @@ def parse_spellcheck(args, session):
             console.print("[#b2b2b2]" + "  • " + suggestion)
 
 
-def parse_first_dict(response):
-    soup = BeautifulSoup(response.text, "lxml")
+def parse_first_dict():
+    global RESPONSE_TEXT
+    global RESPONSE_URL
+    soup = BeautifulSoup(RESPONSE_TEXT, "lxml")
     attempt = 1
     while True:
         first_dict = soup.find("div", "pr dictionary")
         if not first_dict:
-            if "isn’t in the Cambridge Dictionary yet. You can help!" in response.text:
+            if "isn’t in the Cambridge Dictionary yet. You can help!" in RESPONSE_TEXT:
                 print("\n" + str(NoResultError()) + "\n")
                 sys.exit()
             else:
                 attempt = call_on_error(
-                    ParsedNoneError(), response.url, attempt, "PARSING"
+                    ParsedNoneError(), RESPONSE_URL, attempt, "PARSING"
                 )
         else:
             return first_dict
 
-
-def parse_dict_blocks(response):
-    first_dict = parse_first_dict(response)
+def parse_dict_blocks():
+    first_dict = parse_first_dict()
     if first_dict.find(
         "div", ["pr entry-body__el", "entry-body__el clrd js-share-holder"]
     ):
@@ -127,7 +135,6 @@ def parse_dict_blocks(response):
     else:
         blocks = first_dict.find_all("div", "pr idiom-block")
     return blocks
-
 
 # ----------parse dict head----------
 def parse_head_title(title_block):
@@ -500,12 +507,32 @@ def parse_dict_body(block):
         parse_phrasal_verb(block)
 
 
-def parse_dict_name(response):
-    first_dict = parse_first_dict(response)
+def parse_dict_name():
+    first_dict = parse_first_dict()
     dict_info = replace_all(first_dict.small.text).replace("(", "").replace(")", "")
     dict_name = dict_info.split("©")[0]
     dict_name = dict_name.split("the")[-1]
     console.print("[#125D98]" + dict_name + "\n", justify="right")
+
+def request_and_print(url, args):
+    with requests.Session() as session:
+        response = fetch(url, session)
+        if response.url == DICT_BASE_URL:
+            parse_spellcheck(args, session)
+        else:
+            global RESPONSE_URL
+            global RESPONSE_TEXT
+            RESPONSE_URL= response.url
+            RESPONSE_TEXT = response.text
+            logger.debug("Fetched URL <%s> successfully.", RESPONSE_URL)
+            print_dict()
+
+def print_dict():
+    blocks = parse_dict_blocks()
+    for block in blocks:
+        parse_dict_head(block)
+        parse_dict_body(block)
+    parse_dict_name()
 
 
 # ----------main----------
@@ -514,18 +541,37 @@ def main():
         args = parse_args()
         if args.debug:
             logger.setLevel(logging.DEBUG)
-        query_word = get_query_word(args)
-        url = DICT_BASE_URL + query_word
-        with requests.Session() as session:
-            response = fetch(url, session)
-            if response.url == DICT_BASE_URL:
-                parse_spellcheck(args, session)
+        input_word, query_word = get_query_word(args)
+        global REQUEST_URL
+        global RESPONSE_TEXT
+        global RESPONSE_URL
+        REQUEST_URL = DICT_BASE_URL + query_word
+
+        if not Path(DB).is_file():
+            logger.debug("No cache for <%s>. Fetching URL <%s>...", input_word, REQUEST_URL)
+            request_and_print(REQUEST_URL, args)
+            logger.debug("Caching search result of <%s>...", input_word)
+            con = sqlite3.connect(DB)
+            cur = con.cursor()
+            create_table(con, cur)
+            insert_into_table(con, cur, input_word, RESPONSE_URL, RESPONSE_TEXT)
+            con.close()
+            logger.debug("Done caching search result of <%s>.", input_word)
+        else:
+            con = sqlite3.connect(DB)
+            cur = con.cursor()
+            if get_inputword(cur, input_word) is None:
+                logger.debug("No cache for <%s>. Fetching URL <%s>...", input_word, REQUEST_URL)
+                request_and_print(REQUEST_URL, args)
+                logger.debug("Caching search result of <%s>...", input_word)
+                insert_into_table(con, cur, input_word, RESPONSE_URL, RESPONSE_TEXT)
+                logger.debug("Done caching search result of <%s>.", input_word)
             else:
-                logger.debug("Fetched URL <%s> successfully.\n", response.url)
-                for block in parse_dict_blocks(response):
-                    parse_dict_head(block)
-                    parse_dict_body(block)
-                parse_dict_name(response)
+                logger.debug("Already cached <%s> before. Use cache.", input_word)
+                RESPONSE_URL, RESPONSE_TEXT = get_response(cur,input_word)
+                print_dict()
+            con.close()
+
     except KeyboardInterrupt:
         print("\nStopped by user")
 
@@ -535,6 +581,7 @@ if __name__ == "__main__":
     from utils import replace_all
     from console import console
     from errors import ParsedNoneError, NoResultError
+    from cache import DB, create_table, insert_into_table, get_inputword, get_response
 
     t1 = time.time()
     main()
@@ -547,3 +594,4 @@ else:
     from .utils import replace_all
     from .console import console
     from .errors import ParsedNoneError, NoResultError
+    from .cache import DB, create_table, insert_into_table, get_inputword, get_response

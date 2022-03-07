@@ -19,27 +19,80 @@ DICT_BASE_URL = "https://dictionary.cambridge.org/dictionary/english/"  # if no 
 SPELLCHECK_BASE_URL = "https://dictionary.cambridge.org/spellcheck/english/?q="
 
 RESQUEST_URL = ""
-RESPONSE_TEXT = ""
 RESPONSE_URL = ""
+RESPONSE_TEXT = ""
 
-def parse_args():
+
+def list_words(args, cur):
+    try:
+        data = get_inputwords(cur)
+    except sqlite3.OperationalError:
+        logger.error("You may haven't searched any word yet.")
+    else:
+        # data is something like [('hello',), ('good',), ('world',)]
+        for i in data:
+            print(i[0])
+
+def search_words(args, con, cur):
+    global REQUEST_URL
+    global RESPONSE_TEXT
+    global RESPONSE_URL
+
+    input_word, query_word = get_query_word(args)
+    REQUEST_URL = DICT_BASE_URL + query_word
+
+    if args.debug:
+        logger.setLevel(logging.DEBUG)
+
+    if len(check_table(cur)) == 0:
+        logger.debug("No cache for <%s>. Fetching URL <%s>...", input_word, REQUEST_URL)
+        request_and_print(REQUEST_URL, args)
+        logger.debug("Caching search result of <%s>...", input_word)
+        create_table(con, cur)
+        insert_into_table(con, cur, input_word, RESPONSE_URL, RESPONSE_TEXT)
+        logger.debug("Done caching search result of <%s>.", input_word)
+    else:
+        if get_inputword(cur, input_word) is None:
+            logger.debug("No cache for <%s>. Fetching URL <%s>...", input_word, REQUEST_URL)
+            request_and_print(REQUEST_URL, args)
+            logger.debug("Caching search result of <%s>...", input_word)
+            insert_into_table(con, cur, input_word, RESPONSE_URL, RESPONSE_TEXT)
+            logger.debug("Done caching search result of <%s>.", input_word)
+        else:
+            logger.debug("Already cached <%s> before. Use cache.", input_word)
+            RESPONSE_URL, RESPONSE_TEXT = get_response(cur,input_word)
+            print_dict()
+
+
+def parse_args(con, cur):
     parser = argparse.ArgumentParser(
         description="Terminal Version of Cambridge Dictionary"
     )
-    parser.add_argument(
+    sub_parsers = parser.add_subparsers(dest='subparser_name')
+
+    parser_lw = sub_parsers.add_parser("lw", help="list all the words you've successfully searched")
+    parser_lw.set_defaults(func=list_words)
+
+    parser_sw = sub_parsers.add_parser("sw", help="search a word or phrase")
+    parser_sw.set_defaults(func=search_words)
+    parser_sw.add_argument(
         "words",
         nargs="+",
-        help="A word or a phrase you want to look up",
+        help="A word or phrase you want to search",
     )
-    parser.add_argument(
+    parser_sw.add_argument(
         "-d",
         "--debug",
         action="store_true",
         help="switch to debug mode to inspect possible problems",
     )
 
-    # TODO: add word review arg
-    args = parser.parse_args()
+    if len(sys.argv)==1:
+        parser.print_help(sys.stderr)
+        sys.exit(1)
+    else:
+        args = parser.parse_args()
+
     return args
 
 # query_word is a string converted from a list of args.words for query
@@ -538,39 +591,16 @@ def print_dict():
 # ----------main----------
 def main():
     try:
-        args = parse_args()
-        if args.debug:
-            logger.setLevel(logging.DEBUG)
-        input_word, query_word = get_query_word(args)
-        global REQUEST_URL
-        global RESPONSE_TEXT
-        global RESPONSE_URL
-        REQUEST_URL = DICT_BASE_URL + query_word
+        con = sqlite3.connect(DB)
+        cur = con.cursor()
 
-        if not Path(DB).is_file():
-            logger.debug("No cache for <%s>. Fetching URL <%s>...", input_word, REQUEST_URL)
-            request_and_print(REQUEST_URL, args)
-            logger.debug("Caching search result of <%s>...", input_word)
-            con = sqlite3.connect(DB)
-            cur = con.cursor()
-            create_table(con, cur)
-            insert_into_table(con, cur, input_word, RESPONSE_URL, RESPONSE_TEXT)
-            con.close()
-            logger.debug("Done caching search result of <%s>.", input_word)
+        args = parse_args(con, cur)
+        if args.subparser_name == "lw":
+            args.func(args, cur)
         else:
-            con = sqlite3.connect(DB)
-            cur = con.cursor()
-            if get_inputword(cur, input_word) is None:
-                logger.debug("No cache for <%s>. Fetching URL <%s>...", input_word, REQUEST_URL)
-                request_and_print(REQUEST_URL, args)
-                logger.debug("Caching search result of <%s>...", input_word)
-                insert_into_table(con, cur, input_word, RESPONSE_URL, RESPONSE_TEXT)
-                logger.debug("Done caching search result of <%s>.", input_word)
-            else:
-                logger.debug("Already cached <%s> before. Use cache.", input_word)
-                RESPONSE_URL, RESPONSE_TEXT = get_response(cur,input_word)
-                print_dict()
-            con.close()
+            args.func(args, con,cur)
+
+        con.close()
 
     except KeyboardInterrupt:
         print("\nStopped by user")
@@ -581,7 +611,7 @@ if __name__ == "__main__":
     from utils import replace_all
     from console import console
     from errors import ParsedNoneError, NoResultError
-    from cache import DB, create_table, insert_into_table, get_inputword, get_response
+    from cache import DB, create_table, insert_into_table, get_inputword, get_response, get_inputwords, check_table
 
     t1 = time.time()
     main()
@@ -594,4 +624,4 @@ else:
     from .utils import replace_all
     from .console import console
     from .errors import ParsedNoneError, NoResultError
-    from .cache import DB, create_table, insert_into_table, get_inputword, get_response
+    from .cache import DB, create_table, insert_into_table, get_inputword, get_response, get_inputwords, check_table

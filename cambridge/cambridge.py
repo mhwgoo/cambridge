@@ -90,6 +90,11 @@ def parse_args(con, cur):
     if len(sys.argv)==1:
         parser.print_help(sys.stderr)
         sys.exit(1)
+    elif sys.argv[1] != "sw" and sys.argv[1] != "lw" and len(sys.argv) > 1:
+        if sys.argv[1] == "-d":
+            args = parser.parse_args(["sw", "-d", " ".join(sys.argv[2:])])
+        else:
+            args = parser.parse_args(["sw", " ".join(sys.argv[1:])])
     else:
         args = parser.parse_args()
 

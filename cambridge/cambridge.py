@@ -46,18 +46,18 @@ def search_words(args, con, cur):
 
     if len(check_table(cur)) == 0:
         logger.debug("No cache for <%s>. Fetching URL <%s>...", input_word, REQUEST_URL)
-        request_and_print(REQUEST_URL, args)
-        logger.debug("Caching search result of <%s>...", input_word)
-        create_table(con, cur)
-        insert_into_table(con, cur, input_word, RESPONSE_URL, RESPONSE_TEXT)
-        logger.debug("Done caching search result of <%s>.", input_word)
+        if request_and_print(REQUEST_URL, args):
+            logger.debug("Caching search result of <%s>...", input_word)
+            create_table(con, cur)
+            insert_into_table(con, cur, input_word, RESPONSE_URL, RESPONSE_TEXT)
+            logger.debug("Done caching search result of <%s>.", input_word)
     else:
         if get_inputword(cur, input_word) is None:
             logger.debug("No cache for <%s>. Fetching URL <%s>...", input_word, REQUEST_URL)
-            request_and_print(REQUEST_URL, args)
-            logger.debug("Caching search result of <%s>...", input_word)
-            insert_into_table(con, cur, input_word, RESPONSE_URL, RESPONSE_TEXT)
-            logger.debug("Done caching search result of <%s>.", input_word)
+            if request_and_print(REQUEST_URL, args):
+                logger.debug("Caching search result of <%s>...", input_word)
+                insert_into_table(con, cur, input_word, RESPONSE_URL, RESPONSE_TEXT)
+                logger.debug("Done caching search result of <%s>.", input_word)
         else:
             logger.debug("Already cached <%s> before. Use cache.", input_word)
             RESPONSE_URL, RESPONSE_TEXT = get_response(cur,input_word)
@@ -572,6 +572,7 @@ def request_and_print(url, args):
         response = fetch(url, session)
         if response.url == DICT_BASE_URL:
             parse_spellcheck(args, session)
+            return False
         else:
             global RESPONSE_URL
             global RESPONSE_TEXT
@@ -579,6 +580,7 @@ def request_and_print(url, args):
             RESPONSE_TEXT = response.text
             logger.debug("Fetched URL <%s> successfully.", RESPONSE_URL)
             print_dict()
+            return True
 
 def print_dict():
     blocks = parse_dict_blocks()

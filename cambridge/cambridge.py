@@ -5,6 +5,7 @@ import requests
 import sys
 import sqlite3
 from pathlib import Path
+from urllib import parse
 from bs4 import BeautifulSoup
 
 """
@@ -13,6 +14,8 @@ Cambridge is a terminal version of Cambridge Dictionary. Its dictionary data com
 Parsing takes less than 0.4 seconds.
 Most of the time is spent on fetching webpage.
 Total time is mostly between 0.5 to 3 seconds, occasionally 5 secs at most depending on network performance.
+
+python cambridge.py l | fzf --preview='python cambridge.py {}'
 """
 
 DICT_BASE_URL = "https://dictionary.cambridge.org/dictionary/english/"  # if no result found in cambridge database, response.url is this.
@@ -30,7 +33,7 @@ def list_words(args, cur):
         logger.error("You may haven't searched any word yet.")
     else:
         # data is something like [('hello',), ('good',), ('world',)]
-        for i in data:
+        for i in sorted(data):
             print(i[0])
 
 def search_words(args, con, cur):
@@ -70,10 +73,10 @@ def parse_args(con, cur):
     )
     sub_parsers = parser.add_subparsers(dest='subparser_name')
 
-    parser_lw = sub_parsers.add_parser("lw", help="list all the words you've successfully searched")
+    parser_lw = sub_parsers.add_parser("l", help="list all the words you've successfully searched")
     parser_lw.set_defaults(func=list_words)
 
-    parser_sw = sub_parsers.add_parser("sw", help="search a word or phrase")
+    parser_sw = sub_parsers.add_parser("s", help="search a word or phrase")
     parser_sw.set_defaults(func=search_words)
     parser_sw.add_argument(
         "words",
@@ -90,11 +93,11 @@ def parse_args(con, cur):
     if len(sys.argv)==1:
         parser.print_help(sys.stderr)
         sys.exit(1)
-    elif sys.argv[1] != "sw" and sys.argv[1] != "lw" and len(sys.argv) > 1:
+    elif sys.argv[1] != "s" and sys.argv[1] != "l" and len(sys.argv) > 1:
         if sys.argv[1] == "-d":
-            args = parser.parse_args(["sw", "-d", " ".join(sys.argv[2:])])
+            args = parser.parse_args(["s", "-d", " ".join(sys.argv[2:])])
         else:
-            args = parser.parse_args(["sw", " ".join(sys.argv[1:])])
+            args = parser.parse_args(["s", " ".join(sys.argv[1:])])
     else:
         args = parser.parse_args()
 
@@ -581,7 +584,7 @@ def request_and_print(url, args):
         else:
             global RESPONSE_URL
             global RESPONSE_TEXT
-            RESPONSE_URL= response.url
+            RESPONSE_URL= parse.unquote(response.url)
             RESPONSE_TEXT = response.text
             logger.debug("Fetched URL <%s> successfully.", RESPONSE_URL)
             print_dict()
@@ -598,15 +601,16 @@ def print_dict():
 # ----------main----------
 def main():
     try:
-        con = sqlite3.connect(DB)
+        con = sqlite3.connect(DB, detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
         cur = con.cursor()
 
         args = parse_args(con, cur)
-        if args.subparser_name == "lw":
+        if args.subparser_name == "l":
             args.func(args, cur)
         else:
             args.func(args, con,cur)
 
+        cur.close()
         con.close()
 
     except KeyboardInterrupt:

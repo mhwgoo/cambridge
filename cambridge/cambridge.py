@@ -27,15 +27,23 @@ RESPONSE_URL = ""
 RESPONSE_TEXT = ""
 
 
-def list_words(args, cur):
-    try:
-        data = get_response_words(cur)
-    except sqlite3.OperationalError:
-        logger.error("You may haven't searched any word yet")
+def list_words(args, con, cur):
+    if args.delete:
+        word = " ".join(args.delete)
+        if delete_word(con, cur, word):
+            print("'" + word + "'" + " got deleted from cache successfully")
+        else:
+            logger.error("No such word '%s' in cache", word)
+
     else:
-        # data is something like [('hello',), ('good',), ('world',)]
-        for i in sorted(data):
-            print(i[0])
+        try:
+            data = get_response_words(cur)
+        except sqlite3.OperationalError:
+            logger.error("You may haven't searched any word yet")
+        else:
+            # data is something like [('hello',), ('good',), ('world',)]
+            for i in sorted(data):
+                print(i[0])
 
 
 def search_words(args, con, cur):
@@ -85,6 +93,12 @@ def parse_args(con, cur):
 
     parser_lw = sub_parsers.add_parser("l", help="list all the words you've successfully searched")
     parser_lw.set_defaults(func=list_words)
+    parser_lw.add_argument(
+        "-d",
+        "--delete",
+        nargs="+",
+        help="delete a word or phrase from cache",
+    )
 
     parser_sw = sub_parsers.add_parser("s", help="search a word or phrase")
     parser_sw.set_defaults(func=search_words)
@@ -616,7 +630,7 @@ def main():
 
         args = parse_args(con, cur)
         if args.subparser_name == "l":
-            args.func(args, cur)
+            args.func(args, con, cur)
         else:
             args.func(args, con,cur)
 
@@ -632,7 +646,7 @@ if __name__ == "__main__":
     from utils import replace_all, parse_from_url
     from console import console
     from errors import ParsedNoneError, NoResultError
-    from cache import DB, create_table, insert_into_table, get_cache, get_response_words, check_table
+    from cache import DB, create_table, insert_into_table, get_cache, get_response_words, delete_word, check_table
 
     t1 = time.time()
     main()
@@ -645,4 +659,4 @@ else:
     from .utils import replace_all, parse_from_url
     from .console import console
     from .errors import ParsedNoneError, NoResultError
-    from .cache import DB, create_table, insert_into_table, get_cache, get_response_words, check_table
+    from .cache import DB, create_table, insert_into_table, get_cache, get_response_words, delete_word, check_table

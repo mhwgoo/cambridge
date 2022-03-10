@@ -12,7 +12,8 @@ from pathlib import Path
 logging.basicConfig(
     # filename=str(data / "dict.log"),
     # filemode="a",
-    format="%(asctime)s - %(pathname)s[line:%(lineno)d] - %(levelname)s: %(message)s",
+    # format="%(asctime)s - %(pathname)s[line:%(lineno)d] - %(levelname)s: %(message)s",
+    format="%(asctime)s - %(levelname)s: %(message)s",
     level=logging.INFO,
 )
 

@@ -2,6 +2,7 @@
 This script contains utility functions.
 """
 import cProfile, pstats, io
+from urllib import parse
 
 
 def replace_all(string):
@@ -23,6 +24,12 @@ def replace_all(string):
         .replace("C2", "")
         .strip()
     )
+
+def parse_from_url(url):
+    url = parse.unquote(url)
+    response_base_url = url.split("?")[0]
+    response_word = response_base_url.split("/")[-1].replace("-", " ")
+    return response_base_url, response_word
 
 
 def profile(func):

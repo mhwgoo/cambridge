@@ -5,7 +5,6 @@ import requests
 import sys
 import sqlite3
 from pathlib import Path
-from urllib import parse
 from bs4 import BeautifulSoup
 
 """
@@ -22,13 +21,14 @@ DICT_BASE_URL = "https://dictionary.cambridge.org/dictionary/english/"  # if no 
 SPELLCHECK_BASE_URL = "https://dictionary.cambridge.org/spellcheck/english/?q="
 
 RESQUEST_URL = ""
+RESPONSE_WORD = ""
 RESPONSE_URL = ""
 RESPONSE_TEXT = ""
 
 
 def list_words(args, cur):
     try:
-        data = get_inputwords(cur)
+        data = get_response_words(cur)
     except sqlite3.OperationalError:
         logger.error("You may haven't searched any word yet.")
     else:
@@ -38,8 +38,9 @@ def list_words(args, cur):
 
 def search_words(args, con, cur):
     global REQUEST_URL
-    global RESPONSE_TEXT
+    global RESPONSE_WORD
     global RESPONSE_URL
+    global RESPONSE_TEXT
 
     input_word, query_word = get_query_word(args)
     REQUEST_URL = DICT_BASE_URL + query_word
@@ -48,22 +49,29 @@ def search_words(args, con, cur):
         logger.setLevel(logging.DEBUG)
 
     if len(check_table(cur)) == 0:
-        logger.debug("No cache for <%s>. Fetching URL <%s>...", input_word, REQUEST_URL)
+        # ToDo
+        logger.debug("Searching <%s> for <%s> ...", DICT_BASE_URL, input_word)
         if request_and_print(REQUEST_URL, args):
-            logger.debug("Caching search result of <%s>...", input_word)
+            logger.debug("Caching search result of <%s> ...", input_word)
             create_table(con, cur)
-            insert_into_table(con, cur, input_word, RESPONSE_URL, RESPONSE_TEXT)
+            insert_into_table(con, cur, input_word, RESPONSE_WORD, RESPONSE_URL,RESPONSE_TEXT)
             logger.debug("Done caching search result of <%s>.", input_word)
     else:
-        if get_inputword(cur, input_word) is None:
-            logger.debug("No cache for <%s>. Fetching URL <%s>...", input_word, REQUEST_URL)
+        data = get_cache(cur, input_word, RESQUEST_URL)
+        if  data is None:
+            logger.debug("Searching <%s> for <%s> ...", DICT_BASE_URL, input_word)
             if request_and_print(REQUEST_URL, args):
-                logger.debug("Caching search result of <%s>...", input_word)
-                insert_into_table(con, cur, input_word, RESPONSE_URL, RESPONSE_TEXT)
-                logger.debug("Done caching search result of <%s>.", input_word)
+                try:
+                    logger.debug("Caching search result of <%s> ...", input_word)
+                    insert_into_table(con, cur, input_word, RESPONSE_WORD, RESPONSE_URL,RESPONSE_TEXT)
+                # If a user inputs a word with plural form, it won't get cached again
+                except sqlite3.IntegrityError:
+                    logger.debug("Similar word <%s> from the cambridge dictionary found in cache, stop caching.", RESPONSE_WORD)
+                else:
+                    logger.debug("Done caching search result of <%s>.", input_word)
         else:
             logger.debug("Already cached <%s> before. Use cache.", input_word)
-            RESPONSE_URL, RESPONSE_TEXT = get_response(cur,input_word)
+            RESPONSE_URL, RESPONSE_TEXT = data[0], data[1]
             print_dict()
 
 
@@ -582,9 +590,10 @@ def request_and_print(url, args):
             parse_spellcheck(args, session)
             return False
         else:
+            global RESPONSE_WORD
             global RESPONSE_URL
             global RESPONSE_TEXT
-            RESPONSE_URL= parse.unquote(response.url)
+            RESPONSE_URL, RESPONSE_WORD = parse_from_url(response.url)
             RESPONSE_TEXT = response.text
             logger.debug("Fetched URL <%s> successfully.", RESPONSE_URL)
             print_dict()
@@ -619,10 +628,10 @@ def main():
 
 if __name__ == "__main__":
     from log import logger
-    from utils import replace_all
+    from utils import replace_all, parse_from_url
     from console import console
     from errors import ParsedNoneError, NoResultError
-    from cache import DB, create_table, insert_into_table, get_inputword, get_response, get_inputwords, check_table
+    from cache import DB, create_table, insert_into_table, get_cache, get_response_words, check_table
 
     t1 = time.time()
     main()
@@ -632,7 +641,7 @@ if __name__ == "__main__":
 
 else:
     from .log import logger
-    from .utils import replace_all
+    from .utils import replace_all, parse_from_url
     from .console import console
     from .errors import ParsedNoneError, NoResultError
-    from .cache import DB, create_table, insert_into_table, get_inputword, get_response, get_inputwords, check_table
+    from .cache import DB, create_table, insert_into_table, get_cache, get_response_words, check_table

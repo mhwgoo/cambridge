@@ -17,6 +17,7 @@ Total time is mostly between 0.5 to 3 seconds, occasionally 5 secs at most depen
 python cambridge.py l | fzf --preview='python cambridge.py {}'
 """
 
+CAMBRIDGE_URL = "https://dictionary.cambridge.org"
 DICT_BASE_URL = "https://dictionary.cambridge.org/dictionary/english/"  # if no result found in cambridge database, response.url is this.
 SPELLCHECK_BASE_URL = "https://dictionary.cambridge.org/spellcheck/english/?q="
 
@@ -30,7 +31,7 @@ def list_words(args, cur):
     try:
         data = get_response_words(cur)
     except sqlite3.OperationalError:
-        logger.error("You may haven't searched any word yet.")
+        logger.error("You may haven't searched any word yet")
     else:
         # data is something like [('hello',), ('good',), ('world',)]
         for i in sorted(data):
@@ -50,27 +51,27 @@ def search_words(args, con, cur):
 
     if len(check_table(cur)) == 0:
         # ToDo
-        logger.debug("Searching <%s> for <%s> ...", DICT_BASE_URL, input_word)
+        logger.debug("Searching %s for '%s'", CAMBRIDGE_URL, input_word)
         if request_and_print(REQUEST_URL, args):
-            logger.debug("Caching search result of <%s> ...", input_word)
+            logger.debug("Caching search result of '%s'", input_word)
             create_table(con, cur)
             insert_into_table(con, cur, input_word, RESPONSE_WORD, RESPONSE_URL,RESPONSE_TEXT)
-            logger.debug("Done caching search result of <%s>.", input_word)
+            logger.debug("Done caching search result of '%s'", input_word)
     else:
         data = get_cache(cur, input_word, RESQUEST_URL)
         if  data is None:
-            logger.debug("Searching <%s> for <%s> ...", DICT_BASE_URL, input_word)
+            logger.debug("Searching %s for '%s'", CAMBRIDGE_URL, input_word)
             if request_and_print(REQUEST_URL, args):
                 try:
-                    logger.debug("Caching search result of <%s> ...", input_word)
+                    logger.debug("Caching search result of '%s'", input_word)
                     insert_into_table(con, cur, input_word, RESPONSE_WORD, RESPONSE_URL,RESPONSE_TEXT)
                 # If a user inputs a word with plural form, it won't get cached again
                 except sqlite3.IntegrityError:
-                    logger.debug("Similar word <%s> from the cambridge dictionary found in cache, stop caching.", RESPONSE_WORD)
+                    logger.debug("Similar word '%s' from the cambridge dictionary found in cache, stop caching", RESPONSE_WORD)
                 else:
-                    logger.debug("Done caching search result of <%s>.", input_word)
+                    logger.debug("Done caching search result of '%s'", input_word)
         else:
-            logger.debug("Already cached <%s> before. Use cache.", input_word)
+            logger.debug("Already cached '%s' before. Use cache", input_word)
             RESPONSE_URL, RESPONSE_TEXT = data[0], data[1]
             print_dict()
 
@@ -142,11 +143,11 @@ def fetch(url, session):
 
 def call_on_error(error, url, attempt, op):
     if attempt == 4:
-        logger.debug("Maximum amount of [%s] retries reached. Quit out.", op)
+        logger.debug("Maximum amount of %s retries reached. Quit out", op)
         logger.error("Something went wrong. Please try later: " + str(error))
         sys.exit()
     logger.debug(
-        str(error) + " - [%s] document from <%s>. Retrying %d times ...",
+        str(error) + " - %s document from %s. Retried %d times",
         op,
         url,
         attempt,
@@ -595,7 +596,7 @@ def request_and_print(url, args):
             global RESPONSE_TEXT
             RESPONSE_URL, RESPONSE_WORD = parse_from_url(response.url)
             RESPONSE_TEXT = response.text
-            logger.debug("Fetched URL <%s> successfully.", RESPONSE_URL)
+            logger.debug("Fetched html from %s successfully", RESPONSE_URL)
             print_dict()
             return True
 

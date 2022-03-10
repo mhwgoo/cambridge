@@ -37,6 +37,7 @@ def list_words(args, cur):
         for i in sorted(data):
             print(i[0])
 
+
 def search_words(args, con, cur):
     global REQUEST_URL
     global RESPONSE_WORD
@@ -112,11 +113,10 @@ def parse_args(con, cur):
 
     return args
 
-# query_word is a string converted from a list of args.words for query
-# input_word is a string converted from a list of args.words for storage
+
 def get_query_word(args):
-    input_word = " ".join(args.words)
-    query_word = "-".join(args.words)
+    input_word = args.words[0]
+    query_word = args.words[0].replace(" ", "-")
     return input_word, query_word
 
 
@@ -130,13 +130,13 @@ def fetch(url, session):
         try:
             r = session.get(url, timeout=9.05)
         except requests.exceptions.ConnectTimeout as e:
-            attempt = call_on_error(e, url, attempt, "FETCHING")
+            attempt = call_on_error(e, url, attempt, "Fetching")
         except requests.exceptions.ConnectionError as e:
-            attempt = call_on_error(e, url, attempt, "FETCHING")
+            attempt = call_on_error(e, url, attempt, "Fetching")
         except requests.exceptions.ReadTimeout as e:
-            attempt = call_on_error(e, url, attempt, "FETCHING")
+            attempt = call_on_error(e, url, attempt, "Fetching")
         except Exception as e:
-            attempt = call_on_error(e, url, attempt, "FETCHING")
+            attempt = call_on_error(e, url, attempt, "Fetching")
         else:
             return r
 
@@ -147,7 +147,7 @@ def call_on_error(error, url, attempt, op):
         logger.error("Something went wrong. Please try later: " + str(error))
         sys.exit()
     logger.debug(
-        str(error) + " - %s document from %s. Retried %d times",
+        str(error) + " - %s html from %s. Retried %d times",
         op,
         url,
         attempt,
@@ -189,7 +189,7 @@ def parse_first_dict():
                 sys.exit()
             else:
                 attempt = call_on_error(
-                    ParsedNoneError(), RESPONSE_URL, attempt, "PARSING"
+                    ParsedNoneError(), RESPONSE_URL, attempt, "Parsing"
                 )
         else:
             return first_dict

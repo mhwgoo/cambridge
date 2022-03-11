@@ -1,9 +1,7 @@
 """
 This script sets up logger.
 """
-import os
 import logging
-from pathlib import Path
 
 # Logging only to stdout, not to local
 # data = Path.home() / ".local" / "share" / "cambridge"

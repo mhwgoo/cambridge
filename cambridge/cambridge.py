@@ -4,7 +4,6 @@ import time
 import requests
 import sys
 import sqlite3
-from pathlib import Path
 from bs4 import BeautifulSoup
 
 """

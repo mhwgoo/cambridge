@@ -7,7 +7,7 @@ class ParsedNoneError(Exception):
     """Used when bs4 returned None whereas there's target content existing within the document"""
 
     def __init__(self):
-        self.message = "Parsed out nothing with Cambridge Dictionary content in place"
+        self.message = "Nothing parsed out"
 
     def __str__(self):
         return self.message

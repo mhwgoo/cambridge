@@ -26,6 +26,7 @@ RESPONSE_WORD = ""
 RESPONSE_URL = ""
 RESPONSE_TEXT = ""
 
+OP = ["FETCHING", "PARSING"]
 
 def list_words(args, con, cur):
     if args.delete:
@@ -59,7 +60,6 @@ def search_words(args, con, cur):
         logger.setLevel(logging.DEBUG)
 
     if len(check_table(cur)) == 0:
-        # ToDo
         logger.debug("Searching %s for '%s'", CAMBRIDGE_URL, input_word)
         if request_and_print(REQUEST_URL, args):
             logger.debug("Caching search result of '%s'", input_word)
@@ -139,35 +139,37 @@ def fetch(url, session):
         "User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/29.0.1547.62 Safari/537.36"
     }
     session.headers.update(headers)
-    attempt = 1
+    attempt = 0 
+
     while True:
         try:
             r = session.get(url, timeout=9.05)
+        except requests.exceptions.HTTPError as e:
+            attempt = call_on_error(e, url, attempt, OP[0])
         except requests.exceptions.ConnectTimeout as e:
-            attempt = call_on_error(e, url, attempt, "Fetching")
+            attempt = call_on_error(e, url, attempt, OP[0])
         except requests.exceptions.ConnectionError as e:
-            attempt = call_on_error(e, url, attempt, "Fetching")
+            attempt = call_on_error(e, url, attempt, OP[0])
         except requests.exceptions.ReadTimeout as e:
-            attempt = call_on_error(e, url, attempt, "Fetching")
+            attempt = call_on_error(e, url, attempt, OP[0])
         except Exception as e:
-            attempt = call_on_error(e, url, attempt, "Fetching")
+            attempt = call_on_error(e, url, attempt, OP[0])
         else:
             return r
 
 
 def call_on_error(error, url, attempt, op):
-    if attempt == 4:
-        logger.debug("Maximum amount of %s retries reached. Quit out", op)
-        logger.error("Something went wrong. Please try later: " + str(error))
-        sys.exit()
+    attempt += 1
     logger.debug(
-        str(error) + " - %s html from %s. Retried %d times",
+        "%s HTML from %s %d times",
         op,
         url,
         attempt,
     )
-    time.sleep(0.1)
-    attempt += 1
+    if attempt == 3:
+        logger.debug("Maximum %s retries reached. Exit", op)
+        logger.error("Please try later: " + str(error))
+        sys.exit()
     return attempt
 
 
@@ -203,7 +205,7 @@ def parse_first_dict():
                 sys.exit()
             else:
                 attempt = call_on_error(
-                    ParsedNoneError(), RESPONSE_URL, attempt, "Parsing"
+                    ParsedNoneError(), RESPONSE_URL, attempt, OP[1]
                 )
         else:
             return first_dict

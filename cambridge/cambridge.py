@@ -55,7 +55,7 @@ def search_words(args, con, cur):
     input_word, query_word = get_query_word(args)
     REQUEST_URL = DICT_BASE_URL + query_word
 
-    if args.debug:
+    if args.verbose:
         logger.setLevel(logging.DEBUG)
 
     if len(check_table(cur)) == 0:
@@ -107,18 +107,18 @@ def parse_args(con, cur):
         help="A word or phrase you want to search",
     )
     parser_sw.add_argument(
-        "-d",
-        "--debug",
+        "-v",
+        "--verbose",
         action="store_true",
-        help="switch to debug mode to inspect possible problems",
+        help="search a world or phrase in verbose mode",
     )
 
-    if len(sys.argv)==1:
+    if len(sys.argv)==1 or sys.argv[1] == "-h" or sys.argv[1] == "--help":
         parser.print_help(sys.stderr)
         sys.exit(1)
     elif sys.argv[1] != "s" and sys.argv[1] != "l" and len(sys.argv) > 1:
-        if sys.argv[1] == "-d":
-            args = parser.parse_args(["s", "-d", " ".join(sys.argv[2:])])
+        if sys.argv[1] == "-v" or sys.argv[1] == "--verbose":
+            args = parser.parse_args(["s", "-v", " ".join(sys.argv[2:])])
         else:
             args = parser.parse_args(["s", " ".join(sys.argv[1:])])
     else:

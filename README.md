@@ -28,8 +28,9 @@ pip install cambridge
 
 ## Usage
 ```bash
-camb <the word/phrase you want to look up>     # e.g. camb stone
-camb <the word/phase with an apostrophe>       # e.g. camb "a stone's throw"
-camb <the word/phase with an apostrophe>       # e.g. camb a stone\'s throw
-camb -d <the word/phrase you want to look up>  # switch to debug mode to inspect problems if any
+camb <word/phrase>                    # search a word or phrase. e.g. camb stone
+camb <word/phrase with an apostrophe> # e.g. camb "a stone's throw" OR camb a stone\'s throw
+camb -v <word/phrase>                 # search a word or phrase in verbose mode 
+camb l                                # list words you've searched successfully 
+camb l -d                             # delete a word from words' list
 ```

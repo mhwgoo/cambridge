@@ -7,13 +7,8 @@ import sqlite3
 from bs4 import BeautifulSoup
 
 """
-Cambridge is a terminal version of Cambridge Dictionary. Its dictionary data comes from https://dictionary.cambridge.org.
-
-Parsing takes less than 0.4 seconds.
-Most of the time is spent on fetching webpage.
-Total time is mostly between 0.5 to 3 seconds, occasionally 5 secs at most depending on network performance.
-
-python cambridge.py l | fzf --preview='python cambridge.py {}'
+Cambridge is a terminal version of Cambridge Dictionary. 
+The dictionary data comes from https://dictionary.cambridge.org.
 """
 
 CAMBRIDGE_URL = "https://dictionary.cambridge.org"

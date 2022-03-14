@@ -17,10 +17,10 @@ I'm a terminal person tired of pulling out a GUI app or browser, inputting words
 1. Just `camb` and "the word and phrase" you want to search.
 2. Takes 0.5 ~ 3 secs including webpage fetching, depending on the network speed. Less than 0.1 secs for the same word's second time search. 
 3. No unnecessary info, like ads, quizzes, pics, etc.
-4. Fetches the first dictionary on Cambridge Organization webpage without similar dictionaries with similar meanings making people dizzy.
+4. Fetches the first dictionary on Cambridge without similar dictionaries with similar meanings making people dizzy.
 5. If not found, a list of related word suggestions will be displayed.
 6. `camb l` to list words you've searched successfully. 
-7. `camb l | fzf --preview 'camb {}'`, with `fzf` integration, you'll get the following magics: 
+7. `camb l | fzf --preview 'camb {}'`, if you've installed [fzf](https://github.com/junegunn/fzf), you'll get the following magics: 
     - fuzzy finding a word from the word list & instantly previewing the meaning for each word you've found 
     - displaying the whole word list & instantly previewing each word meaning as you scroll through the list
 ![list words](/screenshots/fzf.png)

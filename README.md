@@ -38,3 +38,6 @@ camb -v <word/phrase>                 # search a word or phrase in verbose mode
 camb l                                # list words you've searched successfully 
 camb l -d                             # delete a word from the word list
 ```
+
+### Wishlist
+Feel free to make a wishlist, like specific dictionaries you want to incorporate, new features, etc. by creating an issue or emailing me. 

@@ -70,7 +70,7 @@ def search_words(args, con, cur):
                     insert_into_table(con, cur, input_word, RESPONSE_WORD, RESPONSE_URL,RESPONSE_TEXT)
                 # If a user inputs a word with plural form, it won't get cached again
                 except sqlite3.IntegrityError:
-                    logger.debug("Similar word '%s' from the cambridge dictionary found in cache, stop caching", RESPONSE_WORD)
+                    logger.debug("Not to cache word of '%s' because it already exists", RESPONSE_WORD)
                 else:
                     logger.debug("Done caching search result of '%s'", input_word)
         else:
@@ -124,7 +124,7 @@ def parse_args(con, cur):
 
 def get_query_word(args):
     input_word = args.words[0]
-    query_word = args.words[0].replace(" ", "-")
+    query_word = args.words[0].replace(" ", "-").replace("/", "-")
     return input_word, query_word
 
 
@@ -162,7 +162,7 @@ def call_on_error(error, url, attempt, op):
     )
     if attempt == 3:
         logger.debug("Maximum %s retries reached. Exit", op)
-        logger.error("Please try later: " + str(error))
+        logger.error(str(error))
         sys.exit()
     return attempt
 
@@ -189,39 +189,40 @@ def parse_spellcheck(args, session):
 def parse_first_dict():
     global RESPONSE_TEXT
     global RESPONSE_URL
+    if "isn’t in the Cambridge Dictionary yet. You can help!" in RESPONSE_TEXT or "404. Page not found" in RESPONSE_TEXT:
+        print("\n" + str(NoResultError()) + "\n")
+        sys.exit()
     soup = BeautifulSoup(RESPONSE_TEXT, "lxml")
-    attempt = 1
-    while True:
-        first_dict = soup.find("div", "pr dictionary")
-        if not first_dict:
-            if "isn’t in the Cambridge Dictionary yet. You can help!" in RESPONSE_TEXT:
-                print("\n" + str(NoResultError()) + "\n")
-                sys.exit()
-            else:
-                attempt = call_on_error(
-                    ParsedNoneError(), RESPONSE_URL, attempt, OP[1]
-                )
-        else:
-            return first_dict
+    first_dict = soup.find("div", "pr dictionary")
+    if not first_dict:
+        print("\n" + str(ParsedNoneError()) + "\n")
+        sys.exit()
+    else:
+        return first_dict
 
 def parse_dict_blocks():
     first_dict = parse_first_dict()
-    if first_dict.find(
-        "div", ["pr entry-body__el", "entry-body__el clrd js-share-holder"]
-    ):
-        blocks = first_dict.find_all(
+    try:
+        result = first_dict.find(
             "div", ["pr entry-body__el", "entry-body__el clrd js-share-holder"]
         )
+    except AttributeError:
+        print("\n" + str(NoResultError()) + "\n")
+        sys.exit()
     else:
-        blocks = first_dict.find_all("div", "pr idiom-block")
-    return blocks
+        if result:
+            blocks = first_dict.find_all(
+                "div", ["pr entry-body__el", "entry-body__el clrd js-share-holder"]
+            )
+        else:
+            blocks = first_dict.find_all("div", "pr idiom-block")
+        return blocks, first_dict
 
 # ----------parse dict head----------
 def parse_head_title(title_block):
     if title_block.find("div", "di-title"):
         word = title_block.find("div", "di-title").text.upper()
         return word
-
 
 def parse_head_type(head):
     if head.find("span", "anc-info-head danc-info-head"):
@@ -587,8 +588,7 @@ def parse_dict_body(block):
         parse_phrasal_verb(block)
 
 
-def parse_dict_name():
-    first_dict = parse_first_dict()
+def parse_dict_name(first_dict):
     dict_info = replace_all(first_dict.small.text).replace("(", "").replace(")", "")
     dict_name = dict_info.split("©")[0]
     dict_name = dict_name.split("the")[-1]
@@ -611,11 +611,11 @@ def request_and_print(url, args):
             return True
 
 def print_dict():
-    blocks = parse_dict_blocks()
+    blocks, first_dict = parse_dict_blocks()
     for block in blocks:
         parse_dict_head(block)
         parse_dict_body(block)
-    parse_dict_name()
+    parse_dict_name(first_dict)
 
 
 # ----------main----------

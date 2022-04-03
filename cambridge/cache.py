@@ -1,6 +1,5 @@
-import sqlite3
-import datetime
 from pathlib import Path
+import datetime
 
 dir = Path.home() / ".cache" / "cambridge"
 dir.mkdir(parents=True, exist_ok=True)
@@ -9,11 +8,11 @@ DB = str(dir / "cambridge.db")
 current_datetime = datetime.datetime.now()
 
 def create_table (con, cur):
-    cur.execute('''CREATE TABLE words
-        ("input_word" TEXT UNIQUE NOT NULL,
+    cur.execute('''CREATE TABLE words (
+        "input_word" TEXT UNIQUE NOT NULL,
         "response_word" TEXT UNIQUE NOT NULL,
-        "created_at" TEXT NOT NULL,
-       "response_url" TEXT UNIQUE NOT NULL,
+        "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        "response_url" TEXT UNIQUE NOT NULL,
         "response_text" TEXT NOT NULL)''')
     con.commit()
 
@@ -23,7 +22,7 @@ def check_table(cur):
     return data
 
 def insert_into_table(con, cur, input_word, response_word, url, text):
-    cur.execute("INSERT INTO words VALUES (?, ?, ?, ?, ?)", (input_word, response_word, current_datetime, url, text))
+    cur.execute("INSERT INTO words (input_word, response_word, created_at, response_url, response_text) VALUES (?, ?, ?, ?, ?)", (input_word, response_word, current_datetime, url, text))
     con.commit()
 
 def get_cache(cur, word, resquest_url):

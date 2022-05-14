@@ -12,7 +12,7 @@ The dictionary data comes from https://dictionary.cambridge.org.
 """
 
 CAMBRIDGE_URL = "https://dictionary.cambridge.org"
-DICT_BASE_URL = "https://dictionary.cambridge.org/dictionary/english/"  # if no result found in cambridge database, response.url is this.
+DICT_BASE_URL = "https://dictionary.cambridge.org/dictionary/english/"  # if no result found in cambridge, response.url is this.
 SPELLCHECK_BASE_URL = "https://dictionary.cambridge.org/spellcheck/english/?q="
 
 RESQUEST_URL = ""
@@ -23,6 +23,7 @@ RESPONSE_TEXT = ""
 OP = ["FETCHING", "PARSING"]
 
 def list_words(args, con, cur):
+    # The subparser i.e. the sub-command isn't in the namespace of args
     if args.delete:
         word = " ".join(args.delete)
         if delete_word(con, cur, word):
@@ -79,14 +80,21 @@ def search_words(args, con, cur):
             print_dict()
 
 
-def parse_args(con, cur):
+def parse_args():
     parser = argparse.ArgumentParser(
         description="Terminal Version of Cambridge Dictionary"
     )
+    
+    # Add sub-command capability that can identify different sub-command name 
     sub_parsers = parser.add_subparsers(dest='subparser_name')
 
+    # Add sub-command l
     parser_lw = sub_parsers.add_parser("l", help="list all the words you've successfully searched")
+
+    # Make sub-command l run default funtion of "list_words"
     parser_lw.set_defaults(func=list_words)
+
+    # Add optional arguments
     parser_lw.add_argument(
         "-d",
         "--delete",
@@ -94,13 +102,20 @@ def parse_args(con, cur):
         help="delete a word or phrase from cache",
     )
 
+    # TODO: Make search as main parser rather than subparser
+    # Add sub-command s
     parser_sw = sub_parsers.add_parser("s", help="search a word or phrase")
+
+    # Make sub-command s run default function of "search_words"
     parser_sw.set_defaults(func=search_words)
+
+    # Add positional arguments with n args
     parser_sw.add_argument(
         "words",
         nargs="+",
         help="A word or phrase you want to search",
     )
+    # Add optional arguments
     parser_sw.add_argument(
         "-v",
         "--verbose",
@@ -108,14 +123,18 @@ def parse_args(con, cur):
         help="search a world or phrase in verbose mode",
     )
 
+    # If there is only program name or argument for help
     if len(sys.argv)==1 or sys.argv[1] == "-h" or sys.argv[1] == "--help":
-        parser.print_help(sys.stderr)
-        sys.exit(1)
+        parser.print_help()
+        sys.exit(0)
+
+    # If Searching words without typing the extra sub-command s
     elif sys.argv[1] != "s" and sys.argv[1] != "l" and len(sys.argv) > 1:
         if sys.argv[1] == "-v" or sys.argv[1] == "--verbose":
             args = parser.parse_args(["s", "-v", " ".join(sys.argv[2:])])
         else:
             args = parser.parse_args(["s", " ".join(sys.argv[1:])])
+
     else:
         args = parser.parse_args()
 
@@ -624,11 +643,8 @@ def main():
         con = sqlite3.connect(DB, detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
         cur = con.cursor()
 
-        args = parse_args(con, cur)
-        if args.subparser_name == "l":
-            args.func(args, con, cur)
-        else:
-            args.func(args, con,cur)
+        args = parse_args()
+        args.func(args, con, cur)
 
         cur.close()
         con.close()

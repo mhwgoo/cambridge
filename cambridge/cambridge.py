@@ -102,7 +102,6 @@ def parse_args():
         help="delete a word or phrase from cache",
     )
 
-    # TODO: Make search as main parser rather than subparser
     # Add sub-command s
     parser_sw = sub_parsers.add_parser("s", help="search a word or phrase")
 
@@ -129,12 +128,13 @@ def parse_args():
         sys.exit(0)
 
     # If Searching words without typing the extra sub-command s
-    elif sys.argv[1] != "s" and sys.argv[1] != "l" and len(sys.argv) > 1:
-        if sys.argv[1] == "-v" or sys.argv[1] == "--verbose":
+    elif sys.argv[1] != "l" and len(sys.argv) > 1:
+        if "-v" in sys.argv[1]:
             args = parser.parse_args(["s", "-v", " ".join(sys.argv[2:])])
+        elif "-v" in sys.argv[-1]:
+            args = parser.parse_args(["s", " ".join(sys.argv[1:-1]), "-v"])
         else:
             args = parser.parse_args(["s", " ".join(sys.argv[1:])])
-
     else:
         args = parser.parse_args()
 

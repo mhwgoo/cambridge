@@ -119,22 +119,23 @@ def parse_args():
         "-v",
         "--verbose",
         action="store_true",
-        help="search a world or phrase in verbose mode",
+        help="search a word or phrase in verbose mode",
     )
 
-    # If there is only program name or argument for help
+    # If it is for help
     if len(sys.argv)==1 or sys.argv[1] == "-h" or sys.argv[1] == "--help":
         parser.print_help()
         sys.exit(0)
 
-    # If Searching words without typing the extra sub-command s
+    # If it is to search words
     elif sys.argv[1] != "l" and len(sys.argv) > 1:
-        if "-v" in sys.argv[1]:
-            args = parser.parse_args(["s", "-v", " ".join(sys.argv[2:])])
-        elif "-v" in sys.argv[-1]:
-            args = parser.parse_args(["s", " ".join(sys.argv[1:-1]), "-v"])
+        # If in verbose mode
+        if "-v" in sys.argv or "--verbose" in sys.argv:
+            args = parser_sw.parse_args(["-v",  " ". join([i for i in sys.argv[1:] if not "-v" in i])])
         else:
-            args = parser.parse_args(["s", " ".join(sys.argv[1:])])
+            args = parser_sw.parse_args([" ". join(sys.argv[1:])])
+
+    # If it is not to search words
     else:
         args = parser.parse_args()
 

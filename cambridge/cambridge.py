@@ -1,6 +1,7 @@
 import argparse
 import logging
 import time
+from datetime import datetime
 import requests
 import sys
 import sqlite3
@@ -38,7 +39,12 @@ def list_words(args, con, cur):
             logger.error("You may haven't searched any word yet")
         else:
             # data is something like [('hello',), ('good',), ('world',)]
-            for i in sorted(data):
+            if args.recent:
+                data.sort(reverse=True, key=lambda tup: tup[1])
+            else:
+                data.sort()
+
+            for i in data:
                 print(i[0])
 
 
@@ -89,18 +95,28 @@ def parse_args():
     sub_parsers = parser.add_subparsers(dest='subparser_name')
 
     # Add sub-command l
-    parser_lw = sub_parsers.add_parser("l", help="list all the words you've successfully searched")
+    parser_lw = sub_parsers.add_parser("l", help="list all the words you've successfully searched in alphabetical order")
 
     # Make sub-command l run default funtion of "list_words"
     parser_lw.set_defaults(func=list_words)
 
-    # Add optional arguments
+    # Add optional argument for deleting a word from word list
     parser_lw.add_argument(
         "-d",
         "--delete",
         nargs="+",
         help="delete a word or phrase from cache",
     )
+
+
+    # Add optional argument for listing words by time
+    parser_lw.add_argument(
+        "-r",
+        "--recent",
+        action="store_true",
+        help="list all the words you've successfully searched in reverse chronological order",
+    )
+
 
     # Add sub-command s
     parser_sw = sub_parsers.add_parser("s", help="search a word or phrase")

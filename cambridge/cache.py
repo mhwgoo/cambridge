@@ -36,6 +36,12 @@ def get_response_words(cur):
     data = cur.fetchall()
     return data
 
+# Get random response words for l -r command
+def get_random_words(cur):
+    cur.execute("SELECT response_word FROM words ORDER BY RANDOM() LIMIT 20")
+    data = cur.fetchall()
+    return data
+
 def delete_word(con, cur, word):
     cur.execute("SELECT input_word FROM words WHERE input_word = ? OR response_word = ? ", (word, word))
     data = cur.fetchone()

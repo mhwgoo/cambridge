@@ -1,7 +1,6 @@
 import argparse
 import logging
 import time
-from datetime import datetime
 import requests
 import sys
 import sqlite3
@@ -31,19 +30,26 @@ def list_words(args, con, cur):
             print("'" + word + "'" + " got deleted from cache successfully")
         else:
             logger.error("No such word '%s' in cache", word)
-
+    elif args.random:
+        try:
+            # data is something like [('hello',), ('good',), ('world',)]
+            data = get_random_words(cur)
+        except sqlite3.OperationalError:
+            logger.error("You may haven't searched any word yet")
+        else:
+            for i in data:
+                print(i[0])
     else:
         try:
+            # data is something like [('hello',), ('good',), ('world',)]
             data = get_response_words(cur)
         except sqlite3.OperationalError:
             logger.error("You may haven't searched any word yet")
         else:
-            # data is something like [('hello',), ('good',), ('world',)]
-            if args.recent:
+            if args.time:
                 data.sort(reverse=True, key=lambda tup: tup[1])
             else:
                 data.sort()
-
             for i in data:
                 print(i[0])
 
@@ -108,15 +114,21 @@ def parse_args():
         help="delete a word or phrase from cache",
     )
 
-
-    # Add optional argument for listing words by time
+    # Add optional argument for listing all words by time
     parser_lw.add_argument(
-        "-r",
-        "--recent",
+        "-t",
+        "--time",
         action="store_true",
         help="list all the words you've successfully searched in reverse chronological order",
     )
 
+    # Add optional argument for listing words randomly chosen 
+    parser_lw.add_argument(
+        "-r",
+        "--random",
+        action="store_true",
+        help="randomly list the words you've successfully searched",
+    )
 
     # Add sub-command s
     parser_sw = sub_parsers.add_parser("s", help="search a word or phrase")
@@ -139,15 +151,17 @@ def parse_args():
     )
 
     # If it is for help
-    if len(sys.argv)==1 or sys.argv[1] == "-h" or sys.argv[1] == "--help":
+    if len(sys.argv)==1:
         parser.print_help()
         sys.exit(0)
 
     # If it is to search words
     elif sys.argv[1] != "l" and len(sys.argv) > 1:
-        # If in verbose mode
         if "-v" in sys.argv or "--verbose" in sys.argv:
             args = parser_sw.parse_args(["-v",  " ". join([i for i in sys.argv[1:] if not "-v" in i])])
+        elif "-h" in sys.argv or "--help" in sys.argv:
+            parser_sw.print_help()
+            sys.exit(0)
         else:
             args = parser_sw.parse_args([" ". join(sys.argv[1:])])
 
@@ -675,7 +689,7 @@ if __name__ == "__main__":
     from utils import replace_all, parse_from_url
     from console import console
     from errors import ParsedNoneError, NoResultError
-    from cache import DB, create_table, insert_into_table, get_cache, get_response_words, delete_word, check_table
+    from cache import DB, create_table, insert_into_table, get_cache, get_response_words, get_random_words, delete_word, check_table
 
     t1 = time.time()
     main()
@@ -688,4 +702,4 @@ else:
     from .utils import replace_all, parse_from_url
     from .console import console
     from .errors import ParsedNoneError, NoResultError
-    from .cache import DB, create_table, insert_into_table, get_cache, get_response_words, delete_word, check_table
+    from .cache import DB, create_table, insert_into_table, get_cache, get_response_words, get_random_words, delete_word, check_table

@@ -32,10 +32,13 @@ pip install cambridge
 
 ## Usage
 ```bash
-camb <word/phrase>               # search a word or phrase. e.g. camb stone
-camb <phrase with an apostrophe> # e.g. camb "a stone's throw" OR camb a stone\'s throw
-camb <phrase with a slash>       # e.g. camb "have your/its moments" OR camb have your\/its moments 
-camb -v <word/phrase>            # search a word or phrase in verbose mode 
-camb l                           # list words you've searched successfully 
+camb <word/phrase>               # search a word or phrase. e.g. camb innocuous
+camb <word/phrase> -v            # search a word or phrase in verbose mode
+camb l                           # list all words you've searched successfully in alphabetical order
+camb l -t                        # list all words you've searched successfully in reverse chronological order
+camb l -r                        # randomly list 20 words you've searched successfully
 camb l -d                        # delete a word from the word list
+
+camb <phrase with an apostrophe> # e.g. camb "a stone's throw" OR camb a stone\'s throw
+camb <phrase with a slash>       # e.g. camb "have your/its moments" OR camb have your\/its moments
 ```

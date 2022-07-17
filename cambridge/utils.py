@@ -28,9 +28,7 @@ def replace_all(string):
 def parse_from_url(url):
     url = parse.unquote(url)
     response_base_url = url.split("?")[0]
-    response_word = response_base_url.split("/")[-1].replace("-", " ")
-    return response_base_url, response_word
-
+    return response_base_url
 
 def profile(func):
     """A decorator that uses cProfile to profile a function"""

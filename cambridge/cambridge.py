@@ -5,6 +5,7 @@ import requests
 import sys
 import sqlite3
 from bs4 import BeautifulSoup
+from functools import wraps
 
 """
 Cambridge is a terminal version of Cambridge Dictionary. 
@@ -53,7 +54,6 @@ def list_words(args, con, cur):
             for i in data:
                 print(i[0])
 
-
 def search_words(args, con, cur):
     global REQUEST_URL
     global RESPONSE_WORD
@@ -83,14 +83,13 @@ def search_words(args, con, cur):
                     insert_into_table(con, cur, input_word, RESPONSE_WORD, RESPONSE_URL,RESPONSE_TEXT)
                 # If a user inputs a word with plural form, it won't get cached again
                 except sqlite3.IntegrityError:
-                    logger.debug("Not to cache word of '%s' because it already exists", RESPONSE_WORD)
+                    logger.debug("Cancel caching word of '%s' because it already exists", RESPONSE_WORD)
                 else:
                     logger.debug("Done caching search result of '%s'", input_word)
         else:
             logger.debug("Already cached '%s' before. Use cache", input_word)
             RESPONSE_URL, RESPONSE_TEXT = data[0], data[1]
             print_dict()
-
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -201,7 +200,6 @@ def fetch(url, session):
         else:
             return r
 
-
 def call_on_error(error, url, attempt, op):
     attempt += 1
     logger.debug(
@@ -215,7 +213,6 @@ def call_on_error(error, url, attempt, op):
         logger.error(str(error))
         sys.exit()
     return attempt
-
 
 def parse_spellcheck(args, session):
     word = " ".join(args.words).upper()
@@ -235,15 +232,19 @@ def parse_spellcheck(args, session):
             suggestion = replace_all(i.text)
             console.print("[#b2b2b2]" + "  • " + suggestion)
 
-
 def parse_first_dict():
     global RESPONSE_TEXT
     global RESPONSE_URL
+    global RESPONSE_WORD
+
     if "isn’t in the Cambridge Dictionary yet. You can help!" in RESPONSE_TEXT or "404. Page not found" in RESPONSE_TEXT:
         print("\n" + str(NoResultError()) + "\n")
         sys.exit()
+
     soup = BeautifulSoup(RESPONSE_TEXT, "lxml")
     first_dict = soup.find("div", "pr dictionary")
+    RESPONSE_WORD = soup.find("title").text.split("|")[0].strip().lower()
+
     if not first_dict:
         print("\n" + str(ParsedNoneError()) + "\n")
         sys.exit()
@@ -646,15 +647,15 @@ def parse_dict_name(first_dict):
 
 def request_and_print(url, args):
     with requests.Session() as session:
+        session.trust_env = False
         response = fetch(url, session)
         if response.url == DICT_BASE_URL:
             parse_spellcheck(args, session)
             return False
         else:
-            global RESPONSE_WORD
             global RESPONSE_URL
             global RESPONSE_TEXT
-            RESPONSE_URL, RESPONSE_WORD = parse_from_url(response.url)
+            RESPONSE_URL = parse_from_url(response.url)
             RESPONSE_TEXT = response.text
             logger.debug("Fetched html from %s successfully", RESPONSE_URL)
             print_dict()
@@ -669,6 +670,18 @@ def print_dict():
 
 
 # ----------main----------
+def timer(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        start_at = time.time()
+        f = func(*args, **kwargs)
+        time_taken = time.time() - start_at
+        print("Time taken: {} seconds".format(time_taken))
+        return f
+
+    return wrapper
+
+@timer
 def main():
     try:
         con = sqlite3.connect(DB, detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
@@ -691,10 +704,7 @@ if __name__ == "__main__":
     from errors import ParsedNoneError, NoResultError
     from cache import DB, create_table, insert_into_table, get_cache, get_response_words, get_random_words, delete_word, check_table
 
-    t1 = time.time()
     main()
-    t2 = time.time()
-    print(f"\nTIME TAKEN: {t2 - t1}")
 
 
 else:

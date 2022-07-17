@@ -215,7 +215,7 @@ def call_on_error(error, url, attempt, op):
     return attempt
 
 def parse_spellcheck(args, session):
-    word = " ".join(args.words).upper()
+    word = " ".join(args.words)
     query_word = "+".join(args.words)
     url = SPELLCHECK_BASE_URL + query_word
     response = fetch(url, session)
@@ -223,7 +223,7 @@ def parse_spellcheck(args, session):
     content = soup.find("div", "hfl-s lt2b lmt-10 lmb-25 lp-s_r-20")
     print()
     console.print("[bold #3C8DAD on #DDDDDD]" + word)
-    title = content.h1.text.upper().strip()
+    title = content.h1.text.strip()
     console.print("[bold]" + "\n" + title)
     for ul in content.find_all("ul", "hul-u"):
         notice = ul.find_previous_sibling().text
@@ -272,7 +272,7 @@ def parse_dict_blocks():
 # ----------parse dict head----------
 def parse_head_title(title_block):
     if title_block.find("div", "di-title"):
-        word = title_block.find("div", "di-title").text.upper()
+        word = title_block.find("div", "di-title").text
         return word
 
 def parse_head_type(head):
@@ -286,10 +286,10 @@ def parse_head_type(head):
                 },
             ).text
         )
-        w_type = replace_all(w_type).upper()
+        w_type = replace_all(w_type)
     elif head.find("div", "posgram dpos-g hdib lmr-5"):
         posgram = head.find("div", "posgram dpos-g hdib lmr-5")
-        w_type = replace_all(posgram.text).upper()
+        w_type = replace_all(posgram.text)
     else:
         w_type = None
     return w_type
@@ -316,7 +316,7 @@ def parse_head_tense(head):
 
 
 def parse_head_domain(head):
-    domain = replace_all(head.find("span", "domain ddomain").text.upper())
+    domain = replace_all(head.find("span", "domain ddomain").text)
     console.print("[bold]" + domain, end="  ")
 
 
@@ -383,7 +383,7 @@ def parse_dict_head(block):
 
 # ----------parse dict body----------
 def parse_def_title(block):
-    d_title = replace_all(block.find("h3", "dsense_h").text).upper()
+    d_title = replace_all(block.find("h3", "dsense_h").text)
     console.print("[bold #3C8DAD]" + "\n" + d_title)
 
 
@@ -643,7 +643,7 @@ def parse_dict_name(first_dict):
     dict_info = replace_all(first_dict.small.text).replace("(", "").replace(")", "")
     dict_name = dict_info.split("©")[0]
     dict_name = dict_name.split("the")[-1]
-    console.print("[#125D98]" + dict_name + "\n", justify="right")
+    console.print(dict_name + "\n", justify="right")
 
 def request_and_print(url, args):
     with requests.Session() as session:
@@ -675,13 +675,13 @@ def timer(func):
     def wrapper(*args, **kwargs):
         start_at = time.time()
         f = func(*args, **kwargs)
-        time_taken = time.time() - start_at
+        time_taken = round((time.time() - start_at), 2)
         print("Time taken: {} seconds".format(time_taken))
         return f
 
     return wrapper
 
-@timer
+# @timer
 def main():
     try:
         con = sqlite3.connect(DB, detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)

@@ -253,7 +253,7 @@ def parse_first_dict(url):
             attempt = call_on_error(e, url, attempt, OP[1])
         else:
             if not first_dict: 
-                attempt = call_on_error(ParsedNoneErrors(), url, attempt, OP[0])
+                attempt = call_on_error(ParsedNoneError(), url, attempt, OP[0])
 
             RESPONSE_WORD = soup.find("title").text.split("|")[0].strip().lower()
             return first_dict

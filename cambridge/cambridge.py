@@ -54,7 +54,7 @@ def list_words(args, con, cur):
             for i in data:
                 print(i[0])
 
-def search_words(args, con, cur):
+def search_words(args, con, cur, url):
     global REQUEST_URL
     global RESPONSE_WORD
     global RESPONSE_URL

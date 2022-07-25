@@ -89,7 +89,7 @@ def search_words(args, con, cur):
         else:
             logger.debug("Already cached '%s' before. Use cache", input_word)
             RESPONSE_URL, RESPONSE_TEXT = data[0], data[1]
-            print_dict()
+            print_dict(url)
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -198,6 +198,8 @@ def fetch(url, session):
         except Exception as e:
             attempt = call_on_error(e, url, attempt, OP[0])
         else:
+            if r.status_code != 200:  # only a 200 response has a response body
+                attempt = call_on_error(r.status_code, url, attempt, OP[0])
             return r
 
 def call_on_error(error, url, attempt, op):
@@ -232,7 +234,7 @@ def parse_spellcheck(args, session):
             suggestion = replace_all(i.text)
             console.print("[#b2b2b2]" + "  • " + suggestion)
 
-def parse_first_dict():
+def parse_first_dict(url):
     global RESPONSE_TEXT
     global RESPONSE_URL
     global RESPONSE_WORD
@@ -242,17 +244,22 @@ def parse_first_dict():
         sys.exit()
 
     soup = BeautifulSoup(RESPONSE_TEXT, "lxml")
-    first_dict = soup.find("div", "pr dictionary")
-    RESPONSE_WORD = soup.find("title").text.split("|")[0].strip().lower()
+    attempt = 0
 
-    if not first_dict:
-        print("\n" + str(ParsedNoneError()) + "\n")
-        sys.exit()
-    else:
-        return first_dict
+    while True:
+        try:
+            first_dict = soup.find("div", "pr dictionary")
+        except Exception as e:
+            attempt = call_on_error(e, url, attempt, OP[1])
+        else:
+            if not first_dict: 
+                attempt = call_on_error(ParsedNoneErrors(), url, attempt, OP[0])
 
-def parse_dict_blocks():
-    first_dict = parse_first_dict()
+            RESPONSE_WORD = soup.find("title").text.split("|")[0].strip().lower()
+            return first_dict
+
+def parse_dict_blocks(url):
+    first_dict = parse_first_dict(url)
     try:
         result = first_dict.find(
             "div", ["pr entry-body__el", "entry-body__el clrd js-share-holder"]
@@ -658,11 +665,11 @@ def request_and_print(url, args):
             RESPONSE_URL = parse_from_url(response.url)
             RESPONSE_TEXT = response.text
             logger.debug("Fetched html from %s successfully", RESPONSE_URL)
-            print_dict()
+            print_dict(url)
             return True
 
-def print_dict():
-    blocks, first_dict = parse_dict_blocks()
+def print_dict(url):
+    blocks, first_dict = parse_dict_blocks(url)
     for block in blocks:
         parse_dict_head(block)
         parse_dict_body(block)

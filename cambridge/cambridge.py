@@ -54,7 +54,7 @@ def list_words(args, con, cur):
             for i in data:
                 print(i[0])
 
-def search_words(args, con, cur, url):
+def search_words(args, con, cur):
     global REQUEST_URL
     global RESPONSE_WORD
     global RESPONSE_URL
@@ -89,7 +89,7 @@ def search_words(args, con, cur, url):
         else:
             logger.debug("Already cached '%s' before. Use cache", input_word)
             RESPONSE_URL, RESPONSE_TEXT = data[0], data[1]
-            print_dict(url)
+            print_dict(REQUEST_URL)
 
 def parse_args():
     parser = argparse.ArgumentParser(

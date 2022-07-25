@@ -15,7 +15,7 @@ requires = [
     "rich"
 ]
 
-keywords = "dictionary, cambridge, python scraping"
+keywords = "dictionary, cambridge, web scraping, python"
 
 classifiers = ["License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)", "Programming Language :: Python :: 3", "Environment :: Console"]
 

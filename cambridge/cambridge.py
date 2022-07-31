@@ -1,3 +1,8 @@
+"""
+Cambridge is a terminal version of Cambridge Dictionary. 
+The dictionary data comes from https://dictionary.cambridge.org.
+"""
+
 import argparse
 import logging
 import time
@@ -7,10 +12,8 @@ import sqlite3
 from bs4 import BeautifulSoup
 from functools import wraps
 
-"""
-Cambridge is a terminal version of Cambridge Dictionary. 
-The dictionary data comes from https://dictionary.cambridge.org.
-"""
+from fake_user_agent import user_agent
+
 
 CAMBRIDGE_URL = "https://dictionary.cambridge.org"
 
@@ -68,7 +71,7 @@ def search_words(args, con, cur):
     REQUEST_URL = DICT_BASE_URL + query_word
 
     if args.verbose:
-        logger.setLevel(logging.DEBUG)
+        logging.getLogger(__package__).setLevel(logging.DEBUG)
 
     if len(check_table(cur)) == 0:
         logger.debug("Searching %s for '%s'", CAMBRIDGE_URL, input_word)
@@ -153,22 +156,30 @@ def parse_args():
         help="search a word or phrase in verbose mode",
     )
 
-    # If it is for help
+    # Add optional arguments
+    parser_sw.add_argument(
+        "-c",
+        "--chn",
+        action="store_true",
+        help="search a word or phrase with Chinese Translation",
+    )
+
     if len(sys.argv)==1:
         parser.print_help()
         sys.exit(0)
 
-    # If it is to search words
     elif sys.argv[1] != "l" and len(sys.argv) > 1:
-        if "-v" in sys.argv or "--verbose" in sys.argv:
-            args = parser_sw.parse_args(["-v",  " ". join([i for i in sys.argv[1:] if not "-v" in i])])
-        elif "-h" in sys.argv or "--help" in sys.argv:
-            parser_sw.print_help()
-            sys.exit(0)
-        else:
-            args = parser_sw.parse_args([" ". join(sys.argv[1:])])
+        to_parse = []
+        word = []
+        for i in sys.argv[1:]:
+            if i.startswith("-"):
+                to_parse.append(i)
+            else:
+                word.append(i)
+        to_search = " ".join(word)
+        to_parse.append(to_search)
+        args = parser_sw.parse_args(to_parse)
 
-    # If it is not to search words
     else:
         args = parser.parse_args()
 
@@ -182,9 +193,8 @@ def get_query_word(args):
 
 
 def fetch(url, session):
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/29.0.1547.62 Safari/537.36"
-    }
+    ua = user_agent()
+    headers = {"User-Agent": ua}
     session.headers.update(headers)
     attempt = 0 
 
@@ -716,8 +726,7 @@ if __name__ == "__main__":
     from cache import DB, create_table, insert_into_table, get_cache, get_response_words, get_random_words, delete_word, check_table
 
     main()
-
-
+    
 else:
     from .log import logger
     from .utils import replace_all, parse_from_url

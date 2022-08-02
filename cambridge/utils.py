@@ -1,8 +1,11 @@
 """
 This script contains utility functions.
 """
+
+import time
 import cProfile, pstats, io
 from urllib import parse
+from functools import wraps
 
 
 def replace_all(string):
@@ -25,10 +28,29 @@ def replace_all(string):
         .strip()
     )
 
+
 def parse_from_url(url):
     url = parse.unquote(url)
     response_base_url = url.split("?")[0]
     return response_base_url
+
+
+def get_request_url(url, input_word):
+    """Return the url formatted for requesting the web page at the url."""
+
+    query_word = input_word.replace(" ", "-").replace("/", "-")
+    request_url = url + query_word
+
+    return request_url 
+
+def get_requsest_url_spellcheck(url, input_word):
+    """Return the url formatted for requesting the spellcheck web page at the url."""
+
+    query_word = input_word.replace(" ", "+").replace("/", "+")
+    request_url = url + query_word
+
+    return request_url
+
 
 def profile(func):
     """A decorator that uses cProfile to profile a function"""
@@ -46,3 +68,15 @@ def profile(func):
         return retval
 
     return inner
+
+
+def timer(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        start_at = time.time()
+        f = func(*args, **kwargs)
+        time_taken = round((time.time() - start_at), 2)
+        print("Time taken: {} seconds".format(time_taken))
+        return f
+
+    return wrapper

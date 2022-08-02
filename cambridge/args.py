@@ -118,9 +118,9 @@ def list_words(args, con, cur):
     if args.delete:
         word = " ".join(args.delete)
         if delete_word(con, cur, word):
-            print("'" + word + "'" + " got deleted from cache successfully")
+            print(f'"{word}" got deleted from cache successfully')
         else:
-            logger.error("No such word '%s' in cache", word)
+            logger.error(f'No such word "{word}" in cache')
     elif args.random:
         try:
             # data is something like [('hello',), ('good',), ('world',)]
@@ -145,7 +145,6 @@ def list_words(args, con, cur):
                 print(i[0])
 
 
-# FIXME
 def search_word(args, con, cur):
     # FIXME docstring not finished
     """
@@ -159,52 +158,37 @@ def search_word(args, con, cur):
     if args.verbose:
         logging.getLogger(__package__).setLevel(logging.DEBUG)
 
-    # try:
-        # check_table(cur)
-    # except sqlite3.OperationalError: 
+    data = get_cache(cur, input_word, request_url)  # data is a tuple if any
+
+    if data is None:
         logger.debug(f'Searching {CAMBRIDGE_URL} for "{input_word}"')
 
         result = request_and_print(request_url, input_word)
         found = result[0]
         response_word, response_url, response_text, soup = result[1]
 
-        print(data)
-
         if found:
-            logger.debug(f'Caching search result of "{input_word}"')
+            try:
+                logger.debug(f'Caching search result of "{input_word}"')
 
-            create_table(con, cur)
-            insert_into_table(con, cur, input_word, response_word, response_url, response_text)
+                check_table(cur)
+            except sqlite3.OperationalError: 
+                create_table(con, cur)
 
-            logger.debug(f'Done caching search result of "{input_word}"')
-    else:
-        # FIXME not to check table, first get_cache, if it throws notable error for example, catch it and deal with it
-        data = get_cache(cur, input_word, request_url)
+            try: 
+                insert_into_table(con, cur, input_word, response_word, response_url, response_text)
+            except sqlite3.IntegrityError:
+                logger.debug(f'Cancel caching word of "{input_word}" because it already exists')
+            else:
+                logger.debug(f'Done caching search result of "{input_word}"')
 
-        if data is None:
-            logger.debug(f'Searching {CAMBRIDGE_URL} for "{input_word}"')
-
-            result = request_and_print(request_url, input_word)
-            found = result[0]
-            response_word, response_url, response_text, soup = result[1]
-
-            if found:
-                try:
-                    logger.debug(f'Caching search result of "{input_word}"')
-
-                    insert_into_table(con, cur, input_word, response_word, response_url, response_text)
-
-                # If a user inputs a word with plural form, the single form of it has been cached and it won't get cached again
-                except sqlite3.IntegrityError:
-                    logger.debug(f'Cancel caching word of "{response_word}" because it already exists')
-                else:
-                    logger.debug(f'Done caching search result of "{input_word}"')
         else:
-            logger.debug(f'Already cached "{input_word}" before. Use cache')
-            # FIXME response_url not used
-            response_text = data[1]
-            soup = BeautifulSoup(response_text, "lxml")
-            print_dict(request_url, soup)
+            sys.exit()
+
+    else:
+        logger.debug(f'Already cached "{input_word}" before. Use cache')
+        soup = BeautifulSoup(data[0], "lxml")
+        print_dict(request_url, soup)
 
 
 # ----------print dict ----------

@@ -23,4 +23,4 @@ classifiers = ["License :: OSI Approved :: GNU General Public License v3 or late
 publish = ["flit"]
 
 [tool.flit.scripts]
-camb = "cambridge.cambridge:main"
+camb = "cambridge.main:main"

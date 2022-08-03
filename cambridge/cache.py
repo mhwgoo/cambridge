@@ -20,10 +20,10 @@ def create_table(con, cur):
     con.commit()
 
 
-def check_table(cur):
-    """Check a table exists or not"""
-
-    cur.execute("SELECT name FROM sqlite_schema WHERE type='table'")
+# def check_table(cur):
+#     """Check a table exists or not"""
+#
+#     cur.execute("SELECT name FROM sqlite_schema WHERE type='table'")
 
 
 def insert_into_table(con, cur, input_word, response_word, url, text):
@@ -43,15 +43,17 @@ def get_cache(cur, word, resquest_url):
     return data
 
 
-# Get all response words for l command
 def get_response_words(cur):
+    """Get all response words for l command on terminal"""
+
     cur.execute("SELECT response_word, created_at FROM words")
     data = cur.fetchall()
     return data
 
 
-# Get random response words for l -r command
 def get_random_words(cur):
+    """Get random response words for l -r command on terminal"""
+
     cur.execute("SELECT response_word FROM words ORDER BY RANDOM() LIMIT 20")
     data = cur.fetchall()
     return data

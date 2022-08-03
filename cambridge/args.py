@@ -12,7 +12,6 @@ from .cache import (
     get_response_words,
     get_random_words,
     delete_word,
-    check_table,
 )
 from .log import logger
 from .dicts.cambridge import (
@@ -146,10 +145,12 @@ def list_words(args, con, cur):
 
 
 def search_word(args, con, cur):
-    # FIXME docstring not finished
     """
     The function triggered when a user searches a word or phrase on terminal.
-    It checks the args, if "-v" or "--verbose" is in it, the debug mode will be turned on.
+    It checks the args, if "verbose" is in it, the debug mode will be turned on.
+    Then it checks the cache, if the word has been cached, uses it and prints it; if not, go fetch the web.
+    After fetching the data, prints it to the terminal and caches it.
+    If no word found in the cambridge, display word suggestions and exit.
     """
 
     input_word = args.words[0]
@@ -171,7 +172,6 @@ def search_word(args, con, cur):
             try:
                 logger.debug(f'Caching search result of "{input_word}"')
                 insert_into_table(con, cur, input_word, response_word, response_url, response_text)
-                # check_table(cur)
             except sqlite3.OperationalError: 
                 create_table(con, cur)
             except sqlite3.IntegrityError:

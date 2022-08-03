@@ -22,10 +22,9 @@ def parse_response_word(soup):
 def parse_spellcheck(input_word, soup):
     """Parse Cambridge spellcheck page and print it to the terminal."""
 
-    word = " ".join(input_word)
     content = soup.find("div", "hfl-s lt2b lmt-10 lmb-25 lp-s_r-20")
     print()
-    console.print("[bold #3C8DAD on #DDDDDD]" + word)
+    console.print("[bold #3C8DAD on #DDDDDD]" + input_word)
     title = content.h1.text.strip()
     console.print("[bold]" + "\n" + title)
     for ul in content.find_all("ul", "hul-u"):

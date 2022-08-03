@@ -5,9 +5,6 @@ The dictionary data comes from https://dictionary.cambridge.org.
 
 import sqlite3
 
-from .args import parse_args
-from .cache import DB
-
 # @timer
 def main():
     try:
@@ -24,4 +21,17 @@ def main():
 
     except KeyboardInterrupt:
         print("\nStopped by user")
+
+
+if __name__ == "__main__":
+    from args import parse_args
+    from cache import DB
+
+    main()
+
+else:
+    from .args import parse_args
+    from .cache import DB
+
+    print("Welcome to cambridge!")
 

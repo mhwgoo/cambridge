@@ -165,9 +165,9 @@ def search_word(args, con, cur):
 
         result = request_and_print(request_url, input_word)
         found = result[0]
-        response_word, response_url, response_text, soup = result[1]
 
         if found:
+            response_word, response_url, response_text, soup = result[1]
             try:
                 logger.debug(f'Caching search result of "{input_word}"')
 

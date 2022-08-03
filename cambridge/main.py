@@ -5,8 +5,8 @@ The dictionary data comes from https://dictionary.cambridge.org.
 
 import sqlite3
 
-from .args import parse_args
-from .cache import DB
+from args import parse_args
+from cache import DB
 
 # @timer
 def main():
@@ -25,5 +25,3 @@ def main():
     except KeyboardInterrupt:
         print("\nStopped by user")
 
-
-main()

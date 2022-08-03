@@ -3,9 +3,10 @@ import logging
 import argparse
 import sys
 import requests
+import threading
 from bs4 import BeautifulSoup
 
-from .cache import (
+from cambridge.cache import (
     create_table,
     insert_into_table,
     get_cache,
@@ -13,8 +14,8 @@ from .cache import (
     get_random_words,
     delete_word,
 )
-from .log import logger
-from .dicts.cambridge import (
+from cambridge.log import logger
+from cambridge.dicts.cambridge import (
     parse_spellcheck,
     parse_dict_blocks,
     parse_dict_body,
@@ -25,8 +26,8 @@ from .dicts.cambridge import (
     CAMBRIDGE_URL,
     SPELLCHECK_BASE_URL,
 )
-from .utils import get_request_url, get_requsest_url_spellcheck, parse_from_url
-from .fetch import fetch
+from cambridge.utils import get_request_url, get_requsest_url_spellcheck, parse_from_url
+from cambridge.fetch import fetch
 
 
 def parse_args():
@@ -119,7 +120,7 @@ def list_words(args, con, cur):
         if delete_word(con, cur, word):
             print(f'"{word}" got deleted from cache successfully')
         else:
-            logger.error(f'No such word "{word}" in cache')
+            logger.error(f'No "{word}" in cache')
     elif args.random:
         try:
             # data is something like [('hello',), ('good',), ('world',)]
@@ -159,37 +160,52 @@ def search_word(args, con, cur):
     if args.verbose:
         logging.getLogger(__package__).setLevel(logging.DEBUG)
 
-    data = get_cache(cur, input_word, request_url)  # data is a tuple if any
+    data = get_cache(con, cur, input_word, request_url)  # data is a tuple if any
 
     if data is None:
         logger.debug(f'Searching {CAMBRIDGE_URL} for "{input_word}"')
 
-        result = request_and_print(request_url, input_word)
+        result = request(request_url, input_word)
         found = result[0]
 
         if found:
-            response_word, response_url, response_text, soup = result[1]
-            try:
-                logger.debug(f'Caching search result of "{input_word}"')
-                insert_into_table(con, cur, input_word, response_word, response_url, response_text)
-            except sqlite3.OperationalError: 
-                create_table(con, cur)
-            except sqlite3.IntegrityError:
-                logger.debug(f'Cancel caching word of "{input_word}" because it already exists')
-            else:
-                logger.debug(f'Done caching search result of "{input_word}"')
+            response_url, response_text = result[1]
+
+            soup = BeautifulSoup(response_text, "lxml")
+            response_word = parse_response_word(soup)
+
+            parse_thread = threading.Thread(
+                target=parse_and_print, args=(request_url, soup)
+            )
+            parse_thread.start()
+
+            save(con, cur, input_word, response_word, response_url, response_text)
 
         else:
+            _, spellcheck_text = result[1]
+            soup = BeautifulSoup(spellcheck_text, "lxml")
+            parse_spellcheck(input_word, soup)
             sys.exit()
 
     else:
         logger.debug(f'Already cached "{input_word}" before. Use cache')
         soup = BeautifulSoup(data[0], "lxml")
-        print_dict(request_url, soup)
+        parse_and_print(request_url, soup)
+
+
+def save(con, cur, input_word, response_word, response_url, response_text):
+    try:
+        insert_into_table(
+            con, cur, input_word, response_word, response_url, response_text
+        )
+        logger.debug(f'Cached search result of "{input_word}"')
+    except sqlite3.IntegrityError as e:
+        logger.debug(f'Stopped caching "{input_word}" because of {str(e)}')
+        pass
 
 
 # ----------print dict ----------
-def request_and_print(url, input_word):
+def request(url, input_word):
     with requests.Session() as session:
         session.trust_env = False
         response = fetch(url, session)
@@ -202,25 +218,16 @@ def request_and_print(url, input_word):
             )
             spellcheck_text = fetch(spellcheck_url, session).text
 
-            soup = BeautifulSoup(spellcheck_text, "lxml")
-            parse_spellcheck(input_word, soup)
-
-            return False, None
+            return False, (None, spellcheck_text)
         else:
-            logger.debug(f'"{input_word}" found in Cambridge')
+            logger.debug(f'Found "{input_word}" in Cambridge')
 
             response_url = parse_from_url(response.url)
             response_text = response.text
-
-            soup = BeautifulSoup(response_text, "lxml")
-            response_word = parse_response_word(soup)
-
-            print_dict(url, soup)
-
-            return True, (response_word, response_url, response_text, soup)
+            return True, (response_url, response_text)
 
 
-def print_dict(url, soup):
+def parse_and_print(url, soup):
     blocks, first_dict = parse_dict_blocks(url, soup)
     for block in blocks:
         parse_dict_head(block)

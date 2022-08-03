@@ -1,8 +1,9 @@
 import requests
 from fake_user_agent import user_agent
 
-from .errors import call_on_error
-from .settings import OP
+from cambridge.errors import call_on_error
+from cambridge.settings import OP
+
 
 def fetch(url, session):
     ua = user_agent()

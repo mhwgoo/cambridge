@@ -1,5 +1,6 @@
 from pathlib import Path
 import datetime
+import sqlite3
 
 dir = Path.home() / ".cache" / "cambridge"
 dir.mkdir(parents=True, exist_ok=True)
@@ -34,13 +35,17 @@ def insert_into_table(con, cur, input_word, response_word, url, text):
     con.commit()
 
 
-def get_cache(cur, word, resquest_url):
-    cur.execute(
-        "SELECT response_text FROM words WHERE input_word = ? OR response_word = ? OR response_url = ?",
-        (word, word, resquest_url),
-    )
-    data = cur.fetchone()
-    return data
+def get_cache(con, cur, word, resquest_url):
+    try:
+        cur.execute(
+            "SELECT response_text FROM words WHERE input_word = ? OR response_word = ? OR response_url = ?",
+            (word, word, resquest_url),
+        )
+    except sqlite3.OperationalError:
+        create_table(con, cur)
+    else:
+        data = cur.fetchone()
+        return data
 
 
 def get_response_words(cur):

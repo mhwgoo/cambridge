@@ -41,7 +41,8 @@ def get_request_url(url, input_word):
     query_word = input_word.replace(" ", "-").replace("/", "-")
     request_url = url + query_word
 
-    return request_url 
+    return request_url
+
 
 def get_requsest_url_spellcheck(url, input_word):
     """Return the url formatted for requesting the spellcheck web page at the url."""

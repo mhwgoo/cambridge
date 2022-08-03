@@ -2,10 +2,10 @@
 
 import sys
 
-from ..console import console
-from ..utils import replace_all
-from ..errors import NoResultError, ParsedNoneError, call_on_error
-from ..settings import OP
+from cambridge.console import console
+from cambridge.utils import replace_all
+from cambridge.errors import NoResultError, ParsedNoneError, call_on_error
+from cambridge.settings import OP
 
 
 CAMBRIDGE_URL = "https://dictionary.cambridge.org"
@@ -18,6 +18,7 @@ def parse_response_word(soup):
 
     response_word = soup.find("title").text.split("|")[0].strip().lower()
     return response_word
+
 
 def parse_spellcheck(input_word, soup):
     """Parse Cambridge spellcheck page and print it to the terminal."""
@@ -442,5 +443,3 @@ def parse_dict_name(first_dict):
     dict_name = dict_info.split("©")[0]
     dict_name = dict_name.split("the")[-1]
     console.print(dict_name + "\n", justify="right")
-
-

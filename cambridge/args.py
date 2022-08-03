@@ -170,13 +170,10 @@ def search_word(args, con, cur):
             response_word, response_url, response_text, soup = result[1]
             try:
                 logger.debug(f'Caching search result of "{input_word}"')
-
-                check_table(cur)
+                insert_into_table(con, cur, input_word, response_word, response_url, response_text)
+                # check_table(cur)
             except sqlite3.OperationalError: 
                 create_table(con, cur)
-
-            try: 
-                insert_into_table(con, cur, input_word, response_word, response_url, response_text)
             except sqlite3.IntegrityError:
                 logger.debug(f'Cancel caching word of "{input_word}" because it already exists')
             else:

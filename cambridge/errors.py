@@ -4,7 +4,7 @@ This script sets up self-defined errors.
 
 import sys
 
-from log import logger
+from .log import logger
 
 
 class ParsedNoneError(Exception):

@@ -5,7 +5,7 @@ import sys
 import requests
 from bs4 import BeautifulSoup
 
-from cache import (
+from .cache import (
     create_table,
     insert_into_table,
     get_cache,
@@ -14,8 +14,8 @@ from cache import (
     delete_word,
     check_table,
 )
-from log import logger
-from dicts.cambridge import (
+from .log import logger
+from .dicts.cambridge import (
     parse_spellcheck,
     parse_dict_blocks,
     parse_dict_body,
@@ -26,8 +26,8 @@ from dicts.cambridge import (
     CAMBRIDGE_URL,
     SPELLCHECK_BASE_URL,
 )
-from utils import get_request_url, get_requsest_url_spellcheck, parse_from_url
-from fetch import fetch
+from .utils import get_request_url, get_requsest_url_spellcheck, parse_from_url
+from .fetch import fetch
 
 
 def parse_args():

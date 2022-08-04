@@ -1,8 +1,8 @@
 import requests
 from fake_user_agent import user_agent
 
-from cambridge.errors import call_on_error
-from cambridge.settings import OP
+from .errors import call_on_error
+from .settings import OP
 
 
 def fetch(url, session):

@@ -6,16 +6,15 @@ import requests
 import threading
 from bs4 import BeautifulSoup
 
-from cambridge.cache import (
-    create_table,
+from .cache import (
     insert_into_table,
     get_cache,
     get_response_words,
     get_random_words,
     delete_word,
 )
-from cambridge.log import logger
-from cambridge.dicts.cambridge import (
+from .log import logger
+from .dicts.cambridge import (
     parse_spellcheck,
     parse_dict_blocks,
     parse_dict_body,
@@ -26,8 +25,8 @@ from cambridge.dicts.cambridge import (
     CAMBRIDGE_URL,
     SPELLCHECK_BASE_URL,
 )
-from cambridge.utils import get_request_url, get_requsest_url_spellcheck, parse_from_url
-from cambridge.fetch import fetch
+from .utils import get_request_url, get_requsest_url_spellcheck, parse_from_url
+from .fetch import fetch
 
 
 def parse_args():

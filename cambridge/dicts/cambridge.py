@@ -2,10 +2,10 @@
 
 import sys
 
-from cambridge.console import console
-from cambridge.utils import replace_all
-from cambridge.errors import NoResultError, ParsedNoneError, call_on_error
-from cambridge.settings import OP
+from ..console import console
+from ..utils import replace_all
+from ..errors import NoResultError, ParsedNoneError, call_on_error
+from ..settings import OP
 
 
 CAMBRIDGE_URL = "https://dictionary.cambridge.org"

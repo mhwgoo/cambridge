@@ -21,9 +21,8 @@ from .dicts.cambridge import (
     parse_dict_head,
     parse_dict_name,
     parse_response_word,
-    DICT_BASE_URL,
-    CAMBRIDGE_URL,
-    SPELLCHECK_BASE_URL,
+    CAMBRIDGE_BASE_URL,
+    CAMBRIDGE_SPELLCHECK_URL,
 )
 from .utils import get_request_url, get_requsest_url_spellcheck, parse_from_url
 from .fetch import fetch
@@ -154,7 +153,7 @@ def search_word(args, con, cur):
     """
 
     input_word = args.words[0]
-    request_url = get_request_url(DICT_BASE_URL, input_word)
+    request_url = get_request_url(CAMBRIDGE_BASE_URL, input_word)
 
     if args.verbose:
         logging.getLogger(__package__).setLevel(logging.DEBUG)
@@ -162,7 +161,7 @@ def search_word(args, con, cur):
     data = get_cache(con, cur, input_word, request_url)  # data is a tuple if any
 
     if data is None:
-        logger.debug(f'Searching {CAMBRIDGE_URL} for "{input_word}"')
+        logger.debug(f'Searching {CAMBRIDGE_BASE_URL} for "{input_word}"')
 
         result = request(request_url, input_word)
         found = result[0]
@@ -209,11 +208,11 @@ def request(url, input_word):
         session.trust_env = False
         response = fetch(url, session)
 
-        if response.url == DICT_BASE_URL:
+        if response.url == CAMBRIDGE_BASE_URL:
             logger.debug(f'No "{input_word}" found in Cambridge')
 
             spellcheck_url = get_requsest_url_spellcheck(
-                SPELLCHECK_BASE_URL, input_word
+                CAMBRIDGE_SPELLCHECK_URL, input_word
             )
             spellcheck_text = fetch(spellcheck_url, session).text
 

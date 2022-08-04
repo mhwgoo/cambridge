@@ -7,10 +7,8 @@ from ..utils import replace_all
 from ..errors import NoResultError, ParsedNoneError, call_on_error
 from ..settings import OP
 
-
-CAMBRIDGE_URL = "https://dictionary.cambridge.org"
-DICT_BASE_URL = "https://dictionary.cambridge.org/dictionary/english/"  # if no result found in cambridge, response.url is this.
-SPELLCHECK_BASE_URL = "https://dictionary.cambridge.org/spellcheck/english/?q="
+CAMBRIDGE_BASE_URL = "https://dictionary.cambridge.org/dictionary/english/"  # if no result found in cambridge, response.url is this.
+CAMBRIDGE_SPELLCHECK_URL = "https://dictionary.cambridge.org/spellcheck/english/?q="
 
 
 def parse_response_word(soup):
@@ -26,8 +24,6 @@ def parse_spellcheck(input_word, soup):
     content = soup.find("div", "hfl-s lt2b lmt-10 lmb-25 lp-s_r-20")
     print()
     console.print("[bold #3C8DAD on #DDDDDD]" + input_word)
-    title = content.h1.text.strip()
-    console.print("[bold]" + "\n" + title)
     for ul in content.find_all("ul", "hul-u"):
         notice = ul.find_previous_sibling().text
         console.print("[bold #3C8DAD]" + "\n" + notice)
@@ -37,6 +33,8 @@ def parse_spellcheck(input_word, soup):
 
 
 def parse_first_dict(url, soup):
+    """Parse the dict section of the page for the word."""
+
     attempt = 0
 
     while True:

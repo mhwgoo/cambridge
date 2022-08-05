@@ -4,28 +4,23 @@ import argparse
 import sys
 import requests
 import threading
-from bs4 import BeautifulSoup
 
-from .cache import (
+from cambridge.cache import (
     insert_into_table,
     get_cache,
     get_response_words,
     get_random_words,
     delete_word,
 )
-from .log import logger
-from .dicts.cambridge import (
-    parse_spellcheck,
-    parse_dict_blocks,
-    parse_dict_body,
-    parse_dict_head,
-    parse_dict_name,
+from cambridge.log import logger
+from cambridge.dicts.cambridge import (
     parse_response_word,
+    parse_and_print,
     CAMBRIDGE_BASE_URL,
     CAMBRIDGE_SPELLCHECK_URL,
 )
-from .utils import get_request_url, get_requsest_url_spellcheck, parse_from_url
-from .fetch import fetch
+from cambridge.utils import make_a_soup, get_request_url, get_request_url_spellcheck, parse_from_url
+from cambridge.fetch import fetch
 
 
 def parse_args():
@@ -169,7 +164,7 @@ def search_word(args, con, cur):
         if found:
             response_url, response_text = result[1]
 
-            soup = BeautifulSoup(response_text, "lxml")
+            soup = make_a_soup(response_text) 
             response_word = parse_response_word(soup)
 
             parse_thread = threading.Thread(
@@ -181,13 +176,14 @@ def search_word(args, con, cur):
 
         else:
             _, spellcheck_text = result[1]
-            soup = BeautifulSoup(spellcheck_text, "lxml")
-            parse_spellcheck(input_word, soup)
-            sys.exit()
+            soup = make_a_soup(spellcheck_text)
+            parse_and_print(None, soup)
+            # parse_spellcheck(input_word, soup)
+            # sys.exit()
 
     else:
         logger.debug(f'Already cached "{input_word}" before. Use cache')
-        soup = BeautifulSoup(data[0], "lxml")
+        soup = make_a_soup(data[0])
         parse_and_print(request_url, soup)
 
 
@@ -211,7 +207,7 @@ def request(url, input_word):
         if response.url == CAMBRIDGE_BASE_URL:
             logger.debug(f'No "{input_word}" found in Cambridge')
 
-            spellcheck_url = get_requsest_url_spellcheck(
+            spellcheck_url = get_request_url_spellcheck(
                 CAMBRIDGE_SPELLCHECK_URL, input_word
             )
             spellcheck_text = fetch(spellcheck_url, session).text
@@ -225,9 +221,3 @@ def request(url, input_word):
             return True, (response_url, response_text)
 
 
-def parse_and_print(url, soup):
-    blocks, first_dict = parse_dict_blocks(url, soup)
-    for block in blocks:
-        parse_dict_head(block)
-        parse_dict_body(block)
-    parse_dict_name(first_dict)

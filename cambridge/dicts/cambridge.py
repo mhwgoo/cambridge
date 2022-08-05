@@ -2,55 +2,35 @@
 
 import sys
 
-from ..console import console
-from ..utils import replace_all
-from ..errors import NoResultError, ParsedNoneError, call_on_error
-from ..settings import OP
+from cambridge.console import console
+from cambridge.utils import replace_all
+from cambridge.errors import NoResultError, ParsedNoneError, call_on_error
+from cambridge.settings import OP
 
 CAMBRIDGE_BASE_URL = "https://dictionary.cambridge.org/dictionary/english/"  # if no result found in cambridge, response.url is this.
 CAMBRIDGE_SPELLCHECK_URL = "https://dictionary.cambridge.org/spellcheck/english/?q="
 
 
-def parse_response_word(soup):
-    "Parse the response word from html title tag."
+# ----------The Entry Point----------
+def parse_and_print(url, soup):
+    """The entry point of this module to parse the dict and print the info about the word."""
 
-    response_word = soup.find("title").text.split("|")[0].strip().lower()
-    return response_word
+    if url is None:
+        parse_spellcheck(soup)
+        sys.exit()
 
-
-def parse_spellcheck(input_word, soup):
-    """Parse Cambridge spellcheck page and print it to the terminal."""
-
-    content = soup.find("div", "hfl-s lt2b lmt-10 lmb-25 lp-s_r-20")
-    print()
-    console.print("[bold #3C8DAD on #DDDDDD]" + input_word)
-    for ul in content.find_all("ul", "hul-u"):
-        notice = ul.find_previous_sibling().text
-        console.print("[bold #3C8DAD]" + "\n" + notice)
-        for i in ul.find_all("li"):
-            suggestion = replace_all(i.text)
-            console.print("[#b2b2b2]" + "  • " + suggestion)
-
-
-def parse_first_dict(url, soup):
-    """Parse the dict section of the page for the word."""
-
-    attempt = 0
-
-    while True:
-        try:
-            first_dict = soup.find("div", "pr dictionary")
-        except Exception as e:
-            attempt = call_on_error(e, url, attempt, OP[1])
-        else:
-            if not first_dict:
-                attempt = call_on_error(ParsedNoneError(), url, attempt, OP[1])
-
-            return first_dict
+    blocks, first_dict = parse_dict_blocks(url, soup)
+    for block in blocks:
+        parse_dict_head(block)
+        parse_dict_body(block)
+    parse_dict_name(first_dict)
 
 
 def parse_dict_blocks(url, soup):
+    """Parse different form sections for the word."""
+
     first_dict = parse_first_dict(url, soup)
+
     try:
         result = first_dict.find(
             "div", ["pr entry-body__el", "entry-body__el clrd js-share-holder"]
@@ -65,14 +45,59 @@ def parse_dict_blocks(url, soup):
             )
         else:
             blocks = first_dict.find_all("div", "pr idiom-block")
+
         return blocks, first_dict
 
 
-# ----------parse dict head----------
+def parse_first_dict(url, soup):
+    """Parse the dict section of the page for the word."""
+
+    attempt = 0
+
+    while True:
+        try:
+            first_dict = soup.find("div", "pr dictionary")
+        except Exception as e:
+            attempt = call_on_error(e, url, attempt, OP[1])
+
+        if not first_dict:
+            attempt = call_on_error(ParsedNoneError(), url, attempt, OP[1])
+
+        return first_dict
+
+
+# ----------Parse Spellcheck----------
+def parse_spellcheck(soup):
+    """Parse Cambridge spellcheck page and print it to the terminal."""
+
+    content = soup.find("div", "hfl-s lt2b lmt-10 lmb-25 lp-s_r-20")
+
+    title = content.h1.text.split("for")[1].strip()
+    console.print("\n[bold]" +  title)
+
+    for ul in content.find_all("ul", "hul-u"):
+        notice = ul.find_previous_sibling().text
+        console.print("[bold #3C8DAD]" + "\n" + notice)
+        for i in ul.find_all("li"):
+            suggestion = replace_all(i.text)
+            console.print("[#b2b2b2]" + "  • " + suggestion)
+
+
+# ----------Parse Response Word----------
+def parse_response_word(soup):
+    "Parse the response word from html title tag."
+
+    response_word = soup.find("title").text.split("|")[0].strip().lower()
+    return response_word
+
+
+# ----------Parse Dict Head----------
+# Compared to Webster Dictionary, Cambridge is a bunch of deep layered html tags filled with unbearably messy class names.
+# No clear pattern, somewhat irregular, sometimes you just need to tweak your codes for particular words and phrases for them to show. 
+
 def parse_head_title(title_block):
-    if title_block.find("div", "di-title"):
-        word = title_block.find("div", "di-title").text
-        return word
+    word = title_block.find("div", "di-title").text
+    return word
 
 
 def parse_head_type(head):
@@ -91,7 +116,7 @@ def parse_head_type(head):
         posgram = head.find("div", "posgram dpos-g hdib lmr-5")
         w_type = replace_all(posgram.text)
     else:
-        w_type = None
+        w_type = "" 
     return w_type
 
 
@@ -153,12 +178,7 @@ def parse_dict_head(block):
         if not word:
             word = parse_head_title(head)
         if w_type:
-            print()
             console.print("[bold #3C8DAD on #DDDDDD]" + word + " " + w_type)
-        else:
-            print()
-            console.print("[bold #3C8DAD on #DDDDDD]" + word)
-
         if head.find("span", "uk dpron-i"):
             if head.find("span", "uk dpron-i").find("span", "pron dpron"):
                 parse_head_pron(head)
@@ -181,7 +201,7 @@ def parse_dict_head(block):
         console.print("[bold #3C8DAD on #DDDDDD]" + word)
 
 
-# ----------parse dict body----------
+# ----------Parse Dict Body----------
 def parse_def_title(block):
     d_title = replace_all(block.find("h3", "dsense_h").text)
     console.print("[bold #3C8DAD]" + "\n" + d_title)
@@ -435,7 +455,7 @@ def parse_dict_body(block):
         parse_phrasal_verb(block)
 
 
-# ----------parse dict name----------
+# ----------Parse Dict Name----------
 def parse_dict_name(first_dict):
     dict_info = replace_all(first_dict.small.text).replace("(", "").replace(")", "")
     dict_name = dict_info.split("©")[0]

@@ -6,6 +6,12 @@ import time
 import cProfile, pstats, io
 from urllib import parse
 from functools import wraps
+from bs4 import BeautifulSoup
+
+
+def make_a_soup(text):
+    soup = BeautifulSoup(text, "lxml")
+    return soup
 
 
 def replace_all(string):
@@ -44,7 +50,7 @@ def get_request_url(url, input_word):
     return request_url
 
 
-def get_requsest_url_spellcheck(url, input_word):
+def get_request_url_spellcheck(url, input_word):
     """Return the url formatted for requesting the spellcheck web page at the url."""
 
     query_word = input_word.replace(" ", "+").replace("/", "+")
@@ -77,7 +83,7 @@ def timer(func):
         start_at = time.time()
         f = func(*args, **kwargs)
         time_taken = round((time.time() - start_at), 2)
-        print("Time taken: {} seconds".format(time_taken))
+        print("\nTime taken: {} seconds".format(time_taken))
         return f
 
     return wrapper

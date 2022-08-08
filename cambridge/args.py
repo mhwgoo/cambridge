@@ -13,6 +13,7 @@ from cambridge.cache import (
 from cambridge.log import logger
 from cambridge.settings import OP
 from cambridge.dicts import webster, cambridge 
+from cambridge.console import console
 
 
 def parse_args():
@@ -133,8 +134,9 @@ def list_words(args, con, cur):
                 data.sort(reverse=True, key=lambda tup: tup[1])
             else:
                 data.sort()
+
             for i in data:
-                print(i[0])
+                console.print(i[0], justify="center")
 
 
 def search_word(args, con, cur):

@@ -6,7 +6,7 @@ import threading
 import sqlite3
 
 from cambridge.console import console
-from cambridge.errors import NoResultError, ParsedNoneError, call_on_error
+from cambridge.errors import ParsedNoneError, call_on_error
 from cambridge.settings import OP, DICTS
 from cambridge.log import logger
 from cambridge.cache import insert_into_table, get_cache
@@ -24,7 +24,7 @@ def search_cambridge(con, cur, input_word):
     data = get_cache(con, cur, input_word, request_url)  # data is a tuple if any
 
     if data is not None:    
-        logger.debug(f'Already cached "{input_word}" before. Use cache')
+        logger.debug(f'{OP[5]} "{input_word}" cached before. Use cache')
         response_url = data[0]
         soup = make_a_soup(data[1])
         parse_and_print(response_url, soup)
@@ -110,14 +110,15 @@ def parse_dict_blocks(url, soup):
 
     first_dict = parse_first_dict(url, soup)
 
-    try:
-        result = first_dict.find(
-            "div", ["pr entry-body__el", "entry-body__el clrd js-share-holder"]
-        )
-    except AttributeError:
-        print("\n" + str(NoResultError()) + "\n")
-        sys.exit()
-    else:
+    attempt = 0
+    while True:
+        try:
+            result = first_dict.find(
+                "div", ["pr entry-body__el", "entry-body__el clrd js-share-holder"]
+            )
+        except AttributeError as e:
+            attempt = call_on_error(e, url, attempt, OP[3])
+
         if result:
             blocks = first_dict.find_all(
                 "div", ["pr entry-body__el", "entry-body__el clrd js-share-holder"]
@@ -138,7 +139,7 @@ def parse_first_dict(url, soup):
         except Exception as e:
             attempt = call_on_error(e, url, attempt, OP[3])
 
-        if not first_dict:
+        if first_dict is None:
             attempt = call_on_error(ParsedNoneError(), url, attempt, OP[3])
 
         return first_dict
@@ -173,9 +174,14 @@ def parse_response_word(soup):
 # Compared to Webster Dictionary, Cambridge is a bunch of deep layered html tags filled with unbearably messy class names.
 # No clear pattern, somewhat irregular, sometimes you just need to tweak your codes for particular words and phrases for them to show. 
 
-def parse_head_title(title_block):
-    word = title_block.find("div", "di-title").text
+def parse_head_title(block):
+    word = block.find("div", "di-title").text
     return word
+
+
+def parse_head_info(block):
+    info = block.find("span", "di-info")
+    return info 
 
 
 def parse_head_type(head):
@@ -250,6 +256,8 @@ def parse_head_spellvar(head):
 def parse_dict_head(block):
     head = block.find("div", "pos-header dpos-h")
     word = parse_head_title(block)
+    info = parse_head_info(block)
+
     if head:
         head = block.find("div", "pos-header dpos-h")
         w_type = parse_head_type(head)
@@ -277,6 +285,8 @@ def parse_dict_head(block):
         print()
     else:
         console.print("[bold #3C8DAD on #DDDDDD]" + word)
+        if info:
+            console.print("[#b2b2b2]" + info.text)
 
 
 # ----------Parse Dict Body----------

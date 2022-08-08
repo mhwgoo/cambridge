@@ -1,26 +1,18 @@
+"""Set, parse, and deal with terminal arguments."""
+
 import sqlite3
 import logging
 import argparse
 import sys
-import requests
-import threading
 
 from cambridge.cache import (
-    insert_into_table,
-    get_cache,
     get_response_words,
     get_random_words,
     delete_word,
 )
 from cambridge.log import logger
-from cambridge.dicts.cambridge import (
-    parse_response_word,
-    parse_and_print,
-    CAMBRIDGE_BASE_URL,
-    CAMBRIDGE_SPELLCHECK_URL,
-)
-from cambridge.utils import make_a_soup, get_request_url, get_request_url_spellcheck, parse_from_url
-from cambridge.fetch import fetch
+from cambridge.settings import OP
+from cambridge.dicts import webster, cambridge 
 
 
 def parse_args():
@@ -83,6 +75,13 @@ def parse_args():
         action="store_true",
         help="search a word or phrase in verbose mode",
     )
+    # Add optional arguments
+    parser_sw.add_argument(
+        "-w",
+        "--webster",
+        action="store_true",
+        help="search a word or phrase in Merriam-Webster Dictionary",
+    )
 
     if len(sys.argv) == 1:
         parser.print_help()
@@ -111,9 +110,9 @@ def list_words(args, con, cur):
     if args.delete:
         word = " ".join(args.delete)
         if delete_word(con, cur, word):
-            print(f'"{word}" got deleted from cache successfully')
+            print(f'{OP[9]} "{word}" from cache successfully')
         else:
-            logger.error(f'No "{word}" in cache')
+            logger.error(f'{OP[6]} "{word}" in cache')
     elif args.random:
         try:
             # data is something like [('hello',), ('good',), ('world',)]
@@ -147,77 +146,16 @@ def search_word(args, con, cur):
     If no word found in the cambridge, display word suggestions and exit.
     """
 
-    input_word = args.words[0]
-    request_url = get_request_url(CAMBRIDGE_BASE_URL, input_word)
-
     if args.verbose:
         logging.getLogger(__package__).setLevel(logging.DEBUG)
 
-    data = get_cache(con, cur, input_word, request_url)  # data is a tuple if any
+    input_word = args.words[0]
+    is_webster = args.webster
 
-    if data is None:
-        logger.debug(f'Searching {CAMBRIDGE_BASE_URL} for "{input_word}"')
-
-        result = request(request_url, input_word)
-        found = result[0]
-
-        if found:
-            response_url, response_text = result[1]
-
-            soup = make_a_soup(response_text) 
-            response_word = parse_response_word(soup)
-
-            parse_thread = threading.Thread(
-                target=parse_and_print, args=(request_url, soup)
-            )
-            parse_thread.start()
-
-            save(con, cur, input_word, response_word, response_url, response_text)
-
-        else:
-            _, spellcheck_text = result[1]
-            soup = make_a_soup(spellcheck_text)
-            parse_and_print(None, soup)
-            # parse_spellcheck(input_word, soup)
-            # sys.exit()
-
+    if is_webster:
+        webster.search_webster(con, cur, input_word)
     else:
-        logger.debug(f'Already cached "{input_word}" before. Use cache')
-        soup = make_a_soup(data[0])
-        parse_and_print(request_url, soup)
+        cambridge.search_cambridge(con, cur, input_word)
 
-
-def save(con, cur, input_word, response_word, response_url, response_text):
-    try:
-        insert_into_table(
-            con, cur, input_word, response_word, response_url, response_text
-        )
-        logger.debug(f'Cached search result of "{input_word}"')
-    except sqlite3.IntegrityError as e:
-        logger.debug(f'Stopped caching "{input_word}" because of {str(e)}')
-        pass
-
-
-# ----------print dict ----------
-def request(url, input_word):
-    with requests.Session() as session:
-        session.trust_env = False
-        response = fetch(url, session)
-
-        if response.url == CAMBRIDGE_BASE_URL:
-            logger.debug(f'No "{input_word}" found in Cambridge')
-
-            spellcheck_url = get_request_url_spellcheck(
-                CAMBRIDGE_SPELLCHECK_URL, input_word
-            )
-            spellcheck_text = fetch(spellcheck_url, session).text
-
-            return False, (None, spellcheck_text)
-        else:
-            logger.debug(f'Found "{input_word}" in Cambridge')
-
-            response_url = parse_from_url(response.url)
-            response_text = response.text
-            return True, (response_url, response_text)
 
 

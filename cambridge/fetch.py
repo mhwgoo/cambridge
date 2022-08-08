@@ -3,6 +3,7 @@ from fake_user_agent import user_agent
 
 from cambridge.errors import call_on_error
 from cambridge.settings import OP
+from cambridge.log import logger
 
 
 def fetch(url, session):
@@ -13,18 +14,17 @@ def fetch(url, session):
 
     while True:
         try:
+            logger.debug(f"{OP[0]} {url}")
             r = session.get(url, timeout=9.05)
         except requests.exceptions.HTTPError as e:
-            attempt = call_on_error(e, url, attempt, OP[0])
+            attempt = call_on_error(e, url, attempt, OP[2])
         except requests.exceptions.ConnectTimeout as e:
-            attempt = call_on_error(e, url, attempt, OP[0])
+            attempt = call_on_error(e, url, attempt, OP[2])
         except requests.exceptions.ConnectionError as e:
-            attempt = call_on_error(e, url, attempt, OP[0])
+            attempt = call_on_error(e, url, attempt, OP[2])
         except requests.exceptions.ReadTimeout as e:
-            attempt = call_on_error(e, url, attempt, OP[0])
+            attempt = call_on_error(e, url, attempt, OP[2])
         except Exception as e:
-            attempt = call_on_error(e, url, attempt, OP[0])
+            attempt = call_on_error(e, url, attempt, OP[2])
         else:
-            if r.status_code != 200:  # only a 200 response has a response body
-                attempt = call_on_error(r.status_code, url, attempt, OP[0])
             return r

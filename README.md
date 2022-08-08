@@ -11,10 +11,10 @@ The dictionary data comes from https://dictionary.cambridge.org
 I'm a terminal person tired of pulling out a GUI app or browser, inputting words in the search bar, hitting the search button and then waiting for the result to render with a bunch of unnecessary static files coming along. Not only is the time taken long, but also switching apps back and forth can be annoying. So I wrote this console application with features to my satisfaction.
 
 ## Features 
-1. Just `camb <word/phrase>` to look up what you need. 
-2. Takes less than 2s for the first run based on my 200M bandwith, including fetching, parsing, printing, and writing cache. 
-3. Less than 0.1s for the same item's later search. 
-4. Only fetches the first dictionary on Cambridge, getting rid of confuses by different dictionaries
+1. `camb <word/phrase>` to look up what you need. 
+2. Takes < 2s the first time based on my 200M bandwidth, including fetching, parsing, printing, and writing cache. 
+3. Less than 0.1s for the same term's later search. 
+4. Fetches the first dictionary on Cambridge, avoiding mental chaos by multiple dictionaries
 5. If not found, a list of related suggestions will be displayed.
 6. `camb l` to list words and phrases you've searched successfully. 
 

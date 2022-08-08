@@ -1,17 +1,23 @@
-"""
-This script contains utility functions.
-"""
+"""Contains various utility functions."""
 
 import time
 import cProfile, pstats, io
 from urllib import parse
 from functools import wraps
 from bs4 import BeautifulSoup
+from lxml import etree
+
+from cambridge.settings import DICTS
 
 
 def make_a_soup(text):
     soup = BeautifulSoup(text, "lxml")
     return soup
+
+
+def generate_a_tree(text):
+    tree = etree.HTML(text)
+    return tree
 
 
 def replace_all(string):
@@ -35,19 +41,21 @@ def replace_all(string):
     )
 
 
-def parse_from_url(url):
+def parse_response_url(url):
     url = parse.unquote(url)
     response_base_url = url.split("?")[0]
     return response_base_url
 
 
-def get_request_url(url, input_word):
+def get_request_url(url, input_word, dict):
     """Return the url formatted for requesting the web page at the url."""
-
-    query_word = input_word.replace(" ", "-").replace("/", "-")
-    request_url = url + query_word
-
-    return request_url
+    
+    if dict == DICTS[0]:
+        query_word = input_word.replace(" ", "-").replace("/", "-")
+        request_url = url + query_word
+        return request_url
+    
+    return parse.quote(url + input_word)
 
 
 def get_request_url_spellcheck(url, input_word):

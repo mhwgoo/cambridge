@@ -1,25 +1,104 @@
 """Script to parse and print cambridge dictionary."""
 
 import sys
+import requests
+import threading
+import sqlite3
 
 from cambridge.console import console
-from cambridge.utils import replace_all
 from cambridge.errors import NoResultError, ParsedNoneError, call_on_error
-from cambridge.settings import OP
+from cambridge.settings import OP, DICTS
+from cambridge.log import logger
+from cambridge.cache import insert_into_table, get_cache
+from cambridge.utils import make_a_soup, get_request_url, get_request_url_spellcheck, parse_response_url, replace_all
+from cambridge.fetch import fetch
 
-CAMBRIDGE_BASE_URL = "https://dictionary.cambridge.org/dictionary/english/"  # if no result found in cambridge, response.url is this.
+
+CAMBRIDGE_DICT_BASE_URL = "https://dictionary.cambridge.org/dictionary/english/"  # if no result found in cambridge, response.url is this.
 CAMBRIDGE_SPELLCHECK_URL = "https://dictionary.cambridge.org/spellcheck/english/?q="
 
 
-# ----------The Entry Point----------
+# ----------Request Web Resouce----------
+def search_cambridge(con, cur, input_word):
+    request_url = get_request_url(CAMBRIDGE_DICT_BASE_URL, input_word, DICTS[0])
+    data = get_cache(con, cur, input_word, request_url)  # data is a tuple if any
+
+    if data is not None:    
+        logger.debug(f'Already cached "{input_word}" before. Use cache')
+        response_url = data[0]
+        soup = make_a_soup(data[1])
+        parse_and_print(response_url, soup)
+
+    else:
+        result = fetch_cambridge(request_url, input_word)
+        found = result[0]
+
+        if found:
+            response_url, response_text = result[1]
+            soup = make_a_soup(response_text) 
+            response_word = parse_response_word(soup)
+
+            parse_thread = threading.Thread(
+                target=parse_and_print, args=(response_url, soup)
+            )
+            parse_thread.start()
+
+            save(con, cur, input_word, response_word, response_url, response_text)
+
+        else:
+            spellcheck_response_url, spellcheck_response_text = result[1]
+            soup = make_a_soup(spellcheck_response_text)
+            parse_and_print(spellcheck_response_url, soup)
+
+
+def fetch_cambridge(request_url, input_word):
+    with requests.Session() as session:
+        session.trust_env = False
+        response = fetch(request_url, session)
+
+        if response.url == CAMBRIDGE_DICT_BASE_URL:
+            logger.debug(f'{OP[6]} "{input_word}" in Cambridge')
+
+            spellcheck_request_url = get_request_url_spellcheck(CAMBRIDGE_SPELLCHECK_URL, input_word)
+            spellcheck_response = fetch(spellcheck_request_url, session)
+            spellcheck_response_url = spellcheck_response.url
+            spellcheck_response_text = spellcheck_response.text
+
+            return False, (spellcheck_response_url, spellcheck_response_text)
+        else:
+            response_url = parse_response_url(response.url)
+            response_text = response.text
+
+            logger.debug(f'{OP[5]} "{input_word}" in Cambridge at {response_url}')
+            return True, (response_url, response_text)
+
+
+# ----------Cache Web Resource----------
+def save(con, cur, input_word, response_word, response_url, response_text):
+    try:
+        insert_into_table(
+            con, cur, input_word, response_word, response_url, response_text
+        )
+        logger.debug(f'{OP[7]} the search result of "{input_word}"')
+    except sqlite3.IntegrityError as e:
+        logger.debug(f'{OP[8]} caching "{input_word}" because of {str(e)}')
+        pass
+
+
+# ----------The Entry Point For Parse And Print----------
 def parse_and_print(url, soup):
     """The entry point of this module to parse the dict and print the info about the word."""
 
-    if url is None:
+    logger.debug(f"{OP[1]} the fetched result of {url}")
+
+    if "spellcheck" in url :
+        logger.debug(f"{OP[4]} the parsed result of {url}")
         parse_spellcheck(soup)
         sys.exit()
 
     blocks, first_dict = parse_dict_blocks(url, soup)
+
+    logger.debug(f"{OP[4]} the parsed result of {url}")
     for block in blocks:
         parse_dict_head(block)
         parse_dict_body(block)
@@ -53,15 +132,14 @@ def parse_first_dict(url, soup):
     """Parse the dict section of the page for the word."""
 
     attempt = 0
-
     while True:
         try:
             first_dict = soup.find("div", "pr dictionary")
         except Exception as e:
-            attempt = call_on_error(e, url, attempt, OP[1])
+            attempt = call_on_error(e, url, attempt, OP[3])
 
         if not first_dict:
-            attempt = call_on_error(ParsedNoneError(), url, attempt, OP[1])
+            attempt = call_on_error(ParsedNoneError(), url, attempt, OP[3])
 
         return first_dict
 

@@ -1,11 +1,16 @@
+"""Shared functionality of all dictionaries."""
+
+import sqlite3
 import requests
 from fake_user_agent import user_agent
 
-from cambridge.errors import call_on_error
-from cambridge.settings import OP
+from cambridge.cache import insert_into_table
 from cambridge.log import logger
+from cambridge.settings import OP
+from cambridge.errors import call_on_error
 
 
+# ----------Fetch Web Resource----------
 def fetch(url, session):
     ua = user_agent()
     headers = {"User-Agent": ua}
@@ -28,3 +33,17 @@ def fetch(url, session):
             attempt = call_on_error(e, url, attempt, OP[2])
         else:
             return r
+
+
+# ----------Cache Web Resource----------
+def save(con, cur, input_word, response_word, response_url, response_text):
+    try:
+        insert_into_table(
+            con, cur, input_word, response_word, response_url, response_text
+        )
+        logger.debug(f'{OP[7]} the search result of "{input_word}"')
+    except sqlite3.IntegrityError as e:
+        logger.debug(f'{OP[8]} caching "{input_word}" because of {str(e)}')
+        pass
+
+

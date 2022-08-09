@@ -8,7 +8,6 @@ from cambridge.console import console
 from cambridge.errors import ParsedNoneError, call_on_error
 from cambridge.settings import OP, DICTS
 from cambridge.log import logger
-from cambridge.cache import get_cache
 from cambridge.utils import (
     make_a_soup,
     get_request_url,
@@ -18,43 +17,43 @@ from cambridge.utils import (
 )
 from cambridge.dicts import dict
 
-
-CAMBRIDGE_DICT_BASE_URL = "https://dictionary.cambridge.org/dictionary/english/"
-CAMBRIDGE_SPELLCHECK_URL = "https://dictionary.cambridge.org/spellcheck/english/?q="
+CAMBRIDGE_URL = "https://dictionary.cambridge.org"
+CAMBRIDGE_DICT_BASE_URL = CAMBRIDGE_URL + "/dictionary/english/"
+CAMBRIDGE_SPELLCHECK_URL = CAMBRIDGE_URL + "/spellcheck/english/?q="
 
 
 # ----------Request Web Resouce----------
-def search_cambridge(con, cur, input_word):
+def search_cambridge(con, cur, input_word, is_fresh=False):
     req_url = get_request_url(CAMBRIDGE_DICT_BASE_URL, input_word, DICTS[0])
-    # data is a tuple (response_url, response_text) if any
-    data = get_cache(con, cur, input_word, req_url)
 
-    if data is not None:
-        logger.debug(f'{OP[5]} "{input_word}" cached before. Use cache')
-        res_url = data[0]
-        soup = make_a_soup(data[1])
-        parse_and_print(res_url, soup)
+    if not is_fresh:
+        cached = dict.cache_run(con, cur, input_word, req_url, DICTS[0])
+        if not cached:
+            fresh_run(con, cur, req_url, input_word)
+    else:
+        fresh_run(con, cur, req_url, input_word)
+
+
+def fresh_run(con, cur, req_url, input_word):
+    result = fetch_cambridge(req_url, input_word)
+    found = result[0]
+
+    if found:
+        res_url, res_text = result[1]
+        soup = make_a_soup(res_text)
+        response_word = parse_response_word(soup)
+
+        parse_thread = threading.Thread(
+            target=parse_and_print, args=(res_url, soup)
+        )
+        parse_thread.start()
+
+        dict.save(con, cur, input_word, response_word, res_url, res_text)
 
     else:
-        result = fetch_cambridge(req_url, input_word)
-        found = result[0]
-
-        if found:
-            res_url, res_text = result[1]
-            soup = make_a_soup(res_text)
-            response_word = parse_response_word(soup)
-
-            parse_thread = threading.Thread(
-                target=parse_and_print, args=(res_url, soup)
-            )
-            parse_thread.start()
-
-            dict.save(con, cur, input_word, response_word, res_url, res_text)
-
-        else:
-            spell_res_url, spell_res_text = result[1]
-            soup = make_a_soup(spell_res_text)
-            parse_and_print(spell_res_url, soup)
+        spell_res_url, spell_res_text = result[1]
+        soup = make_a_soup(spell_res_text)
+        parse_and_print(spell_res_url, soup)
 
 
 def fetch_cambridge(req_url, input_word):
@@ -214,7 +213,7 @@ def parse_head_pron(head):
     w_pron_uk = head.find("span", "uk dpron-i").find("span", "pron dpron")
     if w_pron_uk:
         w_pron_uk = replace_all(w_pron_uk.text)
-    # In bs4, not found element returns None, not raise error, so try block is not right
+    # In bs4, not found element returns None, not raise error
     w_pron_us = head.find("span", "us dpron-i").find("span", "pron dpron")
     if w_pron_us:
         w_pron_us = replace_all(w_pron_us.text)
@@ -554,7 +553,7 @@ def parse_dict_body(block):
 
 # ----------Parse Dict Name----------
 def parse_dict_name(first_dict):
-    dict_info = replace_all(first_dict.small.text).replace("(", "").replace(")", "")
+    dict_info = replace_all(first_dict.small.text).strip("(").strip(")")
     dict_name = dict_info.split("©")[0]
     dict_name = dict_name.split("the")[-1]
     console.print(dict_name + "\n", justify="right")

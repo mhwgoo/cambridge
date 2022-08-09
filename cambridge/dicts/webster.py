@@ -9,7 +9,6 @@ from lxml import etree
 from cambridge.console import console
 from cambridge.settings import OP, DICTS
 from cambridge.utils import get_request_url
-from cambridge.cache import get_cache
 from cambridge.log import logger
 from cambridge.dicts import dict
 
@@ -19,7 +18,7 @@ WEBSTER_BASE_URL = "https://www.merriam-webster.com"
 
 
 # ----------Request Web Resouce----------
-def search_webster(con, cur, input_word):
+def search_webster(con, cur, input_word, is_fresh=False):
     """
     Entry point for dealing with Mirriam Webster Dictionary.
     It first checks the cache, if the word has been cached,
@@ -29,26 +28,26 @@ def search_webster(con, cur, input_word):
     """
 
     req_url = get_request_url(WEBSTER_DICT_BASE_URL, input_word, DICTS[1])
-    # data is a tuple (response_url, response_text) if any
-    data = get_cache(con, cur, input_word, req_url)
 
-    if data is not None:
-        logger.debug(f'{OP[5]} "{input_word}" cached before. Use cache')
-        res_url, res_text = data
-        tree = parse_dict(res_text, True)
-        parse_and_print(res_url, tree)
-
+    if not is_fresh:
+        cached = dict.cache_run(con, cur, input_word, req_url, DICTS[1])
+        if not cached:
+            fresh_run(con, cur, req_url, input_word)
     else:
-        result = fetch_webster(req_url, input_word)
-        found = result[0]
-        res_word, res_url, res_text = result[1]
-        tree = parse_dict(res_text, found)
+        fresh_run(con, cur, req_url, input_word)
 
-        parse_thread = threading.Thread(target=parse_and_print, args=(res_url, tree, found))
-        parse_thread.start()
 
-        if found:
-            dict.save(con, cur, input_word, res_word, res_url, res_text)
+def fresh_run(con, cur, req_url, input_word):
+    result = fetch_webster(req_url, input_word)
+    found = result[0]
+    res_word, res_url, res_text = result[1]
+    tree = parse_dict(res_text, found)
+
+    parse_thread = threading.Thread(target=parse_and_print, args=(res_url, tree, found))
+    parse_thread.start()
+
+    if found:
+        dict.save(con, cur, input_word, res_word, res_url, res_text)
 
 
 def fetch_webster(request_url, input_word):
@@ -100,7 +99,9 @@ def parse_dict(res_text, found):
     tree = etree.HTML(res_text)
 
     if found:
-        return tree.xpath('//*[@id="left-content"]')[0]
+        elem = tree.xpath('//*[@id="left-content"]')
+
+        print(elem)
     else:
         return tree.xpath('//div[@class="widget spelling-suggestion"]')[0]
 

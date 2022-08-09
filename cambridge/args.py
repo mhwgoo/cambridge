@@ -12,7 +12,7 @@ from cambridge.cache import (
 )
 from cambridge.log import logger
 from cambridge.settings import OP
-from cambridge.dicts import webster, cambridge 
+from cambridge.dicts import webster, cambridge
 from cambridge.console import console
 
 
@@ -84,6 +84,14 @@ def parse_args():
         help="search a word or phrase in Merriam-Webster Dictionary",
     )
 
+    # Add optional arguments
+    parser_sw.add_argument(
+        "-f",
+        "--fresh",
+        action="store_true",
+        help="search a word or phrase afresh without using cache",
+    )
+
     if len(sys.argv) == 1:
         parser.print_help()
         sys.exit(0)
@@ -142,7 +150,7 @@ def list_words(args, con, cur):
 def search_word(args, con, cur):
     """
     The function is triggered when a user searches a word or phrase on terminal.
-    It first checks the args having "verbose" in it or not, if so, the debug mode will be turned on.
+    First checks the args having "verbose" in it or not, if so, the debug mode will be turned on.
     Then it checks which dictionary is intended, and then calls respective dictionary function.
     """
 
@@ -151,11 +159,9 @@ def search_word(args, con, cur):
 
     input_word = args.words[0]
     is_webster = args.webster
+    is_fresh = args.fresh
 
     if is_webster:
-        webster.search_webster(con, cur, input_word)
+        webster.search_webster(con, cur, input_word, is_fresh)
     else:
-        cambridge.search_cambridge(con, cur, input_word)
-
-
-
+        cambridge.search_cambridge(con, cur, input_word, is_fresh)

@@ -14,7 +14,7 @@ from cambridge.cache import DB
 from cambridge.utils import timer
 
 
-@timer
+# @timer
 def main():
     try:
         con = sqlite3.connect(

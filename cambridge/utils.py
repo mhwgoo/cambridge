@@ -1,7 +1,9 @@
 """Contains various utility functions."""
 
 import time
-import cProfile, pstats, io
+import cProfile
+import pstats
+import io
 from urllib import parse
 from functools import wraps
 from bs4 import BeautifulSoup
@@ -44,22 +46,22 @@ def parse_response_url(url, dict):
         response_base_url = url.split("?")[0]
         return response_base_url
 
-    return url 
+    return url
 
 
-def construct_request_url(url, input_word, dict):
-    """Return the url formatted for requesting the web page at the url."""
-    
+def get_request_url(url, input_word, dict):
+    """Return the url formatted for requesting the web page."""
+
     if dict == DICTS[0]:
         query_word = input_word.replace(" ", "-").replace("/", "-")
         request_url = url + query_word
         return request_url
-    
+
     return url + parse.quote(input_word)
 
 
-def construct_request_url_spellcheck(url, input_word):
-    """Return the url formatted for requesting the spellcheck web page at the url."""
+def get_request_url_spellcheck(url, input_word):
+    """Return the url formatted for requesting the spellcheck web page."""
 
     query_word = input_word.replace(" ", "+").replace("/", "+")
     request_url = url + query_word

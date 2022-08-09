@@ -9,95 +9,104 @@ from cambridge.errors import ParsedNoneError, call_on_error
 from cambridge.settings import OP, DICTS
 from cambridge.log import logger
 from cambridge.cache import get_cache
-from cambridge.utils import make_a_soup, construct_request_url, construct_request_url_spellcheck, parse_response_url, replace_all
+from cambridge.utils import (
+    make_a_soup,
+    get_request_url,
+    get_request_url_spellcheck,
+    parse_response_url,
+    replace_all,
+)
 from cambridge.dicts import dict
 
 
-CAMBRIDGE_DICT_BASE_URL = "https://dictionary.cambridge.org/dictionary/english/"  # if no result found in cambridge, response.url is this.
+CAMBRIDGE_DICT_BASE_URL = "https://dictionary.cambridge.org/dictionary/english/"
 CAMBRIDGE_SPELLCHECK_URL = "https://dictionary.cambridge.org/spellcheck/english/?q="
 
 
 # ----------Request Web Resouce----------
 def search_cambridge(con, cur, input_word):
-    request_url = construct_request_url(CAMBRIDGE_DICT_BASE_URL, input_word, DICTS[0])
-    data = get_cache(con, cur, input_word, request_url)  # data is a tuple if any
+    req_url = get_request_url(CAMBRIDGE_DICT_BASE_URL, input_word, DICTS[0])
+    # data is a tuple (response_url, response_text) if any
+    data = get_cache(con, cur, input_word, req_url)
 
-    if data is not None:    
+    if data is not None:
         logger.debug(f'{OP[5]} "{input_word}" cached before. Use cache')
-        response_url = data[0]
+        res_url = data[0]
         soup = make_a_soup(data[1])
-        parse_and_print(response_url, soup)
+        parse_and_print(res_url, soup)
 
     else:
-        result = fetch_cambridge(request_url, input_word)
+        result = fetch_cambridge(req_url, input_word)
         found = result[0]
 
         if found:
-            response_url, response_text = result[1]
-            soup = make_a_soup(response_text) 
+            res_url, res_text = result[1]
+            soup = make_a_soup(res_text)
             response_word = parse_response_word(soup)
 
             parse_thread = threading.Thread(
-                target=parse_and_print, args=(response_url, soup)
+                target=parse_and_print, args=(res_url, soup)
             )
             parse_thread.start()
 
-            dict.save(con, cur, input_word, response_word, response_url, response_text)
+            dict.save(con, cur, input_word, response_word, res_url, res_text)
 
         else:
-            spellcheck_response_url, spellcheck_response_text = result[1]
-            soup = make_a_soup(spellcheck_response_text)
-            parse_and_print(spellcheck_response_url, soup)
+            spell_res_url, spell_res_text = result[1]
+            soup = make_a_soup(spell_res_text)
+            parse_and_print(spell_res_url, soup)
 
 
-def fetch_cambridge(request_url, input_word):
+def fetch_cambridge(req_url, input_word):
     """Get response url and response text for future parsing."""
 
     with requests.Session() as session:
         session.trust_env = False
-        response = dict.fetch(request_url, session)
+        res = dict.fetch(req_url, session)
 
-        if response.url == CAMBRIDGE_DICT_BASE_URL:
+        if res.url == CAMBRIDGE_DICT_BASE_URL:
             logger.debug(f'{OP[6]} "{input_word}" in Cambridge')
 
-            spellcheck_request_url = construct_request_url_spellcheck(CAMBRIDGE_SPELLCHECK_URL, input_word)
-            spellcheck_response = dict.fetch(spellcheck_request_url, session)
-            spellcheck_response_url = spellcheck_response.url
-            spellcheck_response_text = spellcheck_response.text
+            spell_req_url = get_request_url_spellcheck(
+                CAMBRIDGE_SPELLCHECK_URL, input_word
+            )
+            spell_res = dict.fetch(spell_req_url, session)
+            spell_res_url = spell_res.url
+            spell_res_text = spell_res.text
 
-            return False, (spellcheck_response_url, spellcheck_response_text)
+            return False, (spell_res_url, spell_res_text)
         else:
-            response_url = parse_response_url(response.url, DICTS[0])
-            response_text = response.text
+            res_url = parse_response_url(res.url, DICTS[0])
+            res_text = res.text
 
-            logger.debug(f'{OP[5]} "{input_word}" in Cambridge at {response_url}')
-            return True, (response_url, response_text)
+            logger.debug(f'{OP[5]} "{input_word}" in Cambridge at {res_url}')
+            return True, (res_url, res_text)
 
 
 # ----------The Entry Point For Parse And Print----------
-def parse_and_print(response_url, soup):
-    """The entry point of this module to parse the dict and print the info about the word."""
+def parse_and_print(res_url, soup):
+    """The entry point to parse the dict and print the info about the word."""
 
-    logger.debug(f"{OP[1]} the fetched result of {response_url}")
+    logger.debug(f"{OP[1]} the fetched result of {res_url}")
 
-    if "spellcheck" in response_url :
-        logger.debug(f"{OP[4]} the parsed result of {response_url}")
+    if "spellcheck" in res_url:
+        logger.debug(f"{OP[4]} the parsed result of {res_url}")
         parse_spellcheck(soup)
         sys.exit()
 
-    blocks, first_dict = parse_dict_blocks(response_url, soup)
+    blocks, first_dict = parse_dict_blocks(res_url, soup)
 
-    logger.debug(f"{OP[4]} the parsed result of {response_url}")
+    logger.debug(f"{OP[4]} the parsed result of {res_url}")
     for block in blocks:
         parse_dict_head(block)
         parse_dict_body(block)
     parse_dict_name(first_dict)
 
 
-def parse_dict_blocks(url, soup):
+def parse_dict_blocks(res_url, soup):
     """Parse different form sections for the word."""
 
-    first_dict = parse_first_dict(url, soup)
+    first_dict = parse_first_dict(res_url, soup)
 
     attempt = 0
     while True:
@@ -106,19 +115,20 @@ def parse_dict_blocks(url, soup):
                 "div", ["pr entry-body__el", "entry-body__el clrd js-share-holder"]
             )
         except AttributeError as e:
-            attempt = call_on_error(e, url, attempt, OP[3])
+            attempt = call_on_error(e, res_url, attempt, OP[3])
 
-        if result:
-            blocks = first_dict.find_all(
-                "div", ["pr entry-body__el", "entry-body__el clrd js-share-holder"]
-            )
         else:
-            blocks = first_dict.find_all("div", "pr idiom-block")
+            if result:
+                blocks = first_dict.find_all(
+                    "div", ["pr entry-body__el", "entry-body__el clrd js-share-holder"]
+                )
+            else:
+                blocks = first_dict.find_all("div", "pr idiom-block")
 
-        return blocks, first_dict
+            return blocks, first_dict
 
 
-def parse_first_dict(url, soup):
+def parse_first_dict(res_url, soup):
     """Parse the dict section of the page for the word."""
 
     attempt = 0
@@ -126,10 +136,10 @@ def parse_first_dict(url, soup):
         try:
             first_dict = soup.find("div", "pr dictionary")
         except Exception as e:
-            attempt = call_on_error(e, url, attempt, OP[3])
+            attempt = call_on_error(e, res_url, attempt, OP[3])
 
         if first_dict is None:
-            attempt = call_on_error(ParsedNoneError(), url, attempt, OP[3])
+            attempt = call_on_error(ParsedNoneError(), res_url, attempt, OP[3])
 
         return first_dict
 
@@ -140,7 +150,7 @@ def parse_spellcheck(soup):
     content = soup.find("div", "hfl-s lt2b lmt-10 lmb-25 lp-s_r-20")
 
     title = content.h1.text.split("for")[1].strip()
-    console.print("\n[bold]" +  title)
+    console.print("\n[bold]" + title)
 
     for ul in content.find_all("ul", "hul-u"):
         notice = ul.find_previous_sibling().text
@@ -159,8 +169,11 @@ def parse_response_word(soup):
 
 
 # ----------Parse Dict Head----------
-# Compared to Webster Dictionary, Cambridge is a bunch of deep layered html tags filled with unbearably messy class names.
-# No clear pattern, somewhat irregular, sometimes you just need to tweak your codes for particular words and phrases for them to show. 
+# Compared to Webster, Cambridge is a bunch of deep layered html tags
+# filled with unbearably messy class names.
+# No clear pattern, somewhat irregular, sometimes you just need to
+# tweak your codes for particular words and phrases for them to show.
+
 
 def parse_head_title(block):
     word = block.find("div", "di-title").text
@@ -193,7 +206,7 @@ def parse_head_type(head):
         posgram = head.find("div", "posgram dpos-g hdib lmr-5")
         w_type = replace_all(posgram.text)
     else:
-        w_type = "" 
+        w_type = ""
     return w_type
 
 
@@ -229,7 +242,7 @@ def parse_head_usage(head):
     if head.find_next_sibling("span", "lab dlab"):
         w_usage = replace_all(head.find_next_sibling("span", "lab dlab").text)
         return w_usage
-    return "" 
+    return ""
 
 
 def parse_head_var(head):
@@ -252,7 +265,6 @@ def parse_dict_head(block):
     word = parse_head_title(block)
     info = parse_head_info(block)
 
-
     if head:
         head = block.find("div", "pos-header dpos-h")
         w_type = parse_head_type(head)
@@ -261,7 +273,9 @@ def parse_dict_head(block):
         if not word:
             word = parse_head_title(head)
         if w_type:
-            console.print(f"\n[bold #3C8DAD on #DDDDDD]{word}[/bold #3C8DAD on #DDDDDD]  [bold]{w_type}[/bold] {usage}")
+            console.print(
+                f"\n[bold #3C8DAD on #DDDDDD]{word}[/bold #3C8DAD on #DDDDDD]  [bold]{w_type}[/bold] {usage}"
+            )
         if head.find("span", "uk dpron-i"):
             if head.find("span", "uk dpron-i").find("span", "pron dpron"):
                 parse_head_pron(head)
@@ -281,7 +295,7 @@ def parse_dict_head(block):
     else:
         console.print("[bold #3C8DAD on #DDDDDD]" + word)
         if info:
-            console.print(f"[bold]{info[0]}[/bold] {info[1]}" )
+            console.print(f"[bold]{info[0]}[/bold] {info[1]}")
 
 
 # ----------Parse Dict Body----------
@@ -516,7 +530,7 @@ def parse_dict_body(block):
 
                     for i in child.find_all("div", "def-block ddef_block"):
                         parse_def(i)
-            except:
+            except Exception:
                 pass
 
     if block.find(

@@ -1,4 +1,4 @@
-"""Set, parse, and deal with terminal arguments."""
+"""Set, parse, and dispatch terminal arguments."""
 
 import sqlite3
 import logging
@@ -136,16 +136,14 @@ def list_words(args, con, cur):
                 data.sort()
 
             for i in data:
-                console.print(i[0], justify="center")
+                console.print(i[0], justify="left")
 
 
 def search_word(args, con, cur):
     """
-    The function triggered when a user searches a word or phrase on terminal.
-    It checks the args, if "verbose" is in it, the debug mode will be turned on.
-    Then it checks the cache, if the word has been cached, uses it and prints it; if not, go fetch the web.
-    After fetching the data, prints it to the terminal and caches it.
-    If no word found in the cambridge, display word suggestions and exit.
+    The function is triggered when a user searches a word or phrase on terminal.
+    It first checks the args having "verbose" in it or not, if so, the debug mode will be turned on.
+    Then it checks which dictionary is intended, and then calls respective dictionary function.
     """
 
     if args.verbose:

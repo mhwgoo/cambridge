@@ -122,9 +122,21 @@ def parse_dict(res_text, found):
 
         # for node in nodes:
         #     try:
-        #         print(node.attrib["id"])
+        #         print("id:    ", node.attrib["id"])
         #     except KeyError:
-        #         print(node.attrib["class"])
+        #         print("class: ", node.attrib["class"])
+        #
+        # # class:  row entry-header
+        # # class:  row entry-attr
+        # # class:  row headword-row
+        # # id:     dictionary-entry-1
+        # # class:  row entry-header
+        # # id:     dictionary-entry-2
+        # # class:  row entry-header
+        # # id:     dictionary-entry-3
+        # # id:     other-words-anchor
+        # # id:     synonyms-anchor
+        # # class:  on-web read-more-content-hint-container
 
         return nodes
 
@@ -134,7 +146,7 @@ def parse_dict(res_text, found):
         return nodes
 
 
-# DONE
+# FIXME BIG based on word type
 def print_synonyms(node):
     """Print synonyms."""
 
@@ -158,7 +170,7 @@ def print_synonyms(node):
                 console.print(f"{elm.text}", end="  ", style="italic")
                 time = time + 1
 
-# DONE
+
 def print_other_words(node):
     """Print other word forms."""
 
@@ -183,9 +195,8 @@ def print_other_words(node):
                 print(f"[{elm.text}]", end=" ")
 
 
-# DONE
 def print_examples(node, word):
-    """Print Recent examples on the web."""
+    """Print recent examples on the web."""
 
     print()
     time = 0
@@ -202,17 +213,18 @@ def print_examples(node, word):
 
             if has_aq:
                 for t in elm.itertext():
-                    if time in [0, 8, 16, 24]: 
+                    if time in [0, 1, 8, 9, 16, 17,  24, 25]:
                         if t.strip().lower() == word.lower():
                             console.print(f"[#3C8DAD]{t}", end="", style="italic bold")
                         else:
                             console.print(f"[#3C8DAD]{t}", end="")
                     else:
-                        break
+                        continue
+                if time in [0, 1, 8, 9, 16, 17,  24, 25]:
+                    print()
                 time = time + 1
 
 
-# DONE
 def print_word_and_wtype(node):
     """Print word and its type."""
 
@@ -230,83 +242,144 @@ def print_word_and_wtype(node):
                 )
             if has_type:
                 console.print(f"[bold] \033[33m{elm.text.upper()}\033[0m", end=" ")
+                print()
     return word
 
 
+# ---Print dictionary entry content---
+def print_num(node):
+    """Print number enumeration."""
+    t = node.text
+    if t != "1":
+        console.print(f"\n[bold]{t}", end=" ")
+    else:
+        console.print(f"[bold]{t}", end=" ")
+
+
+def print_letter(node):
+    """Print letter enumeration."""
+
+    t = node.text
+    if t != "a":
+        console.print(f"\n  [bold]{t}", end=" ")
+    else:
+        console.print(f"[bold]{t}", end=" ")
+
+
+def print_sent(node):
+    "Print example sentences under a definition."
+
+    console.print("\n[#3C8DAD]//", end=" ")
+    for t in node.itertext():
+        console.print(f"[#3C8DAD]{t}", end="")
+
+
+def print_def(node):
+    "Print the definition."
+
+    for t in node.itertext():
+        if t == " ":
+            continue
+        if t.strip() == ":":
+            console.print("\n", end="")
+        else:
+            console.print(f"{t}", end="")
+
+
+# FIXME big
+def print_dict_entry(node):
+    """The dispatch function to dispatch parsing different sections of a dict entry."""
+
+    for i in node.iterdescendants():
+        try:
+            # has_num = (i.tag == "span") and (i.attrib["class"] == "num")
+            # has_letter = (i.tag == "span") and (i.attrib["class"] == "letter")
+            has_def = (i.tag == "span") and (i.attrib["class"] == "dtText")
+            has_sent = (i.tag == "span") and ("ex-sent" in i.attrib["class"] and ("ex-sent aq has-aq sents" != i.attrib["class"]))
+            has_verb_form = (i.tag == "a") and (i.attrib["class"] ==  "important-blue-link")
+            has_sl = (i.tag == "span") and (i.attrib["class"] == "sl")
+            has_sd = (i.tag == "span") and (i.attrib["class"] == "sd")
+            has_drp = (i.tag == "span") and (i.attrib["class"] == "drp")
+
+        except KeyError:
+            continue
+
+        # Print the number enumeration of the definition
+        # if has_num:
+        #     print_num(i)
+
+        # Print the letter enumeration of the definition
+        # if has_letter:
+        #     print_letter(i)
+
+        # Print word definition
+        if has_def:
+            print_def(i)
+
+        # Print sentences with author
+        if has_sent:
+            print_sent(i)
+
+        # Print verb forms
+        if has_verb_form:
+            print(i.text)
+
+        if has_sl or has_sd:
+            console.print(f"\n({i.text.strip()})", style="italic", end="")
+
+        if has_drp:
+            console.print(f"\n\n{i.text.strip()}", style="bold", end=" ")
+
+
 def parse_word(res_url, nodes):
+    """The dispatch function to dispatch parsing different sections of a word."""
+
     for node in nodes:
         try:
             attr = node.attrib["id"]
         except KeyError:
             attr = node.attrib["class"]
 
+        # Print word and its types like verb, noun, and adjetive etc.
         if attr == "row entry-header":
             word = print_word_and_wtype(node)
 
+        # Print pronounciations
+        if attr == "row entry-attr":
+            attrs = list(node.itertext())
+            for index, t in enumerate(attrs):
+                if index == 2 or index == 5:
+                    print(t.strip(), end=" ")
+                else:
+                    print(t.strip(), end="")
+            print()
+
+        # Print headword forms
+        if attr == "row headword-row":
+            for i in node.iterdescendants():
+                if (i.tag == "span") and (i.attrib["class"] == "if"):
+                    print(i.text, end=" ")
+            print()
+
+        # Print dictionary entry content
+        if "dictionary-entry" in attr:
+            print_dict_entry(node)
+
+        # Print other word forms limiting 10
         if attr == "other-words-anchor":
             print_other_words(node)
 
+        # Print synonyms
         if attr == "synonyms-anchor":
             print_synonyms(node)
 
+        # Print web examples
         if attr == "on-web read-more-content-hint-container":
             print_examples(node, word)
 
 
-        # for i in node.iter():
-        #     try:
-        #         # Print pronounciation, tenses etc.
-        #         if i.attrib["class"] == "col" and (i.getparent().attrib["class"] != "row vg-header"):
-        #             t = [
-        #                 t.strip().replace(";", "")
-        #                 for t in i.itertext()
-        #                 if len(t.strip("\n").strip())
-        #             ]
-        #             form = " ".join(t)
-        #             print(f"\033[33m{form}\033[0m", end="\n")
-        #
-        #         # Print transitive verb mark
-        #         if i.attrib["class"] == "vd firstVd":
-        #             vd = i.getchildren()[0].text
-        #             print(vd)
-        #
-        #         # Print definition and its examples
-        #         # FIXME big
-        #         if "dt " in i.attrib["class"]:
-        #             if i.getprevious() is not None and i.getprevious().attrib["class"] == "sl":
-        #                 print(f"[{i.getprevious().text.strip()}]", end="")
-        #             for child in i.getchildren():
-        #                 if child.attrib["class"] == "ex-sent aq has-aq sents":
-        #                     continue
-        #                 elif child.attrib["class"] != "dtText":
-        #                     console.print("\n[#3C8DAD]    //", end=" ")
-        #                     for t in child.itertext():
-        #                         console.print(f"[#3C8DAD]{t}", end="")
-        #                 elif child.attrib["class"] == "dtText":
-        #                     for t in child.itertext():
-        #                         console.print(f"{t}", end="")
-        #
-        #         # Print the number enumeration of the definition
-        #         if i.attrib["class"] == "num":
-        #             t = i.text
-        #             if t != "1":
-        #                 console.print(f"\n[bold]{t}", end=" ")
-        #             else:
-        #                 console.print(f"[bold]{t}", end=" ")
-        #
-        #         # Print the letter enumeration of the definition
-        #         if i.attrib["class"] == "letter":
-        #             t = i.text
-        #             if t != "a":
-        #                 console.print(f"\n  [bold]{t}", end=" ")
-        #             else:
-        #                 console.print(f"[bold]{t}", end=" ")
-        #
-        #
-
-
 def parse_spellcheck(nodes):
-    """Parse spellcheck info and print it to the terminal."""
+    """Parse spellcheck info and print it."""
 
     for node in nodes:
         if node.tag == "h1":

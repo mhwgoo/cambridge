@@ -1,12 +1,12 @@
 """
-Cambridge is a terminal version of Cambridge Dictionary. 
+Cambridge is a terminal version of Cambridge Dictionary.
 The dictionary data comes from https://dictionary.cambridge.org.
 """
 
 import sqlite3
-
 import sys
 import os
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from cambridge.args import parse_args
@@ -14,7 +14,7 @@ from cambridge.cache import DB
 from cambridge.utils import timer
 
 
-# @timer
+@timer
 def main():
     try:
         con = sqlite3.connect(
@@ -30,5 +30,6 @@ def main():
 
     except KeyboardInterrupt:
         print("\nStopped by user")
+
 
 main()

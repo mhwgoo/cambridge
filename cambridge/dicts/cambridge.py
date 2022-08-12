@@ -43,9 +43,7 @@ def fresh_run(con, cur, req_url, input_word):
         soup = make_a_soup(res_text)
         response_word = parse_response_word(soup)
 
-        parse_thread = threading.Thread(
-            target=parse_and_print, args=(res_url, soup)
-        )
+        parse_thread = threading.Thread(target=parse_and_print, args=(res_url, soup))
         parse_thread.start()
 
         dict.save(con, cur, input_word, response_word, res_url, res_text)
@@ -64,7 +62,7 @@ def fetch_cambridge(req_url, input_word):
         res = dict.fetch(req_url, session)
 
         if res.url == CAMBRIDGE_DICT_BASE_URL:
-            logger.debug(f'{OP[6]} "{input_word}" in Cambridge')
+            logger.debug(f'{OP[6]} "{input_word}" in {DICTS[0]}')
 
             spell_req_url = get_request_url_spellcheck(
                 CAMBRIDGE_SPELLCHECK_URL, input_word
@@ -75,10 +73,10 @@ def fetch_cambridge(req_url, input_word):
 
             return False, (spell_res_url, spell_res_text)
         else:
-            res_url = parse_response_url(res.url, DICTS[0])
+            res_url = parse_response_url(res.url)
             res_text = res.text
 
-            logger.debug(f'{OP[5]} "{input_word}" in Cambridge at {res_url}')
+            logger.debug(f'{OP[5]} "{input_word}" in {DICTS[0]} at {res_url}')
             return True, (res_url, res_text)
 
 

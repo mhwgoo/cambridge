@@ -37,20 +37,15 @@ def replace_all(string):
     )
 
 
-def parse_response_url(url, dict):
-    """Return the unquoted url for displaying and saving."""
+def parse_response_url(url):
+    """Return the unquoted Cambridge url for displaying and saving."""
 
-    url = parse.unquote(url)
-
-    if dict == DICTS[0]:
-        response_base_url = url.split("?")[0]
-        return response_base_url
-
-    return url
+    response_base_url = url.split("?")[0]
+    return response_base_url
 
 
 def get_request_url(url, input_word, dict):
-    """Return the url formatted for requesting the web page."""
+    """Return the url formatted to request the web page."""
 
     if dict == DICTS[0]:
         query_word = input_word.replace(" ", "-").replace("/", "-")
@@ -61,7 +56,7 @@ def get_request_url(url, input_word, dict):
 
 
 def get_request_url_spellcheck(url, input_word):
-    """Return the url formatted for requesting the spellcheck web page."""
+    """Return the url formatted to request Cambridge spellcheck web page."""
 
     query_word = input_word.replace(" ", "+").replace("/", "+")
     request_url = url + query_word

@@ -138,6 +138,7 @@ def parse_dict(res_text, found):
 def print_synonyms(node):
     """Print synonyms."""
 
+    time = 0
     for elm in node.iterdescendants():
         try:
             has_title = (elm.tag == "h2")
@@ -152,8 +153,10 @@ def print_synonyms(node):
                 print()
 
             if has_syn:
-                print(f"{elm.text}", end=" ")
-
+                if time == 10:
+                    break
+                console.print(f"{elm.text}", end="  ", style="italic")
+                time = time + 1
 
 # DONE
 def print_other_words(node):
@@ -181,10 +184,12 @@ def print_other_words(node):
 
 
 # DONE
-def print_examples(node):
+def print_examples(node, word):
     """Print Recent examples on the web."""
 
     print()
+    time = 0
+
     for elm in node.iterdescendants():
         try:
             is_label = (elm.attrib["class"] == "ex-header function-label")
@@ -196,10 +201,15 @@ def print_examples(node):
                 console.print(f"\n[bold]{elm.text.upper()}", end="\n")
 
             if has_aq:
-                console.print("[#3C8DAD]// ", end="")
                 for t in elm.itertext():
-                    console.print(f"[#3C8DAD]{t}", end="")
-                print()
+                    if time in [0, 8, 16, 24]: 
+                        if t.strip().lower() == word.lower():
+                            console.print(f"[#3C8DAD]{t}", end="", style="italic bold")
+                        else:
+                            console.print(f"[#3C8DAD]{t}", end="")
+                    else:
+                        break
+                time = time + 1
 
 
 # DONE
@@ -214,11 +224,13 @@ def print_word_and_wtype(node):
             continue
         else:
             if has_word:
+                word = elm.text
                 console.print(
-                    f"\n[bold #3C8DAD on #DDDDDD]{elm.text}[/bold #3C8DAD on #DDDDDD]", end=" "
+                    f"\n[bold #3C8DAD on #DDDDDD]{word}[/bold #3C8DAD on #DDDDDD]", end=" "
                 )
             if has_type:
                 console.print(f"[bold] \033[33m{elm.text.upper()}\033[0m", end=" ")
+    return word
 
 
 def parse_word(res_url, nodes):
@@ -228,6 +240,9 @@ def parse_word(res_url, nodes):
         except KeyError:
             attr = node.attrib["class"]
 
+        if attr == "row entry-header":
+            word = print_word_and_wtype(node)
+
         if attr == "other-words-anchor":
             print_other_words(node)
 
@@ -235,10 +250,8 @@ def parse_word(res_url, nodes):
             print_synonyms(node)
 
         if attr == "on-web read-more-content-hint-container":
-            print_examples(node)
+            print_examples(node, word)
 
-        if attr == "row entry-header":
-            print_word_and_wtype(node)
 
         # for i in node.iter():
         #     try:

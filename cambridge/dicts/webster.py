@@ -489,6 +489,9 @@ def parse_word(res_url, nodes):
         if attr == "related-phrases-anchor":
             print_phrases(node, words)
 
+    dict_name = "The Merriam-Webster Dictionary"
+    console.print(f"\n{dict_name}", justify="right")
+
 
 def parse_spellcheck(nodes):
     """Parse spellcheck info and print it."""

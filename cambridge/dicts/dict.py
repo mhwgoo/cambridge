@@ -49,7 +49,7 @@ def cache_run(con, cur, input_word, req_url, dict):
         if DICTS[0].lower() in res_url:
             if dict != DICTS[0]:
                 logger.info(
-                    f'{OP[5]} "{input_word}" from {DICTS[0]} in cache, use it. Not using it, try with "-f" flag'
+                    f'{OP[5]} "{input_word}" from {DICTS[0]} in cache, used it. Not to use it, try with "-f" flag'
                 )
 
             soup = cambridge.make_a_soup(res_text)
@@ -57,7 +57,7 @@ def cache_run(con, cur, input_word, req_url, dict):
         else:
             if dict != DICTS[1]:
                 logger.info(
-                    f'{OP[5]} "{input_word}" from {DICTS[1]} in cache, use it. Not using it, try with "-f" flag'
+                    f'{OP[5]} "{input_word}" from {DICTS[1]} in cache, used it. Not to use it, try with "-f" flag'
                 )
             tree = webster.parse_dict(res_text, True)
             webster.parse_and_print(res_url, tree, True)

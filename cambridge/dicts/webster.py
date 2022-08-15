@@ -112,6 +112,9 @@ def parse_dict(res_text, found):
         //*[@id="left-content"]/div[@id="related-phrases-anchor"]
         """
 
+        # TODO
+        # //*[@id="left-content"]/div[contains(@id, "art-anchor")] |
+
         # Discard ruling out strategy
         # *[@id="left-content"]/
         # div[following::div[@id="first-known-anchor"] and
@@ -315,27 +318,26 @@ def print_sent(node, has_number):
     s_words = list(node.itertext())
 
     for t in s_words:
-
         if t == s_words[-1]:
             console.print(f"[#3C8DAD]{t}", end="\n")
         else:
             console.print(f"[#3C8DAD]{t}", end="")
 
 
-def print_def_text(node):
+def print_def_text(node, tag_class):
     "Print the text of one definition item."
 
-    s_words = list(node.itertext())
-    for t in s_words:
-        if t == " " and t != s_words[-1]:
-            continue
+    ts = list(node.itertext())
 
-        console.print(t, end="", style="#b2b2b2")
-
-        # if t == s_words[-1]:
-        #     console.print(t, end="\n", style="#b2b2b2")
-        # else:
-        #     console.print(t, end="", style="#b2b2b2")
+    if tag_class == "sb-0":
+        for t in ts:
+            console.print(t, end="", style="#b2b2b2")
+    else:
+        for t in ts:
+            if t == ts[0]:
+                console.print(f"  {t}", end="", style="#b2b2b2")
+            else:
+                console.print(t, end="", style="#b2b2b2")
 
 
 def print_num(num):
@@ -347,7 +349,7 @@ def print_num(num):
         console.print(f"[bold]{num}", end=" ")
 
 
-def print_def_content(node):
+def print_def_content(node, has_number, tag_class):
     """Print definition content including definition text and its examples."""
 
     # span "dt " has definite child span "dtText"
@@ -356,16 +358,17 @@ def print_def_content(node):
         attr = i.attrib["class"]
 
         if attr == "dtText":
-            print_def_text(i)
+            print_def_text(i, tag_class)
 
         if attr == "sd":
             print_label(i)
 
-        # TODO
         if attr == "uns":
+            for t in i.itertext():
+                console.print(t, end="")
 
-            # has_unText = (i.tag == "span") and (i.attrib["class"] == "unText")
-            pass
+        if "ex-sent " in attr and (attr != "ex-sent aq has-aq sents"):
+            print_sent(i, has_number)
 
 
 def print_label(node):
@@ -374,8 +377,7 @@ def print_label(node):
     console.print(f"({node.text.strip()})", style="italic", end=" ")
 
 
-# TODO
-def print_sub_def(node, index, num):
+def print_sub_def(node, tag_class):
     """
     Print sub definition within one defition bundle.
     Like print a meaning, b meaning and so forth.
@@ -385,41 +387,43 @@ def print_sub_def(node, index, num):
     # "sense no-subnum" or "sense has-number-only" or "sense-has-sn" ...
     # sense is the only one child of the node
     sense = node.getchildren()[0]
+    has_number = False
 
     # sense has one child span "dt " or two children: "sn sense- ..." or "dt "
     for i in sense.iterchildren():
         attr = i.attrib["class"]
 
-        # span "dt " or span "dt hasSdSense" with span "sdsense" under it
-        if "dt " in attr:
-            print_def_content(i)
-
+        # number and letter enunciation section
         if "sn sense-" in attr:
             index = attr.find("-") + 1
-            digit = attr[index+1]
+            digit = attr[index]
+            has_number = digit.isnumeric()
 
-            if digit.isnumeric():
+            if has_number:
                 print_num(digit)
 
-        if attr == "sdsense":
-            print_def_content(i)
+        # span "dt " or span "dt hasSdSense" with span "sdsense" under it
+        # definition content section including definition and sentences
+        if "dt " in attr:
+            print_def_content(i, has_number, tag_class)
 
-        if attr == "sl":
+        # span section under span section "dt hasSdSense"
+        if attr == "sdsense":
+            print_def_content(i, has_number, tag_class)
+
+        # span "sl" is a label
+        if attr == "sl" or attr == "if" or attr == "spl plural" or attr == "il or":
             print_label(i)
 
         """
         has_vl = (i.tag == "span") and (i.attrib["class"] == "vl")
         has_va = (i.tag == "span") and (i.attrib["class"] == "va")
-        has_dxnls = (i.tag == "p") and (i.attrib["class"] == "dxnls")
 
         if has_vl:
             console.print(f"({i.text.strip()})", style="italic", end=" ")
 
         if has_va:
             console.print(f"{i.text.strip()}", style="bold yellow", end="")
-
-        if has_dxnls:
-            print_seealso(i)
         """
 
 
@@ -430,10 +434,10 @@ def print_def_bundle(node):
     """
 
     children = node.getchildren()   # get spans with class "sb-0", "sb-1" ...
-    num = len(children)
 
-    for index, child in enumerate(children):
-        print_sub_def(child, index, num)  # print a span class "sb-0" or "sb-1"
+    for c in children:
+        tag_class = c.attrib["class"]
+        print_sub_def(c, tag_class)  # print a span class "sb-0" or "sb-1"
 
 
 def print_main_entry(node):
@@ -464,9 +468,13 @@ def print_dict_entry(node):
         if attr == "vg":
             print_main_entry(i)
 
-        # div "dro" is the phrase part with its own name and definitions
+        # div "dro" is the phrase section with its own name and definitions
         if attr == "dro":
             print_phrase_part(i)
+
+        # p "dxnlx" is the seealso section
+        if attr == "dxnls":
+            print_seealso(node)
 
 
 # --- Print head info of a word ---

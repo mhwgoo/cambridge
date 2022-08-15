@@ -12,7 +12,7 @@ I'm a terminal person tired of pulling out a GUI app or browser, inputting words
 
 ## Features 
 1. Just `camb <word/phrase>` to look up what you need. 
-2. Takes less than 2s for the first run based on my 200M bandwith, including fetching, parsing, printing, and writing cache. 
+2. Takes less than 2s for the first run, including fetching, parsing, printing, and writing cache. 
 3. Less than 0.1s for the same item's later search. 
 4. Only fetches the first dictionary on Cambridge, getting rid of confuses by different dictionaries
 5. If not found, a list of related suggestions will be displayed.

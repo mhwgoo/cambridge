@@ -305,40 +305,23 @@ def print_seealso(node):
     print()
 
 
-def print_sent(node, has_number):
+def print_sent(node, is_last, has_number, tag_class):
     "Print one example sentence under the text of one definition item."
 
     print()
-
-    if has_number:
-        console.print("[#3C8DAD]    //", end=" ")
+    if has_number or tag_class != "sb-0":
+        console.print("[#3C8DAD]  //", end=" ")
     else:
         console.print("[#3C8DAD]//", end=" ")
 
     s_words = list(node.itertext())
 
-    for t in s_words:
-        if t == s_words[-1]:
-            console.print(f"[#3C8DAD]{t}", end="\n")
-        else:
+    if is_last:
+        for t in s_words:
             console.print(f"[#3C8DAD]{t}", end="")
-
-
-def print_def_text(node, tag_class):
-    "Print the text of one definition item."
-
-    ts = list(node.itertext())
-
-    if tag_class == "sb-0":
-        for t in ts:
-            console.print(t, end="", style="#b2b2b2")
     else:
-        for t in ts:
-            if t == ts[0]:
-                console.print(f"  {t}", end="", style="#b2b2b2")
-            else:
-                console.print(t, end="", style="#b2b2b2")
-
+        for t in s_words:
+            console.print(f"[#3C8DAD]{t}", end="")
 
 def print_num(num):
     """Print number enumeration."""
@@ -349,32 +332,84 @@ def print_num(num):
         console.print(f"[bold]{num}", end=" ")
 
 
-def print_def_content(node, has_number, tag_class):
+def print_label(node, tag_class, has_number=True, inline=False):
+    """Print the label before a definition text, like informal, especially."""
+
+    if isinstance(node, str):
+        text = node.strip()
+    else:
+        text = node.text.strip()
+
+    if inline:
+        console.print(f" {text}", style="italic bold", end=" ")
+
+    else:
+        if has_number and (tag_class == "sb-0"):
+            console.print(f"{text}", style="italic bold", end=" ")
+        if has_number and (tag_class != "sb-0"):
+            print()
+            console.print(f"  {text}", style="italic bold", end=" ")
+        if not has_number:
+            console.print(f"{text}", style="italic bold", end=" ")
+
+
+def print_def_text(node, dtText_index, tag_class, has_label):
+    "Print the text of one definition item."
+
+    ts = list(node.itertext())
+    if ts[0] == " ":
+        ts = ts[2:]
+    else:
+        ts = ts[1:]
+
+    t = "".join(ts)
+
+    # print(f"{dtText_index} {tag_class} {has_label}")
+    if dtText_index == 0:
+        if tag_class == "sb-0":
+            console.print(t, end="", style="#b2b2b2")
+        else:
+            if has_label:
+                console.print(f"{t}", end="", style="#b2b2b2")
+            else:
+                print()
+                console.print(f"  {t}", end="", style="#b2b2b2")
+
+    else:
+        if has_label:
+            console.print(t, end="", style="#b2b2b2")
+        else:
+            print()
+            console.print(f" {t}", end="", style="#b2b2b2")
+
+
+def print_def_content(node, has_number, tag_class, has_label):
     """Print definition content including definition text and its examples."""
+
+    dtText_index = 0
+    children = node.getchildren()
+    sents = [child for child in children if ("ex-sent " in child.attrib["class"]) and (child.attrib["class"] != "ex-sent aq has-aq sents")]
 
     # span "dt " has definite child span "dtText"
     # and/or children span class starting with "ex-sent"
-    for i in node.iterchildren():
+    for i in children:
         attr = i.attrib["class"]
 
-        if attr == "dtText":
-            print_def_text(i, tag_class)
-
         if attr == "sd":
-            print_label(i)
+            print_label(i, has_number)
+
+        if attr == "dtText":
+            print_def_text(i, dtText_index, tag_class, has_label)
+            dtText_index += 1
 
         if attr == "uns":
-            for t in i.itertext():
-                console.print(t, end="")
+            ts = list(i.itertext())
+            text = " ".join(ts)
+            print_label(text, tag_class, has_number=False, inline=True)
 
         if "ex-sent " in attr and (attr != "ex-sent aq has-aq sents"):
-            print_sent(i, has_number)
-
-
-def print_label(node):
-    """Print the label before a definition text, like informal, especially."""
-
-    console.print(f"({node.text.strip()})", style="italic", end=" ")
+            is_last = (i == sents[-1])
+            print_sent(i, is_last, has_number, tag_class)
 
 
 def print_sub_def(node, tag_class):
@@ -388,6 +423,8 @@ def print_sub_def(node, tag_class):
     # sense is the only one child of the node
     sense = node.getchildren()[0]
     has_number = False
+    has_label = False
+    char = ""
 
     # sense has one child span "dt " or two children: "sn sense- ..." or "dt "
     for i in sense.iterchildren():
@@ -396,24 +433,28 @@ def print_sub_def(node, tag_class):
         # number and letter enunciation section
         if "sn sense-" in attr:
             index = attr.find("-") + 1
-            digit = attr[index]
-            has_number = digit.isnumeric()
+            char = attr[index]
+            has_number = char.isnumeric()
 
             if has_number:
-                print_num(digit)
+                print_num(char)
+
+        # span "sl" is a label
+        if (attr == "sl" or attr == "if" or attr == "spl plural" or attr == "il or"):
+            has_label = True
+            if char:
+                has_number = True
+                print_label(i, tag_class, has_number)
 
         # span "dt " or span "dt hasSdSense" with span "sdsense" under it
         # definition content section including definition and sentences
         if "dt " in attr:
-            print_def_content(i, has_number, tag_class)
+            print_def_content(i, has_number, tag_class, has_label)
 
         # span section under span section "dt hasSdSense"
         if attr == "sdsense":
-            print_def_content(i, has_number, tag_class)
+            print_def_content(i, has_number, tag_class, has_label)
 
-        # span "sl" is a label
-        if attr == "sl" or attr == "if" or attr == "spl plural" or attr == "il or":
-            print_label(i)
 
         """
         has_vl = (i.tag == "span") and (i.attrib["class"] == "vl")
@@ -598,6 +639,6 @@ def parse_spellcheck(nodes):
                 w = word.strip()
                 if w.startswith("The"):
                     w = w.split(" or")[0].replace("Click on", "Check out")
-                    console.print("[bold #3C8DAD]" + "\n" + w)
+                    console.print("[bold #3C8DAD]" + "\n" + w + ":")
                 else:
                     console.print("  • " + w.strip())

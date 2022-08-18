@@ -22,7 +22,7 @@ CAMBRIDGE_DICT_BASE_URL = CAMBRIDGE_URL + "/dictionary/english/"
 CAMBRIDGE_SPELLCHECK_URL = CAMBRIDGE_URL + "/spellcheck/english/?q="
 
 
-# ----------Request Web Resouce----------
+# ----------Request Web Resource----------
 def search_cambridge(con, cur, input_word, is_fresh=False):
     req_url = get_request_url(CAMBRIDGE_DICT_BASE_URL, input_word, DICTS[0])
 
@@ -146,8 +146,12 @@ def parse_spellcheck(soup):
 
     content = soup.find("div", "hfl-s lt2b lmt-10 lmb-25 lp-s_r-20")
 
-    title = content.h1.text.split("for")[1].strip()
-    console.print("\n[bold]" + title)
+    try:
+        title = content.h1.text.split("for")[1].strip()
+    except IndexError:
+        title = content.find_all("h1")[1].text.split("for")[1].strip()
+
+    console.print("[bold yellow]" + title)
 
     for ul in content.find_all("ul", "hul-u"):
         notice = ul.find_previous_sibling().text
@@ -554,4 +558,4 @@ def parse_dict_name(first_dict):
     dict_info = replace_all(first_dict.small.text).strip("(").strip(")")
     dict_name = dict_info.split("©")[0]
     dict_name = dict_name.split("the")[-1]
-    console.print(dict_name + "\n", justify="right")
+    console.print(dict_name + "\n", justify="right", style="bold")

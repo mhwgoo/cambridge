@@ -363,22 +363,24 @@ def print_sent(node, has_number, tag_class):
         console.print(f"[#3C8DAD]{t}", end="")
 
 
-def print_def_text(node, dtText_index, tag_class, has_label_1, has_label_2):
+def print_def_text(node, dtText_index, tag_class, has_label_1, has_label_2, subsense_index):
     "Print the text of one definition item."
 
     ts = list(node.itertext())
     if ts[0] == " ":
-        ts = ts[2:]
-    else:
-        if ":" in ts[0]:
-            ts = ts[1:]
+        ts = ts[1:]
 
     t = "".join(ts).strip()
+    # print(dtText_index, tag_class, has_label_1, has_label_2, has_subsense)
+    # 0 sb-0 False False True
 
-    # print(dtText_index, tag_class, has_label)
     if dtText_index == 0:
         if tag_class == "sb-0":
-            console.print(t, end="", style="#b2b2b2")
+            if subsense_index == 0:
+                console.print(t, end="", style="#b2b2b2")
+            else:
+                print()
+                console.print(f"  {t}", end="", style="#b2b2b2")
         else:
             if has_label_1:
                 console.print(f"{t}", end="", style="#b2b2b2")
@@ -398,7 +400,7 @@ def print_def_text(node, dtText_index, tag_class, has_label_1, has_label_2):
             console.print(f"  {t}", end="", style="#b2b2b2")
 
 
-def print_def_content(node, has_number, tag_class, has_label_1, is_sdsense):
+def print_def_content(node, has_number, tag_class, has_label_1, is_sdsense, subsense_index):
     """Print definition content including definition text and its examples."""
 
     dtText_index = 0
@@ -415,7 +417,7 @@ def print_def_content(node, has_number, tag_class, has_label_1, is_sdsense):
             has_label_2 = True
 
         if attr == "dtText":
-            print_def_text(i, dtText_index, tag_class, has_label_1, has_label_2)
+            print_def_text(i, dtText_index, tag_class, has_label_1, has_label_2, subsense_index)
             dtText_index += 1
 
         if attr == "uns":
@@ -430,7 +432,7 @@ def print_def_content(node, has_number, tag_class, has_label_1, is_sdsense):
             print_sent(i, has_number, tag_class)
 
 
-def print_sense(node, tag_class):
+def print_sense(node, tag_class, subsense_index=0):
     """
     Like print a meaning, b meaning and so forth.
     """
@@ -446,12 +448,10 @@ def print_sense(node, tag_class):
 
         # number and letter enunciation section
         if "sn sense-" in attr:
-            index = attr.find("-") + 1
-            char = attr[index]
-            is_number = char.isnumeric()
             has_number = True  # no matter is_number or not, has_number is True
-            if is_number:
-                print_num(char)
+            for c in i.iterchildren():
+                if (c.tag == "span") and (c.attrib["class"] == "num"):
+                    print_num(c.text)
 
         # span "sl" is a label
         if (attr == "sl") or ("if" in attr) or ("plural" in attr) or ("il" in attr):
@@ -461,12 +461,12 @@ def print_sense(node, tag_class):
 
         # definition content section including definition and sentences
         if "dt " in attr:
-            print_def_content(i, has_number, tag_class, has_label_1, is_sdsense)
+            print_def_content(i, has_number, tag_class, has_label_1, is_sdsense, subsense_index)
 
         # span section under span section "dt hasSdSense"
         if attr == "sdsense":
             is_sdsense = True
-            print_def_content(i, has_number, tag_class, has_label_1, is_sdsense)
+            print_def_content(i, has_number, tag_class, has_label_1, is_sdsense, subsense_index)
 
 
 def print_sub_def(node, tag_class):
@@ -476,10 +476,12 @@ def print_sub_def(node, tag_class):
     """
 
     sense = node.getchildren()[0]
+
     if sense.attrib["class"] == "pseq no-subnum":
         sub_senses = sense.getchildren()
-        for sub in sub_senses:
-            print_sense(sub, tag_class)
+        has_subsense = True
+        for index, sub in enumerate(sub_senses):
+            print_sense(sub, tag_class, index)
     else:
         # Under a span "sb + number", get a child div with a class name being:
         # "sense no-subnum" or "sense has-number-only" or "sense-has-sn" ...
@@ -578,10 +580,14 @@ def print_pron(node):
     print()
 
 
-def print_word_and_wtype(node):
+def print_word_and_wtype(node, head):
     """Print word and its type."""
 
-    print()
+    if head == 1:
+        print()
+    else:
+        print("\n")
+
     for elm in node.iterdescendants():
         try:
             has_word = (elm.attrib["class"] == "hword")
@@ -607,6 +613,7 @@ def parse_word(nodes):
 
     # A page may have multiple word forms, e.g. "give away", "giveaway"
     words = []
+    head = 1
 
     for node in nodes:
         try:
@@ -618,8 +625,9 @@ def parse_word(nodes):
         # One page has multiple entry headers
         # Also print a phrase entry's name and its types
         if "row entry-header" in attr:
-            word = print_word_and_wtype(node)
+            word = print_word_and_wtype(node, head)
             words.append(word)
+            head += 1
 
         # Print pronounciations
         if attr == "row entry-attr":

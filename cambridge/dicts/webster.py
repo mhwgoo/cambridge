@@ -305,24 +305,6 @@ def print_seealso(node):
     print()
 
 
-def print_sent(node, is_last, has_number, tag_class):
-    "Print one example sentence under the text of one definition item."
-
-    print()
-    if has_number or tag_class != "sb-0":
-        console.print("[#3C8DAD]  //", end=" ")
-    else:
-        console.print("[#3C8DAD]//", end=" ")
-
-    s_words = list(node.itertext())
-
-    if is_last:
-        for t in s_words:
-            console.print(f"[#3C8DAD]{t}", end="")
-    else:
-        for t in s_words:
-            console.print(f"[#3C8DAD]{t}", end="")
-
 def print_num(num):
     """Print number enumeration."""
 
@@ -332,7 +314,7 @@ def print_num(num):
         console.print(f"[bold]{num}", end=" ")
 
 
-def print_label(node, tag_class, has_number=True, inline=False):
+def print_label(node, tag_class, inline, has_number=True):
     """Print the label before a definition text, like informal, especially."""
 
     if isinstance(node, str):
@@ -353,7 +335,27 @@ def print_label(node, tag_class, has_number=True, inline=False):
             console.print(f"{text}", style="italic bold", end=" ")
 
 
-def print_def_text(node, dtText_index, tag_class, has_label):
+def print_sent(node, is_last, has_number, tag_class):
+    "Print one example sentence under the text of one definition item."
+
+    # print(is_last, has_number, tag_class)
+    print()
+    if has_number or tag_class != "sb-0":
+        console.print("[#3C8DAD]  //", end=" ")
+    else:
+        console.print("[#3C8DAD]//", end=" ")
+
+    s_words = list(node.itertext())
+
+    if is_last:
+        for t in s_words:
+            console.print(f"[#3C8DAD]{t}", end="")
+    else:
+        for t in s_words:
+            console.print(f"[#3C8DAD]{t}", end="")
+
+
+def print_def_text(node, dtText_index, tag_class, has_label_1, has_label_2):
     "Print the text of one definition item."
 
     ts = list(node.itertext())
@@ -362,33 +364,38 @@ def print_def_text(node, dtText_index, tag_class, has_label):
     else:
         ts = ts[1:]
 
-    t = "".join(ts)
+    t = "".join(ts).strip()
 
-    # print(f"{dtText_index} {tag_class} {has_label}")
+    # print(dtText_index, tag_class, has_label)
     if dtText_index == 0:
         if tag_class == "sb-0":
             console.print(t, end="", style="#b2b2b2")
         else:
-            if has_label:
+            if has_label_1:
+                console.print(f"{t}", end="", style="#b2b2b2")
+            elif has_label_2:
                 console.print(f"{t}", end="", style="#b2b2b2")
             else:
                 print()
                 console.print(f"  {t}", end="", style="#b2b2b2")
 
+    # If it's not the first dtText, it has to indent
+    # except that it has label
     else:
-        if has_label:
+        if has_label_2:
             console.print(t, end="", style="#b2b2b2")
         else:
             print()
-            console.print(f" {t}", end="", style="#b2b2b2")
+            console.print(f"  {t}", end="", style="#b2b2b2")
 
 
-def print_def_content(node, has_number, tag_class, has_label):
+def print_def_content(node, has_number, tag_class, has_label_1):
     """Print definition content including definition text and its examples."""
 
     dtText_index = 0
     children = node.getchildren()
     sents = [child for child in children if ("ex-sent " in child.attrib["class"]) and (child.attrib["class"] != "ex-sent aq has-aq sents")]
+    has_label_2 = False
 
     # span "dt " has definite child span "dtText"
     # and/or children span class starting with "ex-sent"
@@ -396,16 +403,20 @@ def print_def_content(node, has_number, tag_class, has_label):
         attr = i.attrib["class"]
 
         if attr == "sd":
-            print_label(i, has_number)
+            print_label(i, tag_class, False, has_number)
+            has_label_2 = True
 
         if attr == "dtText":
-            print_def_text(i, dtText_index, tag_class, has_label)
+            print_def_text(i, dtText_index, tag_class, has_label_1, has_label_2)
             dtText_index += 1
 
         if attr == "uns":
-            ts = list(i.itertext())
-            text = " ".join(ts)
-            print_label(text, tag_class, has_number=False, inline=True)
+            for c in i.iterdescendants():
+                cattr = c.attrib["class"]
+                if cattr == "unText":
+                    print_label(c, tag_class, True, has_number=False)
+                if "ex-sent" in cattr:
+                    print_sent(c, False, has_number, tag_class)
 
         if "ex-sent " in attr and (attr != "ex-sent aq has-aq sents"):
             is_last = (i == sents[-1])
@@ -423,7 +434,7 @@ def print_sub_def(node, tag_class):
     # sense is the only one child of the node
     sense = node.getchildren()[0]
     has_number = False
-    has_label = False
+    has_label_1 = False
     char = ""
 
     # sense has one child span "dt " or two children: "sn sense- ..." or "dt "
@@ -441,20 +452,18 @@ def print_sub_def(node, tag_class):
 
         # span "sl" is a label
         if (attr == "sl" or attr == "if" or attr == "spl plural" or attr == "il or"):
-            has_label = True
+            has_label_1 = True
             if char:
                 has_number = True
-                print_label(i, tag_class, has_number)
+                print_label(i, tag_class, False, has_number)
 
-        # span "dt " or span "dt hasSdSense" with span "sdsense" under it
         # definition content section including definition and sentences
         if "dt " in attr:
-            print_def_content(i, has_number, tag_class, has_label)
+            print_def_content(i, has_number, tag_class, has_label_1)
 
         # span section under span section "dt hasSdSense"
         if attr == "sdsense":
-            print_def_content(i, has_number, tag_class, has_label)
-
+            print_def_content(i, has_number, tag_class, has_label_1)
 
         """
         has_vl = (i.tag == "span") and (i.attrib["class"] == "vl")
@@ -494,9 +503,14 @@ def print_main_entry(node):
 
 
 def print_phrase_part(node):
-    pass
+    """Print the phrase part in the main entry."""
 
-    # has_drp = (i.tag == "span") and (i.attrib["class"] == "drp")
+    for i in node.iterchildren():
+        if (i.tag == "span") and (i.attrib["class"] == "drp"):
+            print("\n")
+            console.print(f"{i.text}", end="\n", style="bold yellow")
+        if (i.tag == "div") and (i.attrib["class"] == "vg"):
+            print_main_entry(i)
 
 
 def print_dict_entry(node):

@@ -4,7 +4,7 @@ Cambridge is a terminal version of Cambridge Dictionary.
 
 The dictionary data comes from https://dictionary.cambridge.org
 
-If you're not satisfied with the result, you can try with "-f" flag to look up the word in Merriam-Webster Dictionary.
+If you're not satisfied with the result, you can try with "-w" flag to look up the word in Merriam-Webster Dictionary.
 
 ## Screenshots
 ![look up a word](/screenshots/word.png)
@@ -16,9 +16,9 @@ I'm a terminal person tired of pulling out a GUI app or browser, inputting words
 1. `camb <word/phrase>` to look up what you need. 
 2. Takes < 2s for the first time, including fetching, parsing, printing, and writing cache. 
 3. Less than 0.1s for the same term's later search. 
-4. Fetches the first dictionary on Cambridge, avoiding confuses by multiple dictionaries
+4. Fetches the first dictionary on Cambridge, avoiding confuses by multiple dictionaries.
 5. If not found, a list of related suggestions will be displayed.
-6. `camb l` to list words and phrases you've searched successfully. 
+6. `camb l` to list words and phrases you've found before. 
 
 ## With `fzf`
 `camb l | fzf --preview 'camb {}'`, if you've installed [fzf](https://github.com/junegunn/fzf), you'll get the following magics: 

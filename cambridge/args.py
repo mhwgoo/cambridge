@@ -121,9 +121,9 @@ def list_words(args, con, cur):
         deleted, data = delete_word(con, cur, word)
         if deleted:
             if "cambridge" in data[1]:
-                print(f'{OP[9]} "{word}" of {DICTS[0]} from cache successfully')
+                print(f'{OP[9]} "{word}" from {DICTS[0]} in cache successfully')
             else:
-                print(f'{OP[9]} "{word}" of {DICTS[1]} from cache successfully')
+                print(f'{OP[9]} "{word}" from {DICTS[1]} in cache successfully')
         else:
             print(f'{OP[6]} "{word}" in cache')
     elif args.random:

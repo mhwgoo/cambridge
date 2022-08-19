@@ -3,7 +3,6 @@
 import requests
 import threading
 import sys
-from urllib import parse
 from lxml import etree
 
 from ..console import console
@@ -15,6 +14,8 @@ from ..dicts import dict
 
 WEBSTER_BASE_URL = "https://www.merriam-webster.com"
 WEBSTER_DICT_BASE_URL = WEBSTER_BASE_URL + "/dictionary/"
+
+res_word = ""
 
 
 # ----------Request Web Resouce----------
@@ -40,7 +41,7 @@ def search_webster(con, cur, input_word, is_fresh=False):
 def fresh_run(con, cur, req_url, input_word):
     result = fetch_webster(req_url, input_word)
     found = result[0]
-    res_word, res_url, res_text = result[1]
+    res_url, res_text = result[1]
     nodes = parse_dict(res_text, found)
 
     parse_thread = threading.Thread(
@@ -49,6 +50,11 @@ def fresh_run(con, cur, req_url, input_word):
     parse_thread.start()
 
     if found:
+        # res_word may not be returned when `save` is called by concurrency
+        # word wiin res_url is still the input_word formatted
+        global res_word
+        if not res_word:
+            res_word = input_word
         dict.save(con, cur, input_word, res_word, res_url, res_text)
 
 
@@ -61,12 +67,11 @@ def fetch_webster(request_url, input_word):
 
         res_url = res.url
         res_text = res.text
-        res_word = parse.unquote(res_url.split("/")[-1])
         status = res.status_code
 
         if status == 200:
-            logger.debug(f'{OP[5]} "{res_word}" in {DICTS[1]} at {res_url}')
-            return True, (res_word, res_url, res_text)
+            logger.debug(f'{OP[5]} "{input_word}" in {DICTS[1]} at {res_url}')
+            return True, (res_url, res_text)
 
         # By default Requests will perform location redirection for all verbs except HEAD.
         # https://requests.readthedocs.io/en/latest/user/quickstart/#redirection-and-history
@@ -78,7 +83,7 @@ def fetch_webster(request_url, input_word):
 
         if status == 404:
             logger.debug(f'{OP[6]} "{input_word}" in {DICTS[1]}')
-            return False, (res_word, res_url, res_text)
+            return False, (res_url, res_text)
 
 
 def parse_and_print(response_url, nodes, found):
@@ -695,6 +700,8 @@ def parse_word(nodes):
     dict_name = "The Merriam-Webster Dictionary"
     console.print(f"\n{dict_name}", justify="right", style="bold italic")
 
+    global res_word
+    res_word = words[0]
 
 # --- Print spell check ---
 def parse_spellcheck(nodes):

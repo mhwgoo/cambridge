@@ -311,19 +311,26 @@ def print_seealso(node):
     print()
 
 
-def print_num(num):
+def print_num(num, subsense_index):
     """Print number enumeration."""
 
-    if num != "1":
-        console.print(f"\n[bold]{num}", end=" ")
+    if subsense_index == -1:
+        if num != "1":
+            console.print(f"\n[bold]{num}", end=" ")
+        else:
+            console.print(f"[bold]{num}", end=" ")
     else:
-        console.print(f"[bold]{num}", end=" ")
+        print()
+        console.print(f"  [bold]{num}", end=" ")
 
 
-def print_label(node, inline, has_number, is_sdsense, tag_class, time=1):
+def print_label(node, inline, has_number, is_sdsense, tag_class, label_1_num=1):
     """Print the label before a definition text, like informal, especially."""
 
-    text = node.text.strip()
+    if isinstance(node, str):
+        text = node.strip()
+    else:
+        text = node.text.strip()
 
     if inline:
         console.print(f" {text}", style="italic bold", end=" ")
@@ -334,18 +341,20 @@ def print_label(node, inline, has_number, is_sdsense, tag_class, time=1):
         else:
             if is_sdsense:
                 print()
-                console.print(f"  {text}", style="italic bold", end=" ")
+                console.print(f"   {text}", style="italic bold", end=" ")
             else:
                 if tag_class == "sb-0":
-                    console.print(f"{text}", style="italic bold", end=" ")
+                    if label_1_num == 1:
+                        console.print(f" {text}", style="italic bold", end=" ")
+                    else:
+                        console.print(f"{text}", style="italic bold", end=" ")
                 else:
-                    if time == 1:
+                    if label_1_num == 1:
                         print()
-                        console.print(f"  {text}", style="italic bold", end=" ")
+                        console.print(f"   {text}", style="italic bold", end=" ")
                     else:
                         console.print(f"{text}", style="italic bold", end=" ")
 
-    # print(inline, has_number, is_sdsense, tag_class)
 
 def print_sent(node, has_number, tag_class):
     "Print one example sentence under the text of one definition item."
@@ -353,7 +362,7 @@ def print_sent(node, has_number, tag_class):
     # print(is_last, has_number, tag_class)
     print()
     if has_number or tag_class != "sb-0":
-        console.print("[#3C8DAD]  //", end=" ")
+        console.print("[#3C8DAD]   //", end=" ")
     else:
         console.print("[#3C8DAD]//", end=" ")
 
@@ -363,47 +372,69 @@ def print_sent(node, has_number, tag_class):
         console.print(f"[#3C8DAD]{t}", end="")
 
 
-def print_def_text(node, dtText_index, tag_class, has_label_1, has_label_2, subsense_index):
+def print_def_text(node, dtText_index, tag_class, has_label_1, has_label_2, subsense_index, has_number):
     "Print the text of one definition item."
 
     ts = list(node.itertext())
     if ts[0] == " ":
         ts = ts[1:]
 
-    t = "".join(ts).strip()
-    # print(dtText_index, tag_class, has_label_1, has_label_2, has_subsense)
-    # 0 sb-0 False False True
+    new_ts = []
+    after = False
+
+    for idx, text in enumerate(ts):
+        if text == ": ":
+            if idx == 0:
+                if has_label_1 or has_label_2 or subsense_index > 0:
+                    continue
+                elif tag_class == "sb-0" and not has_number:
+                    continue
+                else:
+                    text = ":"
+                    new_ts.append(text)
+            else:
+                text = "- "
+                after = True
+                new_ts.append(text)
+        else:
+            if after:
+                text = text.upper()
+                new_ts.append(text)
+            else:
+                new_ts.append(text)
+
+    t = "".join(new_ts)
 
     if dtText_index == 0:
-        if tag_class == "sb-0":
-            if subsense_index == 0:
-                console.print(t, end="", style="#b2b2b2")
-            else:
-                print()
-                console.print(f"  {t}", end="", style="#b2b2b2")
+        if has_label_1 or has_label_2 or tag_class == "sb-0":
+            console.print(t, end="", style="#b2b2b2")
         else:
-            if has_label_1:
-                console.print(f"{t}", end="", style="#b2b2b2")
-            elif has_label_2:
-                console.print(f"{t}", end="", style="#b2b2b2")
-            else:
+            if subsense_index == -1 or subsense_index == 0:
                 print()
                 console.print(f"  {t}", end="", style="#b2b2b2")
+            if subsense_index > 0:
+                console.print(t, end="", style="#b2b2b2")
 
     # If it's not the first dtText, it has to indent
     # except that it has label
     else:
         if has_label_2:
             console.print(t, end="", style="#b2b2b2")
-        else:
+        if has_label_1:
             print()
-            console.print(f"  {t}", end="", style="#b2b2b2")
+            console.print(f"   {t}", end="", style="#b2b2b2")
+        else:
+            if subsense_index == -1 or subsense_index == 0:
+                print()
+                console.print(f"  {t}", end="", style="#b2b2b2")
+            if subsense_index > 0:
+                console.print(t, end="", style="#b2b2b2")
 
 
 def print_def_content(node, has_number, tag_class, has_label_1, is_sdsense, subsense_index):
     """Print definition content including definition text and its examples."""
 
-    dtText_index = 0
+    dtText_index = 0    # number of dtText under span "dt " tag
     children = node.getchildren()
     has_label_2 = False
 
@@ -417,22 +448,23 @@ def print_def_content(node, has_number, tag_class, has_label_1, is_sdsense, subs
             has_label_2 = True
 
         if attr == "dtText":
-            print_def_text(i, dtText_index, tag_class, has_label_1, has_label_2, subsense_index)
+            print_def_text(i, dtText_index, tag_class, has_label_1, has_label_2, subsense_index, has_number)
             dtText_index += 1
 
         if attr == "uns":
             for c in i.iterdescendants():
                 cattr = c.attrib["class"]
                 if cattr == "unText":
-                    print_label(c, True, False, is_sdsense, tag_class)
-                if "ex-sent" in cattr:
+                    t = "". join(list(c.itertext()))
+                    print_label(t, True, False, is_sdsense, tag_class)
+                if "ex-sent " in attr and (attr != "ex-sent aq has-aq sents"):
                     print_sent(c, has_number, tag_class)
 
         if "ex-sent " in attr and (attr != "ex-sent aq has-aq sents"):
             print_sent(i, has_number, tag_class)
 
 
-def print_sense(node, tag_class, subsense_index=0):
+def print_sense(node, tag_class, subsense_index):
     """
     Like print a meaning, b meaning and so forth.
     """
@@ -440,7 +472,7 @@ def print_sense(node, tag_class, subsense_index=0):
     has_number = False
     has_label_1 = False
     is_sdsense = False
-    time = 1
+    label_1_num = 1
 
     # sense has one child span "dt " or two children: "sn sense- ..." or "dt "
     for i in node.iterchildren():
@@ -451,13 +483,16 @@ def print_sense(node, tag_class, subsense_index=0):
             has_number = True  # no matter is_number or not, has_number is True
             for c in i.iterchildren():
                 if (c.tag == "span") and (c.attrib["class"] == "num"):
-                    print_num(c.text)
+                    print_num(c.text, subsense_index)
+
+                if (c.tag == "span") and (c.attrib["class"] == "sub-num"):
+                    print_num(c.text, subsense_index)
 
         # span "sl" is a label
         if (attr == "sl") or ("if" in attr) or ("plural" in attr) or ("il" in attr):
             has_label_1 = True
-            print_label(i, False, has_number, is_sdsense, tag_class, time)
-            time += 1
+            print_label(i, False, has_number, is_sdsense, tag_class, label_1_num)
+            label_1_num += 1
 
         # definition content section including definition and sentences
         if "dt " in attr:
@@ -476,17 +511,17 @@ def print_sub_def(node, tag_class):
     """
 
     sense = node.getchildren()[0]
+    index = -1
 
     if sense.attrib["class"] == "pseq no-subnum":
         sub_senses = sense.getchildren()
-        has_subsense = True
-        for index, sub in enumerate(sub_senses):
-            print_sense(sub, tag_class, index)
+        for idx, sub in enumerate(sub_senses):
+            print_sense(sub, tag_class, idx)
     else:
         # Under a span "sb + number", get a child div with a class name being:
         # "sense no-subnum" or "sense has-number-only" or "sense-has-sn" ...
         # sense is the only one child of the node
-        print_sense(sense, tag_class)
+        print_sense(sense, tag_class, index)
 
 
 def print_def_bundle(node):

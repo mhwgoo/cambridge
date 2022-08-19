@@ -4,4 +4,4 @@ The dictionary data comes from https://dictionary.cambridge.org
 If you're not satisfied with the result, you can try with "-w" flag to look up the word in Merriam-Webster Dictionary.
 """
 
-__version__ = "3.0.4"
+__version__ = "3.1.0"

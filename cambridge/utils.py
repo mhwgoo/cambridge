@@ -8,7 +8,7 @@ from urllib import parse
 from functools import wraps
 from bs4 import BeautifulSoup
 
-from cambridge.settings import DICTS
+from .settings import DICTS
 
 
 def make_a_soup(text):

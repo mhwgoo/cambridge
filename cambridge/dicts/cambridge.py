@@ -4,18 +4,18 @@ import sys
 import requests
 import threading
 
-from cambridge.console import console
-from cambridge.errors import ParsedNoneError, call_on_error
-from cambridge.settings import OP, DICTS
-from cambridge.log import logger
-from cambridge.utils import (
+from .console import console
+from .errors import ParsedNoneError, call_on_error
+from .settings import OP, DICTS
+from .log import logger
+from .utils import (
     make_a_soup,
     get_request_url,
     get_request_url_spellcheck,
     parse_response_url,
     replace_all,
 )
-from cambridge.dicts import dict
+from .dicts import dict
 
 CAMBRIDGE_URL = "https://dictionary.cambridge.org"
 CAMBRIDGE_DICT_BASE_URL = CAMBRIDGE_URL + "/dictionary/english/"

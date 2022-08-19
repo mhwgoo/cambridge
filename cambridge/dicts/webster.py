@@ -6,11 +6,11 @@ import sys
 from urllib import parse
 from lxml import etree
 
-from cambridge.console import console
-from cambridge.settings import OP, DICTS
-from cambridge.utils import get_request_url
-from cambridge.log import logger
-from cambridge.dicts import dict
+from .console import console
+from .settings import OP, DICTS
+from .utils import get_request_url
+from .log import logger
+from .dicts import dict
 
 
 WEBSTER_BASE_URL = "https://www.merriam-webster.com"

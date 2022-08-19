@@ -4,14 +4,13 @@ The dictionary data comes from https://dictionary.cambridge.org.
 """
 
 import sqlite3
-import sys
-import os
+# import sys
+# import os
+# sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from cambridge.args import parse_args
-from cambridge.cache import DB
-from cambridge.utils import timer
+from .args import parse_args
+from .cache import DB
+# from .utils import timer
 
 
 # @timer

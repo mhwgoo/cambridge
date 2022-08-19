@@ -5,15 +5,15 @@ import logging
 import argparse
 import sys
 
-from cambridge.cache import (
+from .cache import (
     get_response_words,
     get_random_words,
     delete_word,
 )
-from cambridge.log import logger
-from cambridge.settings import OP
-from cambridge.dicts import webster, cambridge
-from cambridge.console import console
+from .log import logger
+from .settings import OP
+from .dicts import webster, cambridge
+from .console import console
 
 
 def parse_args():

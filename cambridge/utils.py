@@ -1,11 +1,19 @@
-"""
-This script contains utility functions.
-"""
+"""Contains various utility functions."""
 
 import time
-import cProfile, pstats, io
+import cProfile
+import pstats
+import io
 from urllib import parse
 from functools import wraps
+from bs4 import BeautifulSoup
+
+from cambridge.settings import DICTS
+
+
+def make_a_soup(text):
+    soup = BeautifulSoup(text, "lxml")
+    return soup
 
 
 def replace_all(string):
@@ -29,23 +37,26 @@ def replace_all(string):
     )
 
 
-def parse_from_url(url):
-    url = parse.unquote(url)
+def parse_response_url(url):
+    """Return the unquoted Cambridge url for displaying and saving."""
+
     response_base_url = url.split("?")[0]
     return response_base_url
 
 
-def get_request_url(url, input_word):
-    """Return the url formatted for requesting the web page at the url."""
+def get_request_url(url, input_word, dict):
+    """Return the url formatted to request the web page."""
 
-    query_word = input_word.replace(" ", "-").replace("/", "-")
-    request_url = url + query_word
+    if dict == DICTS[0]:
+        query_word = input_word.replace(" ", "-").replace("/", "-")
+        request_url = url + query_word
+        return request_url
 
-    return request_url
+    return url + parse.quote(input_word)
 
 
-def get_requsest_url_spellcheck(url, input_word):
-    """Return the url formatted for requesting the spellcheck web page at the url."""
+def get_request_url_spellcheck(url, input_word):
+    """Return the url formatted to request Cambridge spellcheck web page."""
 
     query_word = input_word.replace(" ", "+").replace("/", "+")
     request_url = url + query_word
@@ -77,7 +88,7 @@ def timer(func):
         start_at = time.time()
         f = func(*args, **kwargs)
         time_taken = round((time.time() - start_at), 2)
-        print("Time taken: {} seconds".format(time_taken))
+        print("\nTime taken: {} seconds".format(time_taken))
         return f
 
     return wrapper

@@ -4,7 +4,7 @@ This script sets up self-defined errors.
 
 import sys
 
-from .log import logger
+from cambridge.log import logger
 
 
 class ParsedNoneError(Exception):
@@ -29,14 +29,8 @@ class NoResultError(Exception):
 
 def call_on_error(error, url, attempt, op):
     attempt += 1
-    logger.debug(
-        "%s HTML from %s %d times",
-        op,
-        url,
-        attempt,
-    )
+    logger.debug(f"{op} HTML from {url} {attempt} times - [ERROR] - {error}")
     if attempt == 3:
-        logger.debug("Maximum %s retries reached. Exit", op)
-        logger.error(str(error))
+        logger.error(f"Maximum {op} retries reached. [ERROR] - {error}\nExit")
         sys.exit()
     return attempt

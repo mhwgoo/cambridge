@@ -1,31 +1,19 @@
+"""Set, parse, and dispatch terminal arguments."""
+
 import sqlite3
 import logging
 import argparse
 import sys
-import requests
-import threading
-from bs4 import BeautifulSoup
 
-from .cache import (
-    insert_into_table,
-    get_cache,
+from cambridge.cache import (
     get_response_words,
     get_random_words,
     delete_word,
 )
-from .log import logger
-from .dicts.cambridge import (
-    parse_spellcheck,
-    parse_dict_blocks,
-    parse_dict_body,
-    parse_dict_head,
-    parse_dict_name,
-    parse_response_word,
-    CAMBRIDGE_BASE_URL,
-    CAMBRIDGE_SPELLCHECK_URL,
-)
-from .utils import get_request_url, get_requsest_url_spellcheck, parse_from_url
-from .fetch import fetch
+from cambridge.log import logger
+from cambridge.settings import OP
+from cambridge.dicts import webster, cambridge
+from cambridge.console import console
 
 
 def parse_args():
@@ -39,7 +27,7 @@ def parse_args():
     # Add sub-command l
     parser_lw = sub_parsers.add_parser(
         "l",
-        help="list all the words you've successfully searched in alphabetical order",
+        help="list all words you've found before in alphabetical order",
     )
 
     # Make sub-command l run default funtion of "list_words"
@@ -50,7 +38,7 @@ def parse_args():
         "-d",
         "--delete",
         nargs="+",
-        help="delete a word or phrase from cache",
+        help="delete a word/phrase from cache",
     )
 
     # Add optional argument for listing all words by time
@@ -58,7 +46,7 @@ def parse_args():
         "-t",
         "--time",
         action="store_true",
-        help="list all the words you've successfully searched in reverse chronological order",
+        help="list all words you've found before in reverse chronological order",
     )
 
     # Add optional argument for listing words randomly chosen
@@ -66,11 +54,11 @@ def parse_args():
         "-r",
         "--random",
         action="store_true",
-        help="randomly list the words you've successfully searched",
+        help="randomly list the words you've found before",
     )
 
     # Add sub-command s
-    parser_sw = sub_parsers.add_parser("s", help="search a word or phrase")
+    parser_sw = sub_parsers.add_parser("s", help="look up a word/phrase")
 
     # Make sub-command s run default function of "search_words"
     parser_sw.set_defaults(func=search_word)
@@ -79,14 +67,29 @@ def parse_args():
     parser_sw.add_argument(
         "words",
         nargs="+",
-        help="A word or phrase you want to search",
+        help="look up a word/phrase in Cambridge Dictionary",
     )
     # Add optional arguments
     parser_sw.add_argument(
         "-v",
         "--verbose",
         action="store_true",
-        help="search a word or phrase in verbose mode",
+        help="look up a word/phrase in verbose mode",
+    )
+    # Add optional arguments
+    parser_sw.add_argument(
+        "-w",
+        "--webster",
+        action="store_true",
+        help="look up a word/phrase in Merriam-Webster Dictionary",
+    )
+
+    # Add optional arguments
+    parser_sw.add_argument(
+        "-f",
+        "--fresh",
+        action="store_true",
+        help="look up a word/phrase afresh without using cache",
     )
 
     if len(sys.argv) == 1:
@@ -116,9 +119,9 @@ def list_words(args, con, cur):
     if args.delete:
         word = " ".join(args.delete)
         if delete_word(con, cur, word):
-            print(f'"{word}" got deleted from cache successfully')
+            print(f'{OP[9]} "{word}" from cache successfully')
         else:
-            logger.error(f'No "{word}" in cache')
+            logger.error(f'{OP[6]} "{word}" in cache')
     elif args.random:
         try:
             # data is something like [('hello',), ('good',), ('world',)]
@@ -139,95 +142,26 @@ def list_words(args, con, cur):
                 data.sort(reverse=True, key=lambda tup: tup[1])
             else:
                 data.sort()
+
             for i in data:
-                print(i[0])
+                console.print(i[0], justify="left")
 
 
 def search_word(args, con, cur):
     """
-    The function triggered when a user searches a word or phrase on terminal.
-    It checks the args, if "verbose" is in it, the debug mode will be turned on.
-    Then it checks the cache, if the word has been cached, uses it and prints it; if not, go fetch the web.
-    After fetching the data, prints it to the terminal and caches it.
-    If no word found in the cambridge, display word suggestions and exit.
+    The function is triggered when a user searches a word or phrase on terminal.
+    First checks the args having "verbose" in it or not, if so, the debug mode will be turned on.
+    Then it checks which dictionary is intended, and then calls respective dictionary function.
     """
-
-    input_word = args.words[0]
-    request_url = get_request_url(CAMBRIDGE_BASE_URL, input_word)
 
     if args.verbose:
         logging.getLogger(__package__).setLevel(logging.DEBUG)
 
-    data = get_cache(con, cur, input_word, request_url)  # data is a tuple if any
+    input_word = args.words[0]
+    is_webster = args.webster
+    is_fresh = args.fresh
 
-    if data is None:
-        logger.debug(f'Searching {CAMBRIDGE_BASE_URL} for "{input_word}"')
-
-        result = request(request_url, input_word)
-        found = result[0]
-
-        if found:
-            response_url, response_text = result[1]
-
-            soup = BeautifulSoup(response_text, "lxml")
-            response_word = parse_response_word(soup)
-
-            parse_thread = threading.Thread(
-                target=parse_and_print, args=(request_url, soup)
-            )
-            parse_thread.start()
-
-            save(con, cur, input_word, response_word, response_url, response_text)
-
-        else:
-            _, spellcheck_text = result[1]
-            soup = BeautifulSoup(spellcheck_text, "lxml")
-            parse_spellcheck(input_word, soup)
-            sys.exit()
-
+    if is_webster:
+        webster.search_webster(con, cur, input_word, is_fresh)
     else:
-        logger.debug(f'Already cached "{input_word}" before. Use cache')
-        soup = BeautifulSoup(data[0], "lxml")
-        parse_and_print(request_url, soup)
-
-
-def save(con, cur, input_word, response_word, response_url, response_text):
-    try:
-        insert_into_table(
-            con, cur, input_word, response_word, response_url, response_text
-        )
-        logger.debug(f'Cached search result of "{input_word}"')
-    except sqlite3.IntegrityError as e:
-        logger.debug(f'Stopped caching "{input_word}" because of {str(e)}')
-        pass
-
-
-# ----------print dict ----------
-def request(url, input_word):
-    with requests.Session() as session:
-        session.trust_env = False
-        response = fetch(url, session)
-
-        if response.url == CAMBRIDGE_BASE_URL:
-            logger.debug(f'No "{input_word}" found in Cambridge')
-
-            spellcheck_url = get_requsest_url_spellcheck(
-                CAMBRIDGE_SPELLCHECK_URL, input_word
-            )
-            spellcheck_text = fetch(spellcheck_url, session).text
-
-            return False, (None, spellcheck_text)
-        else:
-            logger.debug(f'Found "{input_word}" in Cambridge')
-
-            response_url = parse_from_url(response.url)
-            response_text = response.text
-            return True, (response_url, response_text)
-
-
-def parse_and_print(url, soup):
-    blocks, first_dict = parse_dict_blocks(url, soup)
-    for block in blocks:
-        parse_dict_head(block)
-        parse_dict_body(block)
-    parse_dict_name(first_dict)
+        cambridge.search_cambridge(con, cur, input_word, is_fresh)

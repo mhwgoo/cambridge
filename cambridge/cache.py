@@ -12,7 +12,7 @@ current_datetime = datetime.datetime.now()
 def create_table(con, cur):
     cur.execute(
         """CREATE TABLE words (
-        "input_word" TEXT UNIQUE NOT NULL,
+        "input_word" TEXT NOT NULL,
         "response_word" TEXT UNIQUE NOT NULL,
         "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         "response_url" TEXT UNIQUE NOT NULL,
@@ -38,8 +38,8 @@ def insert_into_table(con, cur, input_word, response_word, url, text):
 def get_cache(con, cur, word, resquest_url):
     try:
         cur.execute(
-            "SELECT response_text FROM words WHERE input_word = ? OR response_word = ? OR response_url = ?",
-            (word, word, resquest_url),
+            "SELECT response_url, response_text FROM words WHERE response_url = ? OR response_word = ? OR input_word = ?",
+            (resquest_url, word, word),
         )
     except sqlite3.OperationalError:
         create_table(con, cur)
@@ -66,15 +66,16 @@ def get_random_words(cur):
 
 def delete_word(con, cur, word):
     cur.execute(
-        "SELECT input_word FROM words WHERE input_word = ? OR response_word = ? ",
+        "SELECT input_word FROM words WHERE input_word = ? OR response_word = ?",
         (word, word),
     )
     data = cur.fetchone()
+
     if data is None:
         return False
     else:
         cur.execute(
-            "DELETE FROM words WHERE input_word = ? OR response_word = ? ", (word, word)
+            "DELETE FROM words WHERE input_word = ? OR response_word = ?", (word, word)
         )
         con.commit()
         return True

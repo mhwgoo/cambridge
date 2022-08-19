@@ -11,7 +11,7 @@ from .cache import (
     delete_word,
 )
 from .log import logger
-from .settings import OP
+from .settings import OP, DICTS
 from .dicts import webster, cambridge
 from .console import console
 
@@ -118,10 +118,14 @@ def list_words(args, con, cur):
     # The subparser i.e. the sub-command isn't in the namespace of args
     if args.delete:
         word = " ".join(args.delete)
-        if delete_word(con, cur, word):
-            print(f'{OP[9]} "{word}" from cache successfully')
+        deleted, data = delete_word(con, cur, word)
+        if deleted:
+            if "cambridge" in data[1]:
+                print(f'{OP[9]} "{word}" of {DICTS[0]} from cache successfully')
+            else:
+                print(f'{OP[9]} "{word}" of {DICTS[1]} from cache successfully')
         else:
-            logger.error(f'{OP[6]} "{word}" in cache')
+            print(f'{OP[6]} "{word}" in cache')
     elif args.random:
         try:
             # data is something like [('hello',), ('good',), ('world',)]

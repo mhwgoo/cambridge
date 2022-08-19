@@ -66,16 +66,16 @@ def get_random_words(cur):
 
 def delete_word(con, cur, word):
     cur.execute(
-        "SELECT input_word FROM words WHERE input_word = ? OR response_word = ?",
+        "SELECT input_word, response_url FROM words WHERE input_word = ? OR response_word = ?",
         (word, word),
     )
     data = cur.fetchone()
 
     if data is None:
-        return False
+        return (False, None)
     else:
         cur.execute(
             "DELETE FROM words WHERE input_word = ? OR response_word = ?", (word, word)
         )
         con.commit()
-        return True
+        return (True, data)

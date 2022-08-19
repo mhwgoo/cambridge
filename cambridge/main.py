@@ -5,14 +5,17 @@ If you're not satisfied with the result, you can try with "-w" flag to look up t
 """
 
 import sqlite3
-# import sys
-# import os
-# sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from .args import parse_args
-from .cache import DB
+from cambridge.args import parse_args
+from cambridge.cache import DB
 # from .utils import timer
 
+
+# Test fzf preview under development env
+# python main.py l | fzf --preview 'python main.py  -w {}'
 
 # @timer
 def main():
@@ -30,3 +33,6 @@ def main():
 
     except KeyboardInterrupt:
         print("\nStopped by user")
+
+
+main()

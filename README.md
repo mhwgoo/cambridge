@@ -4,6 +4,8 @@ Cambridge is a terminal version of Cambridge Dictionary.
 
 The dictionary data comes from https://dictionary.cambridge.org
 
+If you're not satisfied with the result, you can try with "-f" flag to look up the word in Merriam-Webster Dictionary.
+
 ## Screenshots
 ![look up a word](/screenshots/word.png)
 
@@ -32,13 +34,16 @@ pip install cambridge
 
 ## Usage
 ```bash
-camb <word/phrase>               # search a word or phrase. e.g. camb innocuous
-camb <word/phrase> -v            # search a word or phrase in verbose mode
-camb l                           # list words searched successfully in alphabetical order
-camb l -t                        # list words searched successfully in reverse chronological order
-camb l -r                        # list 20 words from the word list randomly 
-camb l -d                        # delete a word from the word list
+camb <word/phrase>     e.g. camb pertinent  # look up a word/phrase in Cambridge Dictionary
+camb <word/phrase> -v                       # look up a word/phrase in verbose/debug mode
+camb <word/phrase> -w                       # look up a word/phrase in Merriam-Webster Dictionary
+camb <word/phrase> -f                       # look up a word/phrase afresh without using cache
 
-camb <phrase with an apostrophe> # e.g. camb "a stone's throw" | camb a stone\'s throw
-camb <phrase with a slash>       # e.g. camb "have your/its moments" | camb have your\/its moments
+camb l                                      # list words found before in alphabetical order
+camb l -t                                   # list words found before in reverse chronological order
+camb l -r                                   # list 20 words from the word list randomly 
+camb l -d                                   # delete a word from the word list
+
+camb <phrase with an apostrophe>            # camb "a stone's throw" | camb a stone\'s throw
+camb <phrase with a slash>                  # camb "have your/its moments" | camb have your\/its moments
 ```

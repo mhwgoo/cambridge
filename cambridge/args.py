@@ -27,7 +27,7 @@ def parse_args():
     # Add sub-command l
     parser_lw = sub_parsers.add_parser(
         "l",
-        help="list all the words you've successfully searched in alphabetical order",
+        help="list all words you've found before in alphabetical order",
     )
 
     # Make sub-command l run default funtion of "list_words"
@@ -38,7 +38,7 @@ def parse_args():
         "-d",
         "--delete",
         nargs="+",
-        help="delete a word or phrase from cache",
+        help="delete a word/phrase from cache",
     )
 
     # Add optional argument for listing all words by time
@@ -46,7 +46,7 @@ def parse_args():
         "-t",
         "--time",
         action="store_true",
-        help="list all the words you've successfully searched in reverse chronological order",
+        help="list all words you've found before in reverse chronological order",
     )
 
     # Add optional argument for listing words randomly chosen
@@ -54,11 +54,11 @@ def parse_args():
         "-r",
         "--random",
         action="store_true",
-        help="randomly list the words you've successfully searched",
+        help="randomly list the words you've found before",
     )
 
     # Add sub-command s
-    parser_sw = sub_parsers.add_parser("s", help="search a word or phrase")
+    parser_sw = sub_parsers.add_parser("s", help="look up a word/phrase")
 
     # Make sub-command s run default function of "search_words"
     parser_sw.set_defaults(func=search_word)
@@ -67,21 +67,21 @@ def parse_args():
     parser_sw.add_argument(
         "words",
         nargs="+",
-        help="A word or phrase you want to search",
+        help="look up a word/phrase in Cambridge Dictionary",
     )
     # Add optional arguments
     parser_sw.add_argument(
         "-v",
         "--verbose",
         action="store_true",
-        help="search a word or phrase in verbose mode",
+        help="look up a word/phrase in verbose mode",
     )
     # Add optional arguments
     parser_sw.add_argument(
         "-w",
         "--webster",
         action="store_true",
-        help="search a word or phrase in Merriam-Webster Dictionary",
+        help="look up a word/phrase in Merriam-Webster Dictionary",
     )
 
     # Add optional arguments
@@ -89,7 +89,7 @@ def parse_args():
         "-f",
         "--fresh",
         action="store_true",
-        help="search a word or phrase afresh without using cache",
+        help="look up a word/phrase afresh without using cache",
     )
 
     if len(sys.argv) == 1:

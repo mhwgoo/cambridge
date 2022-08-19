@@ -359,7 +359,6 @@ def print_label(node, inline, has_number, is_sdsense, tag_class, label_1_num=1):
 def print_sent(node, has_number, tag_class):
     "Print one example sentence under the text of one definition item."
 
-    # print(is_last, has_number, tag_class)
     print()
     if has_number or tag_class != "sb-0":
         console.print("[#3C8DAD]   //", end=" ")
@@ -480,7 +479,8 @@ def print_sense(node, tag_class, subsense_index):
 
         # number and letter enunciation section
         if "sn sense-" in attr:
-            has_number = True  # no matter is_number or not, has_number is True
+            # no matter is_number or not, has_number is True
+            has_number = True
             for c in i.iterchildren():
                 if (c.tag == "span") and (c.attrib["class"] == "num"):
                     print_num(c.text, subsense_index)

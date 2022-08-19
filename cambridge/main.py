@@ -30,6 +30,3 @@ def main():
 
     except KeyboardInterrupt:
         print("\nStopped by user")
-
-
-main()

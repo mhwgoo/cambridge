@@ -4,11 +4,11 @@ import sqlite3
 import requests
 from fake_user_agent import user_agent
 
-from .cache import insert_into_table, get_cache
-from .log import logger
-from .settings import OP, DICTS
-from .errors import call_on_error
-from .dicts import cambridge, webster
+from ..cache import insert_into_table, get_cache
+from ..log import logger
+from ..settings import OP, DICTS
+from ..errors import call_on_error
+from ..dicts import cambridge, webster
 
 
 def fetch(url, session):

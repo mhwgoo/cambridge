@@ -12,11 +12,8 @@ import sqlite3
 
 from .args import parse_args
 from .cache import DB
-# from .utils import timer
+# from cambridge.utils import timer
 
-
-# Test fzf preview under development env
-# python main.py l | fzf --preview 'python main.py  -w {}'
 
 # @timer
 def main():

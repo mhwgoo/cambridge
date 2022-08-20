@@ -11,6 +11,13 @@ from ..utils import get_request_url
 from ..log import logger
 from ..dicts import dict
 
+# TODO sub_num (1) (2) with parent meaning or not
+# If not parent meaing, don't print.
+
+
+# Test fzf preview under development env
+# python main.py l | fzf --preview 'python main.py -w {}'
+
 
 WEBSTER_BASE_URL = "https://www.merriam-webster.com"
 WEBSTER_DICT_BASE_URL = WEBSTER_BASE_URL + "/dictionary/"
@@ -316,17 +323,13 @@ def print_seealso(node):
     print()
 
 
-def print_num(num, subsense_index):
+def print_num(num):
     """Print number enumeration."""
 
-    if subsense_index == -1:
-        if num != "1":
-            console.print(f"\n[bold]{num}", end=" ")
-        else:
-            console.print(f"[bold]{num}", end=" ")
+    if num != "1":
+        console.print(f"\n[bold]{num}", end=" ")
     else:
-        print()
-        console.print(f"  [bold]{num}", end=" ")
+        console.print(f"[bold]{num}", end=" ")
 
 
 def print_label(node, inline, has_number, is_sdsense, tag_class, label_1_num=1):
@@ -373,11 +376,40 @@ def print_sent(node, has_number, tag_class):
     s_words = list(node.itertext())
 
     for t in s_words:
-        console.print(f"[#3C8DAD]{t}", end="")
+        console.print(f"[#3C8DAD]{t.strip()}", end="")
 
 
-def print_def_text(node, dtText_index, tag_class, has_label_1, has_label_2, subsense_index, has_number):
-    "Print the text of one definition item."
+def print_subsense_text(text, subsense_index):
+    """
+    Print one definition text only in the case that it has the form of (1) text or (2) text ... 
+    and must have a general meaning above it without (1) or (2). For example:
+
+    : this is the general meaning
+    (1) text
+    (2) text
+
+    The '(1) text part' or 'the (2) text' part is what this function prints.
+
+    Without the general meaing, it will be treated as a normal definition in `print_def_text`.
+    And '(1)' sign won't get printed.
+    """
+
+    if subsense_index == 0:
+        print()
+        console.print(f"  {text}", end="", style="#b2b2b2")
+    if subsense_index > 0:
+        console.print(text, end="", style="#b2b2b2")
+
+
+def print_bare_def(text):
+    """Print a definition text without labels or subsense signs in itself."""
+
+    print()
+    console.print(f"  {text}", end="", style="#b2b2b2")
+
+
+def print_def_text(node, dtText_index, tag_class, has_label_1, has_label_2, subsense_index, before_subnum, has_number):
+    """Print one definition text."""
 
     ts = list(node.itertext())
     if ts[0] == " ":
@@ -389,7 +421,7 @@ def print_def_text(node, dtText_index, tag_class, has_label_1, has_label_2, subs
     for idx, text in enumerate(ts):
         if text == ": ":
             if idx == 0:
-                if has_label_1 or has_label_2 or subsense_index > 0:
+                if has_label_1 or has_label_2 or before_subnum:
                     continue
                 elif tag_class == "sb-0" and not has_number:
                     continue
@@ -410,14 +442,21 @@ def print_def_text(node, dtText_index, tag_class, has_label_1, has_label_2, subs
     t = "".join(new_ts)
 
     if dtText_index == 0:
-        if has_label_1 or has_label_2 or tag_class == "sb-0":
+        if has_label_1 or has_label_2:
             console.print(t, end="", style="#b2b2b2")
-        else:
-            if subsense_index == -1 or subsense_index == 0:
-                print()
-                console.print(f"  {t}", end="", style="#b2b2b2")
+        elif tag_class == "sb-0":
             if subsense_index > 0:
+                print_bare_def(t)
+            else:
                 console.print(t, end="", style="#b2b2b2")
+        else:
+            if subsense_index == -1:
+                print_bare_def(t)
+            else:
+                if before_subnum:
+                    print_subsense_text(t, subsense_index)
+                else:
+                    print_bare_def(t)
 
     # If it's not the first dtText, it has to indent
     # except that it has label
@@ -428,14 +467,16 @@ def print_def_text(node, dtText_index, tag_class, has_label_1, has_label_2, subs
             print()
             console.print(f"   {t}", end="", style="#b2b2b2")
         else:
-            if subsense_index == -1 or subsense_index == 0:
-                print()
-                console.print(f"  {t}", end="", style="#b2b2b2")
-            if subsense_index > 0:
-                console.print(t, end="", style="#b2b2b2")
+            if subsense_index == -1:
+                print_bare_def(t)
+            else:
+                if before_subnum:
+                    print_subsense_text(t, subsense_index)
+                else:
+                    print_bare_def(t)
 
 
-def print_def_content(node, has_number, tag_class, has_label_1, is_sdsense, subsense_index):
+def print_def_content(node, has_number, tag_class, has_label_1, is_sdsense, subsense_index, before_subnum):
     """Print definition content including definition text and its examples."""
 
     dtText_index = 0    # number of dtText under span "dt " tag
@@ -452,23 +493,27 @@ def print_def_content(node, has_number, tag_class, has_label_1, is_sdsense, subs
             has_label_2 = True
 
         if attr == "dtText":
-            print_def_text(i, dtText_index, tag_class, has_label_1, has_label_2, subsense_index, has_number)
+            print_def_text(i, dtText_index, tag_class, has_label_1, has_label_2, subsense_index, before_subnum, has_number)
             dtText_index += 1
 
         if attr == "uns":
-            for c in i.iterdescendants():
+            un = i.getchildren()[0]
+            for c in un.iterchildren():
                 cattr = c.attrib["class"]
                 if cattr == "unText":
                     t = "". join(list(c.itertext()))
-                    print_label(t, True, False, is_sdsense, tag_class)
-                if "ex-sent " in attr and (attr != "ex-sent aq has-aq sents"):
+                    if len(children) == 1:
+                        print_label(t, False, False, is_sdsense, tag_class)
+                    else:
+                        print_label(t, True, False, is_sdsense, tag_class)
+                if cattr == "vis":
                     print_sent(c, has_number, tag_class)
 
         if "ex-sent " in attr and (attr != "ex-sent aq has-aq sents"):
             print_sent(i, has_number, tag_class)
 
 
-def print_sense(node, tag_class, subsense_index):
+def print_sense(node, tag_class, subsense_index, before_subnum):
     """
     Like print a meaning, b meaning and so forth.
     """
@@ -488,10 +533,11 @@ def print_sense(node, tag_class, subsense_index):
             has_number = True
             for c in i.iterchildren():
                 if (c.tag == "span") and (c.attrib["class"] == "num"):
-                    print_num(c.text, subsense_index)
+                    print_num(c.text)
 
-                if (c.tag == "span") and (c.attrib["class"] == "sub-num"):
-                    print_num(c.text, subsense_index)
+                if (c.tag == "span") and (c.attrib["class"] == "sub-num") and before_subnum:
+                    print()
+                    console.print(f"  [bold]{c.text}", end=" ")
 
         # span "sl" is a label
         if (attr == "sl") or ("if" in attr) or ("plural" in attr) or ("il" in attr):
@@ -501,12 +547,12 @@ def print_sense(node, tag_class, subsense_index):
 
         # definition content section including definition and sentences
         if "dt " in attr:
-            print_def_content(i, has_number, tag_class, has_label_1, is_sdsense, subsense_index)
+            print_def_content(i, has_number, tag_class, has_label_1, is_sdsense, subsense_index, before_subnum)
 
         # span section under span section "dt hasSdSense"
         if attr == "sdsense":
             is_sdsense = True
-            print_def_content(i, has_number, tag_class, has_label_1, is_sdsense, subsense_index)
+            print_def_content(i, has_number, tag_class, has_label_1, is_sdsense, subsense_index, before_subnum)
 
 
 def print_sub_def(node, tag_class):
@@ -517,16 +563,20 @@ def print_sub_def(node, tag_class):
 
     sense = node.getchildren()[0]
     index = -1
+    before_subnum = False  # if there is a general definition above (1) and (2)
 
     if sense.attrib["class"] == "pseq no-subnum":
         sub_senses = sense.getchildren()
         for idx, sub in enumerate(sub_senses):
-            print_sense(sub, tag_class, idx)
+            if (idx == 0) and (sub.attrib["class"] != "sense has-sn has-subnum"):
+                before_subnum = True
+
+            print_sense(sub, tag_class, idx, before_subnum)
     else:
         # Under a span "sb + number", get a child div with a class name being:
         # "sense no-subnum" or "sense has-number-only" or "sense-has-sn" ...
         # sense is the only one child of the node
-        print_sense(sense, tag_class, index)
+        print_sense(sense, tag_class, index, before_subnum)
 
 
 def print_def_bundle(node):
@@ -698,10 +748,12 @@ def parse_word(nodes):
             print_phrases(node, words)
 
     dict_name = "The Merriam-Webster Dictionary"
-    console.print(f"\n{dict_name}", justify="right", style="bold italic")
+    console.print(f"\n{dict_name}", justify="right", style="bold")
 
     global res_word
-    res_word = words[0]
+    if words:
+        res_word = words[0]
+
 
 # --- Print spell check ---
 def parse_spellcheck(nodes):

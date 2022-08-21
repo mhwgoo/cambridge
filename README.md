@@ -14,7 +14,7 @@ I'm a terminal person tired of pulling out a GUI app or browser, inputting words
 
 ## Features 
 1. `camb <word/phrase>` to look it up in Cambridge Dictionary by default. 
-2. '-w' flag to fetch Merriam-Webster Dictionary. 
+2. `-w` flag to fetch Merriam-Webster Dictionary. 
 3. Less than 2s taken to do all the work for the word, including fetching, parsing, printing, and writing cache. 
 4. Less than 0.1s for the same word's later search. 
 5. Fetch the first dictionary from Cambridge, avoiding confuses by multiple dictionaries.
@@ -26,7 +26,7 @@ I'm a terminal person tired of pulling out a GUI app or browser, inputting words
 1. Display the whole word list
 2. Fuzzy find a word from the word list & preview its meaning instantly 
 3. preview each word definition instantly as you scroll through the list
-4. `alias cambl="camb l | fzf --preview 'camb {}'"` can be added in your bashrc, config.fish etc. for convenience
+4. `alias cambl="camb l | fzf --preview 'camb {}'"` can be added in your `bashrc` for convenience
 ![list words](/screenshots/fzf.png)
 
 ## Installation

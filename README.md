@@ -26,7 +26,7 @@ I'm a terminal person tired of pulling out a GUI app or browser, inputting words
 1. Display the whole word list
 2. Fuzzy find a word from the word list & preview its meaning instantly 
 3. preview each word definition instantly as you scroll through the list
-4. `alias cambl="camb l | fzf --preview 'camb {}'"` can be added in your `bashrc` for convenience
+4. `alias cambl="camb l | fzf --preview 'camb {}'"` can be added in your bashrc for convenience
 ![list words](/screenshots/fzf.png)
 
 ## Installation

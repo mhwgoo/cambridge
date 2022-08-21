@@ -193,6 +193,9 @@ def print_synonyms(node):
     """Print synonyms."""
 
     print("\n")
+
+    time = 0
+
     for elm in node.iterdescendants():
         try:
             has_title = (elm.tag == "h2")
@@ -205,8 +208,9 @@ def print_synonyms(node):
             if has_title:
                 console.print(f"[bold yellow]{elm.text}", end="")
 
-            if has_em:
+            if has_em and time == 0:
                 console.print(f"[bold yellow italic]{elm.text}", end="")
+                time += 1
 
             if has_syn:
                 for t in elm.itertext():
@@ -698,9 +702,9 @@ def print_word_and_wtype(node, head):
                 word = list(elm.itertext())[0]
                 console.print(f"[bold #3C8DAD on #DDDDDD]{word}", end="")
             if has_type:
-                console.print(f" [bold yellow] {elm.text}", end="")
+                console.print(f" [red] {elm.text}", end="")
             if has_lb:
-                console.print(f"[bold yellow] {elm.text}", end="")
+                console.print(f"[red] {elm.text}", end="")
     print()
     return word
 

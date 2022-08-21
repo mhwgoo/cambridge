@@ -10,12 +10,13 @@ import sqlite3
 # import os
 # sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# from cambridge.args import parse_args
+# from cambridge.cache import DB
+
 from .args import parse_args
 from .cache import DB
-# from cambridge.utils import timer
 
 
-# @timer
 def main():
     try:
         con = sqlite3.connect(

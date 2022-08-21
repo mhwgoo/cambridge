@@ -345,7 +345,12 @@ def print_label(node, inline, has_number, is_sdsense, tag_class, label_1_num=1):
 
     else:
         if not has_number:
-            console.print(f"{text}", style="italic bold", end=" ")
+            if is_sdsense:
+                print()
+                console.print(f"{text}", style="italic bold", end=" ")
+            else:
+                console.print(f"{text}", style="italic bold", end=" ")
+
         else:
             if is_sdsense:
                 print()
@@ -376,7 +381,10 @@ def print_sent(node, has_number, tag_class):
     s_words = list(node.itertext())
 
     for t in s_words:
-        console.print(f"[#3C8DAD]{t.strip()}", end="")
+        if t == s_words[0] and t.strip() == "":
+            continue
+        else:
+            console.print(f"[#3C8DAD]{t}", end="")
 
 
 def print_subsense_text(text, subsense_index):
@@ -393,7 +401,7 @@ def print_subsense_text(text, subsense_index):
     Without the general meaing, it will be treated as a normal definition in `print_def_text`.
     And '(1)' sign won't get printed.
     """
-
+    print(text, subsense_index)
     if subsense_index == 0:
         print()
         console.print(f"  {text}", end="", style="#b2b2b2")
@@ -445,7 +453,7 @@ def print_def_text(node, dtText_index, tag_class, has_label_1, has_label_2, subs
         if has_label_1 or has_label_2:
             console.print(t, end="", style="#b2b2b2")
         elif tag_class == "sb-0":
-            if subsense_index > 0:
+            if not before_subnum and subsense_index > 0:
                 print_bare_def(t)
             else:
                 console.print(t, end="", style="#b2b2b2")

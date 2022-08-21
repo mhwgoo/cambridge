@@ -49,7 +49,7 @@ def cache_run(con, cur, input_word, req_url, dict):
         if DICTS[0].lower() in res_url:
             if dict != DICTS[0]:
                 print(
-                    f'{OP[5]} "{input_word}" from {DICTS[0]} in cache, used it. Not to use it, try with "-f" flag'
+                    f'{OP[5]} "{input_word}" from {DICTS[0]} in cache. Not to use it, try with "-f" flag'
                 )
 
             soup = cambridge.make_a_soup(res_text)
@@ -57,7 +57,7 @@ def cache_run(con, cur, input_word, req_url, dict):
         else:
             if dict != DICTS[1]:
                 print(
-                    f'{OP[5]} "{input_word}" from {DICTS[1]} in cache, used it. Not to use it, try with "-f" flag'
+                    f'{OP[5]} "{input_word}" from {DICTS[1]} in cache. Not to use it, try with "-f" flag'
                 )
             nodes = webster.parse_dict(res_text, True)
             webster.parse_and_print(res_url, nodes, True)
@@ -74,6 +74,6 @@ def save(con, cur, input_word, response_word, response_url, response_text):
             con, cur, input_word, response_word, response_url, response_text
         )
         logger.debug(f'{OP[7]} the search result of "{input_word}"')
-    except sqlite3.IntegrityError as e:
-        logger.debug(f'{OP[8]} caching "{input_word}" because of {str(e)}')
+    except sqlite3.IntegrityError:
+        logger.debug(f'{OP[8]} caching "{input_word}" because it has already been cached before.')
         pass

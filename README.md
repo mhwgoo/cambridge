@@ -22,7 +22,7 @@ I'm a terminal person tired of pulling out a GUI app or browser, inputting words
 7. `camb l` to list words and phrases you've found before. 
 
 ## With `fzf`
-`camb l | fzf --preview 'camb {}'`, if [fzf](https://github.com/junegunn/fzf) has been installed, you'll get a taste of the `fzf` magic: 
+With [fzf](https://github.com/junegunn/fzf) installed, `camb l | fzf --preview 'camb {}'` will get you a taste of the `fzf` magic: 
 1. Display the whole word list
 2. Fuzzy find a word from the word list & preview its meaning instantly 
 3. preview each word definition instantly as you scroll through the list

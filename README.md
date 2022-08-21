@@ -12,7 +12,7 @@ If the result is unsatisfactory, try with `-w` flag to look up the word in Merri
 ## Why This
 I'm a terminal person tired of pulling out a GUI app or browser, inputting words in the search bar, hitting the search button and then waiting for the result to render with a bunch of unnecessary static files coming along. Not only is the time taken long, but also switching apps back and forth can be annoying. So I wrote this console application with features to my satisfaction.
 
-## Features 
+## Highlights 
 1. `camb <word/phrase>` to look it up in Cambridge Dictionary by default
 2. `-w` flag to fetch Merriam-Webster Dictionary
 3. less than 2s taken to do all the work for the word, including fetching, parsing, printing, and writing cache

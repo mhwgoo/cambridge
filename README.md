@@ -15,16 +15,16 @@ I'm a terminal person tired of pulling out a GUI app or browser, inputting words
 ## Features 
 1. `camb <word/phrase>` to look it up in Cambridge Dictionary by default
 2. `-w` flag to fetch Merriam-Webster Dictionary
-3. Less than 2s taken to do all the work for the word, including fetching, parsing, printing, and writing cache
-4. Less than 0.1s for the same word's later search
-5. Fetch the first dictionary from Cambridge, avoiding confuses by multiple dictionaries
-6. If not found, a list of related suggestions will be displayed
+3. less than 2s taken to do all the work for the word, including fetching, parsing, printing, and writing cache
+4. less than 0.1s for the same word's later search
+5. only the first dictionary from Cambridge, avoiding confuses by multiple dictionaries
+6. a list of related suggestions will be given, if not found
 7. `camb l` to list words and phrases you've found before
 
-## With `fzf`
+## `fzf`
 With [fzf](https://github.com/junegunn/fzf) installed, `camb l | fzf --preview 'camb {}'` will get you a taste of the `fzf` magic: 
-1. Display the whole word list
-2. Fuzzy find a word from the word list & preview its meaning instantly 
+1. display the whole word list
+2. fuzzy find a word from the word list & preview its meaning instantly 
 3. preview each word definition instantly as you scroll through the list
 4. `alias cambl="camb l | fzf --preview 'camb {}'"` can be added in your bashrc for convenience
 

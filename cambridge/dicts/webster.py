@@ -93,7 +93,7 @@ def fresh_run(con, cur, req_url, input_word):
             target=parse_and_print, args=(nodes,)
         )
         parse_thread.start()
- 
+
         dict.save(con, cur, input_word, res_word, res_url, res_text)
 
     else:
@@ -102,13 +102,10 @@ def fresh_run(con, cur, req_url, input_word):
         sys.exit()
 
 
-def parse_dict(res_text, found, fresh=True):
+def parse_dict(res_text, found):
     """Parse the dict section of the page for the word."""
 
-    if fresh:
-        tree = etree.HTML(res_text)
-    else:
-        tree = etree.fromstring(res_text)
+    tree = etree.HTML(res_text)
 
     if found:
         s = """

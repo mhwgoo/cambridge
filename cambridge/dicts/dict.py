@@ -9,6 +9,7 @@ from ..log import logger
 from ..settings import OP, DICTS
 from ..errors import call_on_error
 from ..dicts import cambridge, webster
+from ..utils import make_a_soup
 
 
 def fetch(url, session):
@@ -51,18 +52,20 @@ def cache_run(con, cur, input_word, req_url, dict):
                 print(
                     f'{OP[5]} "{input_word}" from {DICTS[0]} in cache. Not to use it, try with "-f" flag'
                 )
-            logger.debug(f'{OP[5]} "{input_word}" from {DICTS[0]} in cache')
-            soup = cambridge.make_a_soup(res_text)
-            cambridge.parse_and_print(res_url, soup)
+            else:
+                logger.debug(f'{OP[5]} "{input_word}" from {DICTS[0]} in cache')
+
+            soup = make_a_soup(res_text)
+            cambridge.parse_and_print(soup, res_url)
         else:
             if dict != DICTS[1]:
                 print(
                     f'{OP[5]} "{input_word}" from {DICTS[1]} in cache. Not to use it, try with "-f" flag'
                 )
-
-            logger.debug(f'{OP[5]} "{input_word}" from {DICTS[1]} in cache')
+            else:
+                logger.debug(f'{OP[5]} "{input_word}" from {DICTS[1]} in cache')
             nodes = webster.parse_dict(res_text, True)
-            webster.parse_and_print(res_url, nodes, True)
+            webster.parse_and_print(nodes)
         return True
 
     return False
@@ -77,7 +80,10 @@ def save(con, cur, input_word, response_word, response_url, response_text):
         )
         logger.debug(f'{OP[7]} the search result of "{input_word}"')
     except sqlite3.IntegrityError as error:
-        logger.debug(f'{OP[8]} caching "{input_word}" - [ERROR] - {error}\n')
+        if "UNIQUE constraint" in str(error):
+            logger.debug(f'{OP[8]} caching "{input_word}" - [ERROR] - already cached before\n')
+        else:
+            logger.debug(f'{OP[8]} caching "{input_word}" - [ERROR] - {error}\n')
     except sqlite3.InterfaceError as error:
         logger.debug(f'{OP[8]} caching "{input_word}" - [ERROR] - {error}\n')
 

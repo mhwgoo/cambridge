@@ -23,7 +23,6 @@ CAMBRIDGE_URL = "https://dictionary.cambridge.org"
 CAMBRIDGE_DICT_BASE_URL = CAMBRIDGE_URL + "/dictionary/english/"
 CAMBRIDGE_SPELLCHECK_URL = CAMBRIDGE_URL + "/spellcheck/english/?q="
 
-dict_result = None
 
 # ----------Request Web Resource----------
 def search_cambridge(con, cur, input_word, is_fresh=False):
@@ -38,7 +37,7 @@ def search_cambridge(con, cur, input_word, is_fresh=False):
 
 
 def fetch_cambridge(req_url, input_word):
-    """Get response url and response text for future parsing."""
+    """Get response url and response text for later parsing."""
 
     with requests.Session() as session:
         session.trust_env = False
@@ -64,6 +63,8 @@ def fetch_cambridge(req_url, input_word):
 
 
 def fresh_run(con, cur, req_url, input_word):
+    """Print the result without cache."""
+
     result = fetch_cambridge(req_url, input_word)
     found = result[0]
 
@@ -72,12 +73,13 @@ def fresh_run(con, cur, req_url, input_word):
         soup = make_a_soup(res_text)
         response_word = parse_response_word(soup)
 
-        parse_thread = threading.Thread(target=parse_and_print, args=(res_url, soup))
-        parse_thread.start()
-        parse_thread.join()
+        first_dict = parse_first_dict(res_url, soup)
 
-        # print(dict_result)
-        dict.save(con, cur, input_word, response_word, res_url, dict_result)
+        parse_thread = threading.Thread(target=parse_and_print, args=(first_dict, res_url))
+        parse_thread.start()
+        # parse_thread.join()
+
+        dict.save(con, cur, input_word, response_word, res_url, str(first_dict))
 
     else:
         spell_res_url, spell_res_text = result[1]
@@ -86,12 +88,12 @@ def fresh_run(con, cur, req_url, input_word):
         print_spellcheck(soup)
         sys.exit()
 
-
 # ----------The Entry Point For Parse And Print----------
-def parse_and_print(res_url, soup):
+
+def parse_and_print(first_dict, res_url):
     """Parse and print different sections for the word."""
 
-    first_dict = parse_first_dict(res_url, soup)
+    logger.debug(f"{OP[4]} the parsed result of {res_url}")
 
     attempt = 0
     while True:
@@ -112,15 +114,10 @@ def parse_and_print(res_url, soup):
                 blocks = first_dict.find_all("div", "pr idiom-block")
                 break
 
-    logger.debug(f"{OP[4]} the parsed result of {res_url}")
-
     for block in blocks:
         parse_dict_head(block)
         parse_dict_body(block)
     parse_dict_name(first_dict)
-
-    global dict_result
-    dict_result = str(first_dict)
 
 
 def parse_first_dict(res_url, soup):
@@ -140,7 +137,7 @@ def parse_first_dict(res_url, soup):
 
 
 def print_spellcheck(soup):
-    """Parse Cambridge spellcheck page and print it to the terminal."""
+    """Parse and print spellcheck info."""
 
     content = soup.find("div", "hfl-s lt2b lmt-10 lmb-25 lp-s_r-20")
 

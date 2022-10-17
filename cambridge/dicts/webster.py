@@ -45,26 +45,6 @@ def search_webster(con, cur, input_word, is_fresh=False):
         fresh_run(con, cur, req_url, input_word)
 
 
-def fresh_run(con, cur, req_url, input_word):
-    result = fetch_webster(req_url, input_word)
-    found = result[0]
-    res_url, res_text = result[1]
-    nodes = parse_dict(res_text, found)
-
-    parse_thread = threading.Thread(
-        target=parse_and_print, args=(res_url, nodes, found)
-    )
-    parse_thread.start()
-
-    if found:
-        # res_word may not be returned when `save` is called by concurrency
-        # word wiin res_url is still the input_word formatted
-        global res_word
-        if not res_word:
-            res_word = input_word
-        dict.save(con, cur, input_word, res_word, res_url, res_text)
-
-
 def fetch_webster(request_url, input_word):
     """Get response url and response text for future parsing."""
 
@@ -93,24 +73,42 @@ def fetch_webster(request_url, input_word):
             return False, (res_url, res_text)
 
 
-def parse_and_print(response_url, nodes, found):
-    """The entry point for parsing and printing."""
+def fresh_run(con, cur, req_url, input_word):
+    """Print the result without cache."""
 
-    logger.debug(f"{OP[1]} the fetched result of {response_url}")
+    result = fetch_webster(req_url, input_word)
+    found = result[0]
+    res_url, res_text = result[1]
+    nodes = parse_dict(res_text, found)
 
-    if not found:
-        logger.debug(f"{OP[4]} the parsed result of {response_url}")
-        parse_spellcheck(nodes)
-        sys.exit()
+    if found:
+        # res_word may not be returned when `save` is called by concurrency
+        # word wiin res_url is still the input_word formatted
+        global res_word
+        if not res_word:
+            res_word = input_word
+
+        logger.debug(f"{OP[4]} the parsed result of {res_url}")
+        parse_thread = threading.Thread(
+            target=parse_and_print, args=(nodes,)
+        )
+        parse_thread.start()
+ 
+        dict.save(con, cur, input_word, res_word, res_url, res_text)
+
     else:
-        logger.debug(f"{OP[4]} the parsed result of {response_url}")
-        parse_word(nodes)
+        logger.debug(f"{OP[4]} the parsed result of {res_url}")
+        print_spellcheck(nodes)
+        sys.exit()
 
 
-def parse_dict(res_text, found):
+def parse_dict(res_text, found, fresh=True):
     """Parse the dict section of the page for the word."""
 
-    tree = etree.HTML(res_text)
+    if fresh:
+        tree = etree.HTML(res_text)
+    else:
+        tree = etree.fromstring(res_text)
 
     if found:
         s = """
@@ -154,14 +152,11 @@ def parse_dict(res_text, found):
         # # id:     synonyms-anchor
         # # class:  on-web read-more-content-hint-container
 
-        return nodes
-
     else:
         nodes = tree.xpath('//div[@class="widget spelling-suggestion"]')[0]
 
-        return nodes
-
-
+    return nodes
+    
 # --- Print other utility content ---
 def print_other_words(node):
     """Print other word forms."""
@@ -710,8 +705,8 @@ def print_word_and_wtype(node, head):
 
 
 # --- Entry point of all prints of a word found ---
-def parse_word(nodes):
-    """Dispatch the parsing of different sections of a word."""
+def parse_and_print(nodes):
+    """Parse and print different sections for the word."""
 
     # A page may have multiple word forms, e.g. "give away", "giveaway"
     words = []
@@ -768,8 +763,8 @@ def parse_word(nodes):
 
 
 # --- Print spell check ---
-def parse_spellcheck(nodes):
-    """Parse spellcheck info and print it."""
+def print_spellcheck(nodes):
+    """Parse and print spellcheck info."""
 
     for node in nodes:
         if node.tag == "h1":

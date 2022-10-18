@@ -84,9 +84,18 @@ def fresh_run(con, cur, req_url, input_word):
     else:
         spell_res_url, spell_res_text = result[1]
         logger.debug(f"{OP[4]} the parsed result of {spell_res_url}")
+
         soup = make_a_soup(spell_res_text)
-        print_spellcheck(soup)
-        sys.exit()
+        nodes = soup.find("div", "hfl-s lt2b lmt-10 lmb-25 lp-s_r-20")
+        suggestions = []
+
+        for ul in nodes.find_all("ul", "hul-u"):
+            for i in ul.find_all("li"):
+                sug = replace_all(i.text)
+                suggestions.append(sug)
+
+        dict.print_spellcheck(con, cur, input_word, suggestions, DICTS[0])
+
 
 # ----------The Entry Point For Parse And Print----------
 
@@ -134,26 +143,6 @@ def parse_first_dict(res_url, soup):
             attempt = call_on_error(ParsedNoneError(), res_url, attempt, OP[3])
 
         return first_dict
-
-
-def print_spellcheck(soup):
-    """Parse and print spellcheck info."""
-
-    content = soup.find("div", "hfl-s lt2b lmt-10 lmb-25 lp-s_r-20")
-
-    try:
-        title = content.h1.text.split("for")[1].strip()
-    except IndexError:
-        title = content.find_all("h1")[1].text.split("for")[1].strip()
-
-    console.print("[bold yellow]" + title)
-
-    for ul in content.find_all("ul", "hul-u"):
-        notice = ul.find_previous_sibling().text
-        console.print("[bold #3C8DAD]" + "\n" + notice)
-        for i in ul.find_all("li"):
-            suggestion = replace_all(i.text)
-            console.print("[#b2b2b2]" + "  • " + suggestion)
 
 
 # ----------Parse Response Word----------

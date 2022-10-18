@@ -98,8 +98,19 @@ def fresh_run(con, cur, req_url, input_word):
 
     else:
         logger.debug(f"{OP[4]} the parsed result of {res_url}")
-        print_spellcheck(nodes)
-        sys.exit()
+
+        suggestions = []
+        for node in nodes:
+            if node.tag != "h1":
+                for word in node.itertext():
+                    w = word.strip()
+                    if w.startswith("The"):
+                        continue
+                    else:
+                        sug = w.strip()
+                        suggestions.append(sug)
+        
+        dict.print_spellcheck(con, cur, input_word, suggestions, DICTS[1])
 
 
 def parse_dict(res_text, found):
@@ -757,21 +768,3 @@ def parse_and_print(nodes):
     global res_word
     if words:
         res_word = words[0]
-
-
-# --- Print spell check ---
-def print_spellcheck(nodes):
-    """Parse and print spellcheck info."""
-
-    for node in nodes:
-        if node.tag == "h1":
-            w = node.text.strip("”").strip("“")
-            console.print("[bold yellow]" + w)
-        else:
-            for word in node.itertext():
-                w = word.strip()
-                if w.startswith("The"):
-                    w = w.split(" or")[0].replace("Click on", "Check out")
-                    console.print("[bold #3C8DAD]" + "\n" + w + ":")
-                else:
-                    console.print("  • " + w.strip())

@@ -1,5 +1,6 @@
 """Shared functionality of all dictionaries."""
 
+import sys
 import sqlite3
 import requests
 from fake_user_agent import user_agent
@@ -10,6 +11,7 @@ from ..settings import OP, DICTS
 from ..errors import call_on_error
 from ..dicts import cambridge, webster
 from ..utils import make_a_soup
+from ..console import console
 
 
 def fetch(url, session):
@@ -87,3 +89,22 @@ def save(con, cur, input_word, response_word, response_url, response_text):
     except sqlite3.InterfaceError as error:
         logger.debug(f'{OP[8]} caching "{input_word}" - [ERROR] - {error}\n')
 
+
+def print_spellcheck(con, cur, input_word, suggestions, dict):
+    """Parse and print spellcheck info."""
+
+    console.print("[red]" + "\n!!! " + "[/red]" + "[yellow]" + input_word.upper() + "[/yellow]" + " you've entered isn't in the dictionary.\n")
+
+    for count, sug in enumerate(suggestions):
+        console.print("[bold]%2d" % (count+1), end="")
+        console.print("[#3C8DAD] %s" % sug)
+   
+    key = input("\nType the NUMBER above to get the word suggestion OR any other KEY to stop:\n")
+
+    if key.isnumeric() and (1 <= int(key) <= len(suggestions)):
+        if dict == DICTS[1]:
+            webster.search_webster(con, cur, suggestions[int(key) - 1])        
+        if dict == DICTS[0]:
+            cambridge.search_cambridge(con, cur, suggestions[int(key) - 1])
+    else:
+        sys.exit()

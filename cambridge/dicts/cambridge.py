@@ -23,39 +23,44 @@ CAMBRIDGE_URL = "https://dictionary.cambridge.org"
 CAMBRIDGE_DICT_BASE_URL = CAMBRIDGE_URL + "/dictionary/english/"
 CAMBRIDGE_SPELLCHECK_URL = CAMBRIDGE_URL + "/spellcheck/english/?q="
 
-CAMBRIDGE_DICT_BASE_URL_CN = "https://dictionary.cambridge.org/dictionary/english-chinese-simplified/"
-CAMBRIDGE_DICT_BASE_URL_CN_TRADITIONAL = "https://dictionary.cambridge.org/dictionary/english-chinese-traditional/"
+CAMBRIDGE_DICT_BASE_URL_CN = CAMBRIDGE_URL + "/dictionary/english-chinese-simplified/"
+CAMBRIDGE_SPELLCHECK_URL_CN = CAMBRIDGE_URL + "/spellcheck/english-chinese-simplified/?q="
+# CAMBRIDGE_DICT_BASE_URL_CN_TRADITIONAL = "https://dictionary.cambridge.org/dictionary/english-chinese-traditional/"
 
 # ----------Request Web Resource----------
-def search_cambridge(con, cur, input_word, is_fresh=False):
-    req_url = get_request_url(CAMBRIDGE_DICT_BASE_URL, input_word, DICTS[0])
+def search_cambridge(con, cur, input_word, is_fresh=False, is_ch=False):
+    if is_ch:
+        req_url = get_request_url(CAMBRIDGE_DICT_BASE_URL_CN, input_word, DICTS[0])
+    else:
+        req_url = get_request_url(CAMBRIDGE_DICT_BASE_URL, input_word, DICTS[0])
 
     if not is_fresh:
         cached = dict.cache_run(con, cur, input_word, req_url, DICTS[0])
         if not cached:
-            fresh_run(con, cur, req_url, input_word)
+            fresh_run(con, cur, req_url, input_word, is_ch)
     else:
-        fresh_run(con, cur, req_url, input_word)
+        fresh_run(con, cur, req_url, input_word, is_ch)
 
 
-def fetch_cambridge(req_url, input_word):
+def fetch_cambridge(req_url, input_word, is_ch):
     """Get response url and response text for later parsing."""
 
     with requests.Session() as session:
         session.trust_env = False   # not to use proxy
         res = dict.fetch(req_url, session)
 
-        if res.url == CAMBRIDGE_DICT_BASE_URL:
+        if res.url == CAMBRIDGE_DICT_BASE_URL or res.url == CAMBRIDGE_DICT_BASE_URL_CN:
             logger.debug(f'{OP[6]} "{input_word}" in {DICTS[0]}')
+            if is_ch:
+                spell_req_url = get_request_url_spellcheck(CAMBRIDGE_SPELLCHECK_URL_CN, input_word)
+            else:
+                spell_req_url = get_request_url_spellcheck(CAMBRIDGE_SPELLCHECK_URL, input_word)
 
-            spell_req_url = get_request_url_spellcheck(
-                CAMBRIDGE_SPELLCHECK_URL, input_word
-            )
             spell_res = dict.fetch(spell_req_url, session)
             spell_res_url = spell_res.url
             spell_res_text = spell_res.text
-
             return False, (spell_res_url, spell_res_text)
+
         else:
             res_url = parse_response_url(res.url)
             res_text = res.text
@@ -64,10 +69,10 @@ def fetch_cambridge(req_url, input_word):
             return True, (res_url, res_text)
 
 
-def fresh_run(con, cur, req_url, input_word):
+def fresh_run(con, cur, req_url, input_word, is_ch):
     """Print the result without cache."""
 
-    result = fetch_cambridge(req_url, input_word)
+    result = fetch_cambridge(req_url, input_word, is_ch)
     found = result[0]
 
     if found:
@@ -96,7 +101,7 @@ def fresh_run(con, cur, req_url, input_word):
                 sug = replace_all(i.text)
                 suggestions.append(sug)
 
-        dict.print_spellcheck(con, cur, input_word, suggestions, DICTS[0])
+        dict.print_spellcheck(con, cur, input_word, suggestions, DICTS[0], is_ch)
 
 
 # ----------The Entry Point For Parse And Print----------
@@ -156,7 +161,15 @@ def parse_first_dict(res_url, soup):
 def parse_response_word(soup):
     "Parse the response word from html head title tag."
 
-    response_word = soup.find("title").text.split("|")[0].strip().lower()
+    temp = soup.find("title").text.split("-")[0].strip()
+    if "|" in temp:
+        response_word = temp.split("|")[0].strip().lower()
+
+    elif "in Simplified Chinese" in temp:
+        response_word = temp.split("in Simplified Chinese")[0].strip().lower()
+    else:
+        response_word = temp.lower()
+
     return response_word
 
 

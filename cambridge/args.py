@@ -92,6 +92,14 @@ def parse_args():
         help="look up a word/phrase afresh without using cache",
     )
 
+    # Add optional arguments
+    parser_sw.add_argument(
+        "-c",
+        "--chinese",
+        action="store_true",
+        help="look up a word/phrase in Cambridge Dictionary with Chinese translation",
+    )
+
     if len(sys.argv) == 1:
         parser.print_help()
         sys.exit(0)
@@ -162,10 +170,16 @@ def search_word(args, con, cur):
         logging.getLogger(__package__).setLevel(logging.DEBUG)
 
     input_word = args.words[0]
+
+    # boolean types
     is_webster = args.webster
     is_fresh = args.fresh
+    is_ch = args.chinese
+
+    if is_webster and is_ch:
+        print("Webster Dictionary doesn't provide Chinese translation. Printing original version ...")
 
     if is_webster:
         webster.search_webster(con, cur, input_word, is_fresh)
     else:
-        cambridge.search_cambridge(con, cur, input_word, is_fresh)
+        cambridge.search_cambridge(con, cur, input_word, is_fresh, is_ch)

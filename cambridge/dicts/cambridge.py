@@ -23,8 +23,8 @@ CAMBRIDGE_URL = "https://dictionary.cambridge.org"
 CAMBRIDGE_DICT_BASE_URL = CAMBRIDGE_URL + "/dictionary/english/"
 CAMBRIDGE_SPELLCHECK_URL = CAMBRIDGE_URL + "/spellcheck/english/?q="
 
-# CAMBRIDGE_DICT_BASE_URL = "https://dictionary.cambridge.org/dictionary/english-chinese-simplified/"
-
+CAMBRIDGE_DICT_BASE_URL_CN = "https://dictionary.cambridge.org/dictionary/english-chinese-simplified/"
+CAMBRIDGE_DICT_BASE_URL_CN_TRADITIONAL = "https://dictionary.cambridge.org/dictionary/english-chinese-traditional/"
 
 # ----------Request Web Resource----------
 def search_cambridge(con, cur, input_word, is_fresh=False):

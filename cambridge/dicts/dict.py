@@ -28,14 +28,19 @@ def fetch(url, session):
             r = session.get(url, timeout=9.05)
         except requests.exceptions.HTTPError as e:
             attempt = call_on_error(e, url, attempt, OP[2])
+            continue
         except requests.exceptions.ConnectTimeout as e:
             attempt = call_on_error(e, url, attempt, OP[2])
+            continue
         except requests.exceptions.ConnectionError as e:
             attempt = call_on_error(e, url, attempt, OP[2])
+            continue
         except requests.exceptions.ReadTimeout as e:
             attempt = call_on_error(e, url, attempt, OP[2])
+            continue
         except Exception as e:
             attempt = call_on_error(e, url, attempt, OP[2])
+            continue
         else:
             return r
 

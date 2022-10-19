@@ -23,6 +23,8 @@ CAMBRIDGE_URL = "https://dictionary.cambridge.org"
 CAMBRIDGE_DICT_BASE_URL = CAMBRIDGE_URL + "/dictionary/english/"
 CAMBRIDGE_SPELLCHECK_URL = CAMBRIDGE_URL + "/spellcheck/english/?q="
 
+# CAMBRIDGE_DICT_BASE_URL = "https://dictionary.cambridge.org/dictionary/english-chinese-simplified/"
+
 
 # ----------Request Web Resource----------
 def search_cambridge(con, cur, input_word, is_fresh=False):
@@ -40,7 +42,7 @@ def fetch_cambridge(req_url, input_word):
     """Get response url and response text for later parsing."""
 
     with requests.Session() as session:
-        session.trust_env = False
+        session.trust_env = False   # not to use proxy
         res = dict.fetch(req_url, session)
 
         if res.url == CAMBRIDGE_DICT_BASE_URL:
@@ -135,14 +137,19 @@ def parse_first_dict(res_url, soup):
     attempt = 0
     while True:
         try:
-            first_dict = soup.find("div", "pr dictionary")
+            # first_dict = soup.find("div", "pr dictionary")
+            first_dict = soup.find("div", "pr di superentry")
         except Exception as e:
             attempt = call_on_error(e, res_url, attempt, OP[3])
+            continue
+        else:
+            if first_dict is None:
+                attempt = call_on_error(ParsedNoneError(), res_url, attempt, OP[3])
+                continue
+            else:
+                break
 
-        if first_dict is None:
-            attempt = call_on_error(ParsedNoneError(), res_url, attempt, OP[3])
-
-        return first_dict
+    return first_dict
 
 
 # ----------Parse Response Word----------
@@ -221,12 +228,18 @@ def parse_head_domain(head):
 
 
 def parse_head_usage(head):
-    if head.find("span", "lab dlab"):
-        w_usage = replace_all(head.find("span", "lab dlab").text)
+    head_usage = head.find("span", "lab dlab")
+
+    # NOTE: <span class = "var dvar"> </span>, attrs["class"] returns a list 
+    if head_usage is not None and head_usage.parent.attrs["class"] != ["var", "dvar"]:
+        w_usage = replace_all(head_usage.text)
         return w_usage
-    if head.find_next_sibling("span", "lab dlab"):
-        w_usage = replace_all(head.find_next_sibling("span", "lab dlab").text)
-        return w_usage
+
+    head_usage_next = head.find_next_sibling("span", "lab dlab")
+    if head_usage_next is not None and head_usage_next.parent.attrs["class"] != ["var", "dvar"]:
+        w_usage_next= replace_all(head_usage_next.text)
+        return w_usage_next
+
     return ""
 
 
@@ -322,6 +335,12 @@ def parse_meaning(def_block):
         meaning_words = replace_all(meaning_b.text)
         print("\033[33m" + meaning_words + "\033[0m")
 
+    # Print the meaning's specific language translation if any
+    meaning_lan = def_block.find("span", "trans dtrans dtrans-se break-cj")
+    if meaning_lan:
+        meaning_lan_words = meaning_lan.text
+        print("\033[93m" + meaning_lan_words + "\033[0m")
+
 
 def parse_pmeaning(def_block):
     meaning_b = def_block.find("div", "def ddef_d db")
@@ -333,6 +352,12 @@ def parse_pmeaning(def_block):
     else:
         meaning_words = replace_all(meaning_b.text)
         print("  " + "\033[33m" + meaning_words + "\033[0m")
+
+    # Print the meaning's specific language translation if any
+    meaning_lan = def_block.find("span", "trans dtrans dtrans-se break-cj")
+    if meaning_lan:
+        meaning_lan_words = meaning_lan.text
+        print("  " + "\033[93m" + meaning_lan_words + "\033[0m")
 
 
 def parse_example(def_block):
@@ -347,6 +372,14 @@ def parse_example(def_block):
     for e in def_block.find_all("div", "examp dexamp"):
         if e is not None:
             example = replace_all(e.find("span", "eg deg").text)
+
+            # Print the exmaple's specific language translation if any
+            example_lan = e.find("span", "trans dtrans dtrans-se hdb break-cj")
+            if example_lan is not None:
+                example_lan_sent = example_lan.text
+            else:
+                example_lan_sent = ""
+
             if e.find("span", "lab dlab"):
                 lab = replace_all(e.find("span", "lab dlab").text)
                 console.print(
@@ -357,6 +390,8 @@ def parse_example(def_block):
                     + " "
                     + "[#b2b2b2]"
                     + example
+                    + " "
+                    + example_lan_sent
                 )
             elif e.find("span", "gram dgram"):
                 gram = replace_all(e.find("span", "gram dgram").text)
@@ -368,6 +403,8 @@ def parse_example(def_block):
                     + " "
                     + "[#b2b2b2]"
                     + example
+                    + " "
+                    + exmaple_lan_sent
                 )
             elif e.find("span", "lu dlu"):
                 lu = replace_all(e.find("span", "lu dlu").text)
@@ -379,9 +416,11 @@ def parse_example(def_block):
                     + " "
                     + "[#b2b2b2]"
                     + example
+                    + " "
+                    + example_lan_sent
                 )
             else:
-                console.print("[#b2b2b2]" + "  • " + example)
+                console.print("[#b2b2b2]" + "  • " + example + " " + example_lan_sent)
 
 
 def parse_synonym(def_block):

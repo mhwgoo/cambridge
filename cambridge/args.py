@@ -208,7 +208,6 @@ def search_word(args, con, cur):
     First checks the args having "verbose" in it or not, if so, the debug mode will be turned on.
     Then it checks which dictionary is intended, and then calls respective dictionary function.
     """
-    print(args)
 
     if args.verbose:
         logging.getLogger(__package__).setLevel(logging.DEBUG)

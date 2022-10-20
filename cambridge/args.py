@@ -18,7 +18,7 @@ from .console import console
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Terminal Version of Cambridge Dictionary"
+        description="Terminal Version of Cambridge Dictionary by default. Also supports Merriam-Webster Dictionary."
     )
 
     # Add sub-command capability that can identify different sub-command name
@@ -27,56 +27,58 @@ def parse_args():
     # Add sub-command l
     parser_lw = sub_parsers.add_parser(
         "l",
-        help="list all words you've found before in alphabetical order",
+        help="list words/phrases you've found before in alphabetical order",
     )
 
     # Make sub-command l run default funtion of "list_words"
     parser_lw.set_defaults(func=list_words)
 
-    # Add optional argument for deleting a word from word list
+    # Add an optional argument for l command
     parser_lw.add_argument(
         "-d",
         "--delete",
         nargs="+",
-        help="delete a word/phrase from cache",
+        help="delete a word/phrase or multiple words/phrases(seperated by ',') from cache",
     )
 
-    # Add optional argument for listing all words by time
+    # Add an optional argument for l command
     parser_lw.add_argument(
         "-t",
         "--time",
         action="store_true",
-        help="list all words you've found before in reverse chronological order",
+        help="list words/phrases you've found before in reverse chronological order",
     )
 
-    # Add optional argument for listing words randomly chosen
+    # Add an optional argument for l command
     parser_lw.add_argument(
         "-r",
         "--random",
         action="store_true",
-        help="randomly list the words you've found before",
+        help="randomly list 20 words/phrases you've found before",
     )
 
     # Add sub-command s
-    parser_sw = sub_parsers.add_parser("s", help="look up a word/phrase")
+    parser_sw = sub_parsers.add_parser("s", help="look up a word/phrase; hidden for convenience, no need to type")
 
     # Make sub-command s run default function of "search_words"
     parser_sw.set_defaults(func=search_word)
 
-    # Add positional arguments with n args
+    # Add positional arguments with n args for s command
     parser_sw.add_argument(
-        "words",
+        "word_or_phrase",
         nargs="+",
-        help="look up a word/phrase in Cambridge Dictionary",
+        help="look up a word/phrase in Cambridge Dictionary; e.g. camb <word/phrase>",
     )
-    # Add optional arguments
+
+    # Add an optional argument for s command
     parser_sw.add_argument(
         "-v",
         "--verbose",
         action="store_true",
         help="look up a word/phrase in verbose mode",
     )
-    # Add optional arguments
+
+    # Add an optional argument for s command
     parser_sw.add_argument(
         "-w",
         "--webster",
@@ -84,7 +86,7 @@ def parse_args():
         help="look up a word/phrase in Merriam-Webster Dictionary",
     )
 
-    # Add optional arguments
+    # Add an optional argument for s command
     parser_sw.add_argument(
         "-f",
         "--fresh",
@@ -92,7 +94,7 @@ def parse_args():
         help="look up a word/phrase afresh without using cache",
     )
 
-    # Add optional arguments
+    # Add an optional argument for s command
     parser_sw.add_argument(
         "-c",
         "--chinese",
@@ -102,7 +104,12 @@ def parse_args():
 
     if len(sys.argv) == 1:
         parser.print_help()
-        sys.exit(0)
+        console.print("[blue]\nCommand l")
+        parser_lw.print_help()
+        console.print("[blue]\nCommand s (hidden for convinience)")
+        parser_sw.print_help()
+
+        sys.exit()
 
     elif sys.argv[1] != "l" and len(sys.argv) > 1:
         to_parse = []
@@ -122,18 +129,53 @@ def parse_args():
     return args
 
 
+def delete(word, con, cur):
+    deleted, data = delete_word(con, cur, word)
+
+    if deleted:
+        if "cambridge" in data[1]:
+            print(f'{OP[9]} "{word}" from {DICTS[0]} in cache successfully')
+        else:
+            print(f'{OP[9]} "{word}" from {DICTS[1]} in cache successfully')
+    else:
+        print(f'{OP[6]} "{word}" in cache')
+
+
 def list_words(args, con, cur):
     # The subparser i.e. the sub-command isn't in the namespace of args
     if args.delete:
-        word = " ".join(args.delete)
-        deleted, data = delete_word(con, cur, word)
-        if deleted:
-            if "cambridge" in data[1]:
-                print(f'{OP[9]} "{word}" from {DICTS[0]} in cache successfully')
-            else:
-                print(f'{OP[9]} "{word}" from {DICTS[1]} in cache successfully')
+        to_delete = args.delete
+    
+        ids = []
+        words = []
+        
+        for index, item in enumerate(to_delete):
+            # multiple words/phrases are seperated by ","
+            if "," in item:
+                ids.append(index)
+
+        # if there is only one word/phrase to delete
+        if not ids:
+            word = " ".join(to_delete).strip()
+            delete(word, con, cur)
+
+        # if there are multiple words/phrase to delete
         else:
-            print(f'{OP[6]} "{word}" in cache')
+            for i, id in enumerate(ids):
+                if i == 0:
+                    words.append(" ".join(to_delete[: (id + 1)]).strip(",").strip())
+                if i > 0:
+                    words.append(" ".join(to_delete[(ids[i-1] + 1): (id + 1)]).strip(",").strip())
+
+            # If the last word in `to_delete` variable does not end with ",", it should be collected.
+            # Else the last word ends with ",", it has been covered and handled above.
+            if ids[-1] != len(to_delete) - 1:
+                words.append(to_delete[-1])
+
+            for word in words:
+                delete(word, con, cur)
+                
+
     elif args.random:
         try:
             # data is something like [('hello',), ('good',), ('world',)]
@@ -143,6 +185,7 @@ def list_words(args, con, cur):
         else:
             for i in data:
                 print(i[0])
+
     else:
         try:
             # data is something like [('hello',), ('good',), ('world',)]
@@ -165,11 +208,13 @@ def search_word(args, con, cur):
     First checks the args having "verbose" in it or not, if so, the debug mode will be turned on.
     Then it checks which dictionary is intended, and then calls respective dictionary function.
     """
+    print(args)
 
     if args.verbose:
         logging.getLogger(__package__).setLevel(logging.DEBUG)
 
-    input_word = args.words[0]
+    
+    input_word = args.word_or_phrase[0].strip(".").strip(",").strip()
 
     # boolean types
     is_webster = args.webster
@@ -177,7 +222,8 @@ def search_word(args, con, cur):
     is_ch = args.chinese
 
     if is_webster and is_ch:
-        print("Webster Dictionary doesn't provide Chinese translation. Printing original version ...")
+        print("Webster Dictionary doesn't support English to other language. Try again without -c(--chinese) option")
+        sys.exit()
 
     if is_webster:
         webster.search_webster(con, cur, input_word, is_fresh)

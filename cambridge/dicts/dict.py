@@ -55,11 +55,11 @@ def cache_run(con, cur, input_word, req_url, dict):
         res_url, res_text = data
 
         if DICTS[0].lower() in res_url:
-            print(f'{OP[5]} "{input_word}" from {DICTS[0]} in cache. Not to use it, try again with "-f" flag')
+            print(f'{OP[5]} "{input_word}" from {DICTS[0]} in cache. Not to use it, try again with -f(--fresh) option')
             soup = make_a_soup(res_text)
             cambridge.parse_and_print(soup, res_url)
         else:
-            print(f'{OP[5]} "{input_word}" from {DICTS[1]} in cache. Not to use it, try again with "-f" flag')
+            print(f'{OP[5]} "{input_word}" from {DICTS[1]} in cache. Not to use it, try again with -f(--fresh) option')
             nodes = webster.parse_dict(res_text, True)
             webster.parse_and_print(nodes)
         return True
@@ -84,7 +84,7 @@ def save(con, cur, input_word, response_word, response_url, response_text):
         logger.debug(f'{OP[8]} caching "{input_word}" - [ERROR] - {error}\n')
 
 
-def print_spellcheck(con, cur, input_word, suggestions, dict, is_ch):
+def print_spellcheck(con, cur, input_word, suggestions, dict, is_ch=False):
     """Parse and print spellcheck info."""
 
     console.print("[red]" + "\n!!! " + "[/red]" + "[yellow]" + input_word.upper() + "[/yellow]" + " you've entered isn't in the dictionary.\n")

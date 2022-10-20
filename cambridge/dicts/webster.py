@@ -142,6 +142,10 @@ def parse_dict(res_text, found):
 
         nodes = tree.xpath(s)
 
+        if len(nodes) < 2:
+            log.error("The fetched result is not what we intended for the word due to the network or website reasons, please try again.")
+            sys.exit()
+
         # for node in nodes:
         #     try:
         #         print("id:    ", node.attrib["id"])
@@ -225,7 +229,8 @@ def print_synonyms(node):
             if has_label:
                 console.print(f"\n{elm.text}", style="bold")
 
-
+# NOTE: Wester scrapes the web for examples in the way that it only finds the exact match of the word.
+#       If the word is a verb, only gets the word without tenses; if the word is a noun, only its single form.
 def print_examples(node, words):
     """Print recent examples on the web."""
 

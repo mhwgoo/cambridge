@@ -29,8 +29,8 @@ class NoResultError(Exception):
 
 def call_on_error(error, url, attempt, op):
     attempt += 1
-    logger.debug(f"{op} HTML from {url} {attempt} times - [ERROR] - {error}")
+    logger.debug(f"{op} HTML from {url} {attempt} times")
     if attempt == 3:
-        logger.error(f"Maximum {op} retries reached. [ERROR] - {error}\nExit")
+        logger.error(f"Maximum {op} retries reached. \n{error}")
         sys.exit()
     return attempt

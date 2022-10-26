@@ -93,7 +93,9 @@ def print_spellcheck(con, cur, input_word, suggestions, dict, is_ch=False):
         console.print("[bold]%2d" % (count+1), end="")
         console.print("[#3C8DAD] %s" % sug)
    
-    key = input("\nType the NUMBER above to get the word suggestion OR any other KEY to stop:\n")
+
+    console.print("[green]" + "\n>>> " + "[/green]" + "Enter the NUMBER above to look up the word suggestion OR any other KEY to exit:")
+    key = input("")
 
     if key.isnumeric() and (1 <= int(key) <= len(suggestions)):
         if dict == DICTS[1]:

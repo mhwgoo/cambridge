@@ -1,6 +1,6 @@
 # Cambridge
 
-`Cambridge` is a terminal version of Cambridge Dictionary, with its data from https://dictionary.cambridge.org
+`cambridge` is a terminal version of Cambridge Dictionary, with its data from https://dictionary.cambridge.org
 
 By default, it is English to English translation. For English to Chinese, add '-c' or '--chinese' option.
 

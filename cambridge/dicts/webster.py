@@ -22,6 +22,7 @@ from ..dicts import dict
 WEBSTER_BASE_URL = "https://www.merriam-webster.com"
 WEBSTER_DICT_BASE_URL = WEBSTER_BASE_URL + "/dictionary/"
 
+sub_text = ""
 res_word = ""
 
 
@@ -79,7 +80,7 @@ def fresh_run(con, cur, req_url, input_word):
     result = fetch_webster(req_url, input_word)
     found = result[0]
     res_url, res_text = result[1]
-    nodes = parse_dict(res_text, found)
+    nodes = parse_dict(res_text, found, True)
 
     if found:
         # res_word may not be returned when `save` is called by concurrency
@@ -94,7 +95,7 @@ def fresh_run(con, cur, req_url, input_word):
         )
         parse_thread.start()
 
-        dict.save(con, cur, input_word, res_word, res_url, res_text)
+        dict.save(con, cur, input_word, res_word, res_url, sub_text)
 
     else:
         logger.debug(f"{OP[4]} the parsed result of {res_url}")
@@ -113,7 +114,7 @@ def fresh_run(con, cur, req_url, input_word):
         dict.print_spellcheck(con, cur, input_word, suggestions, DICTS[1])
 
 
-def parse_dict(res_text, found):
+def parse_dict(res_text, found, is_fresh):
     """Parse the dict section of the page for the word."""
 
     tree = etree.HTML(res_text)
@@ -141,9 +142,14 @@ def parse_dict(res_text, found):
         # not(attribute::class="wgt-incentive-anchors")
 
         nodes = tree.xpath(s)
-
+        
+        if is_fresh:
+            global sub_text
+            sub_tree = tree.xpath('//*[@id="left-content"]')
+            sub_text = etree.tostring(sub_tree[0]).decode('utf-8')
+        
         if len(nodes) < 2:
-            log.error("The fetched result is not what we intended for the word due to the network or website reasons, please try again.")
+            logger.error("The fetched result is not what we intended for the word due to the network or website reasons, please try again.")
             sys.exit()
 
         # for node in nodes:

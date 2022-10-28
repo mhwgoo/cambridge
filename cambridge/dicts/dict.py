@@ -60,7 +60,7 @@ def cache_run(con, cur, input_word, req_url, dict):
             cambridge.parse_and_print(soup, res_url)
         else:
             print(f'{OP[5]} "{input_word}" from {DICTS[1]} in cache. Not to use it, try again with -f(--fresh) option')
-            nodes = webster.parse_dict(res_text, True)
+            nodes = webster.parse_dict(res_text, True, False)
             webster.parse_and_print(nodes)
         return True
 

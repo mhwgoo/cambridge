@@ -119,6 +119,8 @@ def parse_dict(res_text, found, is_fresh):
 
     tree = etree.HTML(res_text)
 
+    logger.debug(f"{OP[1]} {res_url}")
+
     if found:
         s = """
         //*[@id="left-content"]/div[contains(@class, "row entry-header")] |

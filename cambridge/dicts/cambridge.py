@@ -93,6 +93,8 @@ def fresh_run(con, cur, req_url, input_word, is_ch):
         logger.debug(f"{OP[4]} the parsed result of {spell_res_url}")
 
         soup = make_a_soup(spell_res_text)
+
+        logger.debug(f"{OP[1]} {spell_res_url}")
         nodes = soup.find("div", "hfl-s lt2b lmt-10 lmb-25 lp-s_r-20")
         suggestions = []
 
@@ -140,6 +142,8 @@ def parse_first_dict(res_url, soup):
     """Parse the dict section of the page for the word."""
 
     attempt = 0
+    logger.debug(f"{OP[1]} {res_url}")
+
     while True:
         try:
             # first_dict = soup.find("div", "pr dictionary")
@@ -149,7 +153,7 @@ def parse_first_dict(res_url, soup):
             continue
         else:
             if first_dict is None:
-                attempt = call_on_error(ParsedNoneError(), res_url, attempt, OP[3])
+                attempt = call_on_error(ParsedNoneError(res_url), res_url, attempt, OP[3])
                 continue
             else:
                 break

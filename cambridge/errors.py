@@ -10,8 +10,8 @@ from .log import logger
 class ParsedNoneError(Exception):
     """Used when bs4 returned None whereas there's target content existing within the document"""
 
-    def __init__(self):
-        self.message = "Nothing parsed out"
+    def __init__(self, response_url):
+        self.message = "The word isn't in the Cambridge Dictionary yet. Check on " + response_url 
 
     def __str__(self):
         return self.message
@@ -29,8 +29,8 @@ class NoResultError(Exception):
 
 def call_on_error(error, url, attempt, op):
     attempt += 1
-    logger.debug(f"{op} HTML from {url} {attempt} times")
+    logger.debug(f"{op} {url} {attempt} times")
     if attempt == 3:
-        logger.error(f"Maximum {op} retries reached. \n{error}")
+        print(f"Maximum {op} reached: {error}")
         sys.exit()
     return attempt

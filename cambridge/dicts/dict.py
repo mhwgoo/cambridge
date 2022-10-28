@@ -22,9 +22,9 @@ def fetch(url, session):
     session.headers.update(headers)
     attempt = 0
 
+    logger.debug(f"{OP[0]} {url}")
     while True:
         try:
-            logger.debug(f"{OP[0]} {url}")
             r = session.get(url, timeout=9.05)
         except requests.exceptions.HTTPError as e:
             attempt = call_on_error(e, url, attempt, OP[2])
@@ -55,13 +55,14 @@ def cache_run(con, cur, input_word, req_url, dict):
         res_url, res_text = data
 
         if DICTS[0].lower() in res_url:
-            print(f'{OP[5]} "{input_word}" from {DICTS[0]} in cache. Not to use it, try again with -f(--fresh) option')
+            print(f'{OP[5]} "{input_word}" from {DICTS[0]} in cache. Not to use it, try again with -f or --fresh option')
+            logger.debug(f"{OP[1]} {res_url}")
             soup = make_a_soup(res_text)
             cambridge.parse_and_print(soup, res_url)
         else:
-            print(f'{OP[5]} "{input_word}" from {DICTS[1]} in cache. Not to use it, try again with -f(--fresh) option')
-            nodes = webster.parse_dict(res_text, True, False)
-            webster.parse_and_print(nodes)
+            print(f'{OP[5]} "{input_word}" from {DICTS[1]} in cache. Not to use it, try again with -f or --fresh option')
+            nodes = webster.parse_dict(res_text, True, res_url, False)
+            webster.parse_and_print(nodes, res_url)
         return True
 
     return False

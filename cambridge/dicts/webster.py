@@ -80,7 +80,7 @@ def fresh_run(con, cur, req_url, input_word):
     result = fetch_webster(req_url, input_word)
     found = result[0]
     res_url, res_text = result[1]
-    nodes = parse_dict(res_text, found, True)
+    nodes = parse_dict(res_text, found, res_url, True)
 
     if found:
         # res_word may not be returned when `save` is called by concurrency
@@ -89,9 +89,8 @@ def fresh_run(con, cur, req_url, input_word):
         if not res_word:
             res_word = input_word
 
-        logger.debug(f"{OP[4]} the parsed result of {res_url}")
         parse_thread = threading.Thread(
-            target=parse_and_print, args=(nodes,)
+            target=parse_and_print, args=(nodes, res_url,)
         )
         parse_thread.start()
 
@@ -114,7 +113,7 @@ def fresh_run(con, cur, req_url, input_word):
         dict.print_spellcheck(con, cur, input_word, suggestions, DICTS[1])
 
 
-def parse_dict(res_text, found, is_fresh):
+def parse_dict(res_text, found, res_url, is_fresh):
     """Parse the dict section of the page for the word."""
 
     tree = etree.HTML(res_text)
@@ -726,8 +725,10 @@ def print_word_and_wtype(node, head):
 
 
 # --- Entry point of all prints of a word found ---
-def parse_and_print(nodes):
+def parse_and_print(nodes, res_url):
     """Parse and print different sections for the word."""
+
+    logger.debug(f"{OP[4]} the parsed result of {res_url}")
 
     # A page may have multiple word forms, e.g. "give away", "giveaway"
     words = []

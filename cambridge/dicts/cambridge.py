@@ -90,11 +90,9 @@ def fresh_run(con, cur, req_url, input_word, is_ch):
 
     else:
         spell_res_url, spell_res_text = result[1]
-        logger.debug(f"{OP[4]} the parsed result of {spell_res_url}")
-
-        soup = make_a_soup(spell_res_text)
 
         logger.debug(f"{OP[1]} {spell_res_url}")
+        soup = make_a_soup(spell_res_text)
         nodes = soup.find("div", "hfl-s lt2b lmt-10 lmb-25 lp-s_r-20")
         suggestions = []
 
@@ -103,6 +101,7 @@ def fresh_run(con, cur, req_url, input_word, is_ch):
                 sug = replace_all(i.text)
                 suggestions.append(sug)
 
+        logger.debug(f"{OP[4]} the parsed result of {spell_res_url}")
         dict.print_spellcheck(con, cur, input_word, suggestions, DICTS[0], is_ch)
 
 

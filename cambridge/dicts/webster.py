@@ -149,9 +149,9 @@ def parse_dict(res_text, found, res_url, is_fresh):
             sub_tree = tree.xpath('//*[@id="left-content"]')
             sub_text = etree.tostring(sub_tree[0]).decode('utf-8')
         
-        if len(nodes) < 2:
-            logger.error("The fetched result is not what we intended for the word due to the network or website reasons, please try again.")
-            sys.exit()
+        # if len(nodes) < 2:
+        #     logger.error("The fetched result is not what we intended for the word due to the network or website reasons, please try again.")
+        #     sys.exit()
 
         # for node in nodes:
         #     try:

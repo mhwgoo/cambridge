@@ -11,7 +11,7 @@ class ParsedNoneError(Exception):
     """Used when bs4 returned None whereas there's target content existing within the document"""
 
     def __init__(self, response_url):
-        self.message = "The word isn't in the Cambridge Dictionary yet. Check on " + response_url 
+        self.message = "The word isn't in the Cambridge Dictionary yet. See " + response_url 
 
     def __str__(self):
         return self.message

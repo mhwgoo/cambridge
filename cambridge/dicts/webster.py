@@ -121,26 +121,24 @@ def parse_dict(res_text, found, res_url, is_fresh):
     logger.debug(f"{OP[1]} {res_url}")
 
     if found:
+        # the nodes for webster dictionary website's older version
+        # //*[@id="left-content"]/div[contains(@class, "row entry-header")] |
+        # //*[@id="left-content"]/div[@class="row entry-attr"] |
+        # //*[@id="left-content"]/div[@class="row headword-row"] |
+        # //*[@id="left-content"]/div[contains(@id, "dictionary-entry")] |
+        # //*[@id="left-content"]/div[@id="other-words-anchor"] |
+        # //*[@id="left-content"]/div[@id="synonyms-anchor"] |
+        # //*[@id="left-content"]/div[@id="examples-anchor"]/div[@class="on-web read-more-content-hint-container"] |
+        # //*[@id="left-content"]/div[@id="related-phrases-anchor"]
+
+        # the nodes for the newly updated version
         s = """
-        //*[@id="left-content"]/div[contains(@class, "row entry-header")] |
-        //*[@id="left-content"]/div[@class="row entry-attr"] |
-        //*[@id="left-content"]/div[@class="row headword-row"] |
         //*[@id="left-content"]/div[contains(@id, "dictionary-entry")] |
-        //*[@id="left-content"]/div[@id="other-words-anchor"] |
-        //*[@id="left-content"]/div[@id="synonyms-anchor"] |
-        //*[@id="left-content"]/div[@id="examples-anchor"]/div[@class="on-web read-more-content-hint-container"] |
-        //*[@id="left-content"]/div[@id="related-phrases-anchor"]
+        //*[@id="left-content"]/div[@id="synonyms"] |
+        //*[@id="left-content"]/div[@id="examples"] |
+        //*[@id="left-content"]/div[@id="related-phrases"] |
+        //*[@id="left-content"]/div[@id="nearby-entries"]
         """
-
-        # TODO
-        # //*[@id="left-content"]/div[contains(@id, "art-anchor")] |
-
-        # Discard ruling out strategy
-        # *[@id="left-content"]/
-        # div[following::div[@id="first-known-anchor"] and
-        # not(attribute::class="ul-must-login-def") and
-        # not(attribute::id="synonym-discussion-anchor") and
-        # not(attribute::class="wgt-incentive-anchors")
 
         nodes = tree.xpath(s)
         
@@ -149,32 +147,24 @@ def parse_dict(res_text, found, res_url, is_fresh):
             sub_tree = tree.xpath('//*[@id="left-content"]')
             sub_text = etree.tostring(sub_tree[0]).decode('utf-8')
         
-        # if len(nodes) < 2:
-        #     logger.error("The fetched result is not what we intended for the word due to the network or website reasons, please try again.")
-        #     sys.exit()
+        if len(nodes) < 2:
+            logger.error("The fetched content is not intended for the word, due to your network or the website reasons, please try again.")
+            sys.exit()
 
+        # [for debug]
         # for node in nodes:
         #     try:
         #         print("id:    ", node.attrib["id"])
         #     except KeyError:
         #         print("class: ", node.attrib["class"])
-
-        # # class:  row entry-header
-        # # class:  row entry-attr
-        # # class:  row headword-row
-        # # id:     dictionary-entry-1
-        # # class:  row entry-header
-        # # id:     dictionary-entry-2
-        # # class:  row entry-header
-        # # id:     dictionary-entry-3
-        # # id:     other-words-anchor
-        # # id:     synonyms-anchor
-        # # class:  on-web read-more-content-hint-container
+        
+        # sys.exit()
 
     else:
+        # spelling-suggestion page remains the same  
         nodes = tree.xpath('//div[@class="widget spelling-suggestion"]')[0]
 
-    return nodes
+    # return nodes
     
 # --- Print other utility content ---
 def print_other_words(node):
@@ -698,7 +688,7 @@ def print_pron(node):
 
 
 def print_word_and_wtype(node, head):
-    """Print word and its type."""
+    """Print word and its types."""
 
     if head == 1:
         print()
@@ -722,6 +712,11 @@ def print_word_and_wtype(node, head):
                 console.print(f"[red] {elm.text}", end="")
     print()
     return word
+
+
+## TODO: class: row headerword-row header-ins
+def print_wtype():
+    pass
 
 
 # --- Entry point of all prints of a word found ---

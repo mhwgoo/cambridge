@@ -10,6 +10,7 @@ from ..settings import OP, DICTS
 from ..utils import get_request_url
 from ..log import logger
 from ..dicts import dict
+from ..colorscheme import webster_color as wc
 
 # TODO sub_num (1) (2) with parent meaning or not
 # If not parent meaing, don't print.
@@ -164,7 +165,7 @@ def parse_dict(res_text, found, res_url, is_fresh):
         # spelling-suggestion page remains the same  
         nodes = tree.xpath('//div[@class="widget spelling-suggestion"]')[0]
 
-    # return nodes
+    return nodes
     
 # --- Print other utility content ---
 def print_other_words(node):
@@ -687,36 +688,96 @@ def print_pron(node):
     print()
 
 
-def print_word_and_wtype(node, head):
-    """Print word and its types."""
 
-    if head == 1:
-        print()
-    else:
-        print("\n")
-
-    for elm in node.iterdescendants():
-        try:
-            has_word = (elm.attrib["class"] == "hword")
-            has_type = (elm.attrib["class"] == "important-blue-link")
-            has_lb = (elm.attrib["class"] == "lb")
-        except KeyError:
-            continue
-        else:
-            if has_word:
-                word = list(elm.itertext())[0]
-                console.print(f"[bold #3C8DAD on #DDDDDD]{word}", end="")
-            if has_type:
-                console.print(f" [red] {elm.text}", end="")
-            if has_lb:
-                console.print(f"[red] {elm.text}", end="")
-    print()
-    return word
+###########################################
+# parse and print dictionary-entry-[number] 
+###########################################
 
 
-## TODO: class: row headerword-row header-ins
-def print_wtype():
+# --- parse into class "row entry-header" --- #
+def entry_header_content(node):
+    for elm in node.iterchildren():
+        if elm.tag == "h1" or elm.tag == "p":
+            console.print(f"[{wc.eh_h1_word} {wc.bold}]{elm.text}", end=" ")
+
+        if elm.tag == "span":
+            num = " ".join(list(elm.itertext()))
+            console.print(f"[{wc.eh_entry_num}]{num}", end=" ")
+
+        if elm.tag == "h2":
+            type = " ".join(list(elm.itertext()))
+            console.print(f"[{wc.eh_word_type}]{type}", end="\n")
+
+def entry_attr(node):
     pass
+
+def row_entry_header(node):
+    for elm in node.iterchildren():
+        if elm.attrib["class"] == "col-12":
+            for i in elm.iterchildren():
+                if "entry-header-content" in i.attrib["class"]:
+                    entry_header_content(i)
+                if "row entry-atrr" in i.attrib["class"]:
+                    entry_attr(i)
+    
+# --- end --- #
+
+def row_headword_row_header_ins(node):
+    pass
+    
+def vg(node):
+    pass
+
+def entry_uros(node):
+    pass
+     
+
+
+def dictionary_entry(node):
+    """Print one entry of the word and its attributes like plural types, pronounciations, tenses, etc."""
+
+    # if head == 1:
+    #     print()
+    # else:
+    #     print("\n")
+
+
+    for elm in node.iterchildren():
+        try: 
+            if elm.attrib["class"]:
+                if elm.attrib["class"] == "row entry-header":
+                    row_entry_header(elm)
+
+                if elm.attrib["class"] == "row headword-row header_ins":
+                    row_headword_row_header_ins(elm) 
+
+                if elm.attrib["class"] == "vg":
+                    vg(elm)
+
+                if elm.attrib["class"] == "entry-uros":
+                    entry_uros(elm)
+        except:
+            continue
+
+
+    # for elm in node.iterdescendants():
+    #     try:
+    #         has_word = ( "hword")
+    #         has_type = (elm.attrib["class"] == "important-blue-link")
+    #         has_lb = (elm.attrib["class"] == "lb")
+    #     except KeyError:
+    #         continue
+    #     else:
+    #         if has_word:
+    #             word = list(elm.itertext())[0]
+    #             console.print(f"[bold #3C8DAD on #DDDDDD]{word}", end="")
+    #         if has_type:
+    #             console.print(f" [red] {elm.text}", end="")
+    #         if has_lb:
+    #             console.print(f"[red] {elm.text}", end="")
+    # print()
+    # return word
+
 
 
 # --- Entry point of all prints of a word found ---
@@ -735,45 +796,48 @@ def parse_and_print(nodes, res_url):
         except KeyError:
             attr = node.attrib["class"]
 
-        # Print one entry header: one word and its types like verb, noun, adj
-        # One page has multiple entry headers
-        # Also print a phrase entry's name and its types
-        if "row entry-header" in attr:
-            word = print_word_and_wtype(node, head)
-            words.append(word)
-            head += 1
 
-        # Print pronounciations
-        if attr == "row entry-attr":
-            print_pron(node)
-
-        # Print headword forms like verb tenses, noun plurals
-        if attr == "row headword-row":
-            print_forms(node)
-
-        # Print dictionary entry content
+        # FIXME 
         if "dictionary-entry" in attr:
-            print_dict_entry(node)
+            dictionary_entry(node)
 
-        # Print other word forms limiting 10
-        if attr == "other-words-anchor":
-            print_other_words(node)
 
-        # Print synonyms
-        if attr == "synonyms-anchor":
-            print_synonyms(node)
+    #     # Print one entry header: one word and its types like verb, noun, adj
+    #     # One page has multiple entry headers
+    #     # Also print a phrase entry's name and its types
+    #     if "row entry-header" in attr:
+    #         word = print_word_and_wtype(node, head)
+    #         words.append(word)
+    #         head += 1
 
-        # Print web examples
-        if attr == "on-web read-more-content-hint-container":
-            print_examples(node, words)
+    #     # Print pronounciations
+    #     if attr == "row entry-attr":
+    #         print_pron(node)
 
-        # Print related phrases
-        if attr == "related-phrases-anchor":
-            print_phrases(node, words)
+    #     # Print headword forms like verb tenses, noun plurals
+    #     if attr == "row headword-row":
+    #         print_forms(node)
 
-    dict_name = "The Merriam-Webster Dictionary"
-    console.print(f"\n{dict_name}", justify="right", style="bold")
 
-    global res_word
-    if words:
-        res_word = words[0]
+    #     # Print other word forms limiting 10
+    #     if attr == "other-words-anchor":
+    #         print_other_words(node)
+
+    #     # Print synonyms
+    #     if attr == "synonyms-anchor":
+    #         print_synonyms(node)
+
+    #     # Print web examples
+    #     if attr == "on-web read-more-content-hint-container":
+    #         print_examples(node, words)
+
+    #     # Print related phrases
+    #     if attr == "related-phrases-anchor":
+    #         print_phrases(node, words)
+
+    # dict_name = "The Merriam-Webster Dictionary"
+    # console.print(f"\n{dict_name}", justify="right")
+
+    # global res_word
+    # if words:
+    #     res_word = words[0]

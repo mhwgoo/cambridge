@@ -597,4 +597,4 @@ def parse_dict_name(first_dict):
     dict_info = replace_all(first_dict.small.text).strip("(").strip(")")
     dict_name = dict_info.split("©")[0]
     dict_name = dict_name.split("the")[-1]
-    console.print(dict_name + "\n", justify="right", style="bold")
+    console.print(dict_name + "\n", justify="right")

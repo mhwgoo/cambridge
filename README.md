@@ -6,7 +6,7 @@ By default, it is English to English translation. For English to Chinese, add '-
 
 Supports looking up the Merriam-Webster Dictionary, with `-w` or `--webster` option. Webster has no foreign language translation in itself.
 
-**[NOTICE]**: **The Merrain-Webster Dictionary** website has just been updated. Therefore the codes for parsing this website needs rework and is underway. Before it's done, fetching the webster dictionary with `-w` could fail. 
+**[NOTICE]**: **The Merrain-Webster Dictionary website has just been updated. Therefore the codes for parsing this website needs rework and is underway. Before it's done, fetching the webster dictionary with `-w` could fail.** 
 
 ## Screenshots
 ![look up a word](/screenshots/word.png)

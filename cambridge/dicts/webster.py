@@ -10,7 +10,7 @@ from ..settings import OP, DICTS
 from ..utils import get_request_url
 from ..log import logger
 from ..dicts import dict
-from ..colorscheme import webster_color as wc
+from ..colorschemes import webster_color
 
 # TODO sub_num (1) (2) with parent meaning or not
 # If not parent meaing, don't print.
@@ -698,15 +698,15 @@ def print_pron(node):
 def entry_header_content(node):
     for elm in node.iterchildren():
         if elm.tag == "h1" or elm.tag == "p":
-            console.print(f"[{wc.eh_h1_word} {wc.bold}]{elm.text}", end=" ")
+            console.print(f"[{webster_color.eh_h1_word} {webster_color.bold}]{elm.text}", end=" ")
 
         if elm.tag == "span":
             num = " ".join(list(elm.itertext()))
-            console.print(f"[{wc.eh_entry_num}]{num}", end=" ")
+            console.print(f"[{webster_color.eh_entry_num}]{num}", end=" ")
 
         if elm.tag == "h2":
             type = " ".join(list(elm.itertext()))
-            console.print(f"[{wc.eh_word_type}]{type}", end="\n")
+            console.print(f"[{webster_color.eh_word_type}]{type}", end="\n")
 
 def entry_attr(node):
     pass

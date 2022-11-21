@@ -22,6 +22,9 @@ wt = "#525A5B"
 wf = "#FFFFFF"
 wf_type = "#4A7D95"
 
+# --- transitive / intransitive --- #
+tran = "#0074CC"
+
 
 #####################
 # phrases 

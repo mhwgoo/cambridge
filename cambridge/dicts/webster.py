@@ -274,14 +274,6 @@ def phrases(node):
     children = node.getchildren()[1]
     
     for child in children:
-        # NOTE: not to print "Phrases" 
-        # if child.attrib["class"] == "content-section-sub-header":
-        #     texts = list(child.itertext())
-        #     for text in texts:
-        #         t = text.strip()
-        #         if t:
-        #             console.print(f"[{webster_color.ph_title} {webster_color.bold}]{t}")
-        
         if child.attrib["class"] == "drp":
             console.print(f"[{webster_color.ph_item} {webster_color.bold}]{child.text}")
 
@@ -344,19 +336,6 @@ def related_phrases(node, words):
 ########################################
 # parse and print dictionary-entry-[num]
 ########################################
-
-def print_verb_types(node):
-    """Print verb types, like transitive, intransitive."""
-
-    print()
-
-    ts = list(node.itertext())
-    ts = [t for t in ts if len(t.strip("\n").strip()) > 0]
-    for t in ts:
-        console.print(f"{t}", style="bold italic", end="")
-
-    print()
-
 
 def print_seealso(node):
     """Print seealso section."""
@@ -662,78 +641,9 @@ def print_main_entry(node):
             print_def_bundle(s)     # print class "sb has-num", "sb no-sn" ...
 
 
-# NOTE: new function phrases()
-# def print_phrase_part(node):
-#     """Print the phrase part in the main entry."""
-
-#     for i in node.iterchildren():
-#         if (i.tag == "span") and (i.attrib["class"] == "drp"):
-#             print("\n")
-#             console.print(f"{i.text}", end="\n", style="bold yellow")
-#         if (i.tag == "div") and (i.attrib["class"] == "vg"):
-#             print_main_entry(i)
-
-
-def print_dict_entry(node):
-    """Dispatch the parsing of different sections of a dict entry."""
-
-    for i in node.iterchildren():
-        try:
-            attr = i.attrib["class"]
-        except KeyError:
-            continue
-
-        # div "vg" is the main dictionary section
-        if attr == "vg":
-            print_main_entry(i)
-
-        # div "dro" is the phrase section with its own name and definitions
-        if attr == "dro":
-            print_phrase_part(i)
-
-        # p "dxnlx" is the seealso section
-        if attr == "dxnls":
-            print_seealso(node)
-
-
-# --- Print head info of a word ---
-def print_forms(node):
-    """Print word forms including tenses, plurals, etc."""
-
-    for i in node.iterdescendants():
-        if (i.tag == "span") and ("if" in i.attrib["class"]):
-            console.print(f"{i.text}", end="  ", style="bold")
-
-        if (i.tag == "span") and (i.attrib["class"] == "entry-attr vrs"):
-            for t in i.itertext():
-                t = t.strip("\n").strip()
-                console.print(t, end=" ", style="bold")
-
-        if (i.tag == "span") and ("il" in i.attrib["class"]):
-            console.print(i.text.strip(), end=" ", style="italic")
-    print()
-
-
-def print_pron(node):
-    """Print the pronounciation."""
-
-    attrs = list(node.itertext())
-    for index, t in enumerate(attrs):
-        t = t.strip("\n").strip()
-        if t == "|":
-            continue
-        if index == 2 and t != "":
-            console.print(t, end="   ", style="bold")
-        else:
-            console.print(t, end="", style="bold")
-    print()
-
-
-
 ###########################################
 # parse and print dictionary-entry-[number] 
 ###########################################
-
 
 # --- parse class "row entry-header" --- #
 def entry_header_content(node):
@@ -788,11 +698,18 @@ def vg_sseq_entry_item(node):
 def vg(node):
     """Print one entry(e.g. 1 of 3)'s all meanings. e.g. 1 :the monetary worth of somethng 2 :a fair return... 3 :..."""
 
-    for elm in node.iterchildren():
+    children = node.getchildren()[1:]
+    for elm in children:
+        # print one meaning
         if elm.attrib["class"] == "vg-sseq-entry-item":
-            vg_sseq_entry_item(elm)
+            vg_sseq_entry_item(elm)        
 
+        # print transitive or intransitive
+        if elm.attrib["class"] == "vd firstVd":
+            child = elm.getchildren()[0]
+            console.print(f"\n[{webster_color.tran}]{child.text}")
 
+# --- parse class "entry-uros" --- #
 def entry_uros(node):
     """Print other word forms. e.g. valueless, valuelessness"""
 
@@ -802,6 +719,7 @@ def entry_uros(node):
 
         if elm.tag == "span" and elm.attrib["class"] == "fw-bold fl":
             console.print(f"[{webster_color.bold} {webster_color.wf_type}]{elm.text}", end = "\n")
+
 
 # --- parse class "row headword-row header-ins" --- #
 def row_headword_row_header_ins(node):

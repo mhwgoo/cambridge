@@ -25,6 +25,7 @@ WEBSTER_DICT_BASE_URL = WEBSTER_BASE_URL + "/dictionary/"
 
 sub_text = ""
 res_word = ""
+word_entries = []
 
 
 # ----------Request Web Resouce----------
@@ -122,21 +123,11 @@ def parse_dict(res_text, found, res_url, is_fresh):
     logger.debug(f"{OP[1]} {res_url}")
 
     if found:
-        # the nodes for webster dictionary website's older version
-        # //*[@id="left-content"]/div[contains(@class, "row entry-header")] |
-        # //*[@id="left-content"]/div[@class="row entry-attr"] |
-        # //*[@id="left-content"]/div[@class="row headword-row"] |
-        # //*[@id="left-content"]/div[contains(@id, "dictionary-entry")] |
-        # //*[@id="left-content"]/div[@id="other-words-anchor"] |
-        # //*[@id="left-content"]/div[@id="synonyms-anchor"] |
-        # //*[@id="left-content"]/div[@id="examples-anchor"]/div[@class="on-web read-more-content-hint-container"] |
-        # //*[@id="left-content"]/div[@id="related-phrases-anchor"]
-
-        # the nodes for the newly updated version
         s = """
         //*[@id="left-content"]/div[contains(@id, "dictionary-entry")] |
+        //*[@id="left-content"]/div[@id="phrases"] |
         //*[@id="left-content"]/div[@id="synonyms"] |
-        //*[@id="left-content"]/div[@id="examples"] |
+        //*[@id="left-content"]/div[@id="examples"]/div[@class="content-section-body"]/div[@class="on-web-container"]/div[@class="on-web read-more-content-hint-container"] |
         //*[@id="left-content"]/div[@id="related-phrases"] |
         //*[@id="left-content"]/div[@id="nearby-entries"]
         """
@@ -152,7 +143,7 @@ def parse_dict(res_text, found, res_url, is_fresh):
             logger.error("The fetched content is not intended for the word, due to your network or the website reasons, please try again.")
             sys.exit()
 
-        # [for debug]
+        ## [for debug]
         # for node in nodes:
         #     try:
         #         print("id:    ", node.attrib["id"])
@@ -162,39 +153,47 @@ def parse_dict(res_text, found, res_url, is_fresh):
         # sys.exit()
 
     else:
-        # spelling-suggestion page remains the same  
         nodes = tree.xpath('//div[@class="widget spelling-suggestion"]')[0]
 
     return nodes
     
-# --- Print other utility content ---
-def print_other_words(node):
-    """Print other word forms."""
+
+###########################################
+# parse and print nearby entries
+###########################################
+
+def nearby_entries(node):
+    """Print entries near value."""
+
+    print("")
 
     for elm in node.iterdescendants():
         try:
             has_title = (elm.tag == "h2")
-            has_words = (elm.tag == "span") and (elm.attrib["class"] == "ure")
-            has_type = (elm.tag == "span") and (elm.attrib["class"] == "fl")
+            has_word = (elm.tag == "span") and (elm.attrib["class"] == "b-link hw-text fw-bold")
+            has_nearby = (elm.tag == "a") and (elm.attrib["class"] == "b-link")
             has_em = (elm.tag == "em")
         except KeyError:
             continue
         else:
             if has_title:
-                print("\n")
-                console.print(f"[bold yellow]{elm.text}", end="")
+                console.print(f"[{webster_color.bold} {webster_color.nearby_title}]{elm.text}", end="")
 
             if has_em:
-                console.print(f"[bold yellow italic]{elm.text}", end="\n")
+                console.print(f"[{webster_color.bold} {webster_color.italic} {webster_color.nearby_em}]{elm.text}", end="\n")
 
-            if has_words:
-                console.print(f"[#b2b2b2]{elm.text}", end=" ")
+            if has_word:
+                console.print(f"[{webster_color.nearby_word}]{elm.text}", end="\n")
 
-            if has_type:
-                console.print(f"{elm.text}", end=" ", style="bold italic")
+            if has_nearby:
+                console.print(f"[{webster_color.nearby_item}]{elm.text}", end="\n")
 
 
-def print_synonyms(node):
+###########################################
+# parse and print synonyms 
+###########################################
+
+def synonyms(node):
     """Print synonyms."""
 
     print("\n")
@@ -203,33 +202,38 @@ def print_synonyms(node):
 
     for elm in node.iterdescendants():
         try:
-            has_title = (elm.tag == "h2")
-            has_label = (elm.tag == "p") and (elm.attrib["class"] == "function-label")
-            has_syn = (elm.tag == "ul")
+            has_title = (elm.tag == "h2") # "Synonyms"
+            has_label = (elm.tag == "p") and (elm.attrib["class"] == "function-label") # "Noun"
+            has_syn = (elm.tag == "ul") # synonym list
             has_em = (elm.tag == "em")
         except KeyError:
             continue
         else:
             if has_title:
-                console.print(f"[bold yellow]{elm.text}", end="")
+                console.print(f"[{webster_color.bold} {webster_color.syn_title}]{elm.text}", end="")
 
             if has_em and time == 0:
-                console.print(f"[bold yellow italic]{elm.text}", end="")
+                console.print(f"[{webster_color.bold} {webster_color.italic} {webster_color.syn_em}]{elm.text}", end="")
                 time += 1
 
             if has_syn:
                 for t in elm.itertext():
-                    if t.strip() == ",":
-                        console.print(t.strip(), end=" ")
-                    else:
-                        console.print(t, end="")
+                    text = t.strip()
+                    if text:
+                        console.print(f"[{webster_color.syn_item}]{text}", end=" ")
 
             if has_label:
-                console.print(f"\n{elm.text}", style="bold")
+                console.print(f"\n[{webster_color.syn_label} {webster_color.bold}]{elm.text}")
 
-# NOTE: Wester scrapes the web for examples in the way that it only finds the exact match of the word.
-#       If the word is a verb, only gets the word without tenses; if the word is a noun, only its single form.
-def print_examples(node, words):
+
+###########################################
+# parse and print examples 
+###########################################
+
+# NOTE: 
+# Wester scrapes the web for examples in the way that it only finds the exact match of the word.
+# If the word is a verb, only gets the word without tenses; if the word is a noun, only its single form.
+def examples(node, words):
     """Print recent examples on the web."""
 
     print()
@@ -237,43 +241,76 @@ def print_examples(node, words):
 
     for elm in node.iterdescendants():
         try:
-            is_label = (elm.attrib["class"] == "ex-header function-label")
+            is_title = ("ex-header function-label" in elm.attrib["class"]) # Recent Examples on the Web
             has_aq = (elm.attrib["class"] == "t has-aq")
         except KeyError:
             continue
         else:
-            if is_label:
-                console.print(f"\n[bold yellow]{elm.text}", end="")
+            if is_title:
+                console.print(f"\n[{webster_color.eg_title} {webster_color.bold}]{elm.text}", end="")
             if has_aq:
                 for index, t in enumerate(list(elm.itertext())):
-                    if time in [0, 1, 8, 9, 16, 17,  24, 25]:
+                    if time in [0, 1, 8, 9, 16, 17, 24, 25]:
                         if index == 0:
-                            console.print("\n[#3C8DAD]//", end=" ")
-                            console.print(f"[#3C8DAD]{t}", end="")
+                            console.print(f"\n[{webster_color.eg_accessory} {webster_color.bold}]|", end="")
+                            console.print(f"[{webster_color.eg_sentence}]{t}", end="")
                         else:
                             if t.strip().lower() in words:
-                                console.print(f"[#3C8DAD]{t}", end="", style="italic bold")
+                                console.print(f"[{webster_color.eg_word} {webster_color.italic}]{t}", end="")
                             else:
-                                console.print(f"[#3C8DAD]{t}", end="")
+                                console.print(f"[{webster_color.eg_sentence}]{t}", end="")
                     else:
                         continue
                 time = time + 1
 
 
-def print_phrases(node, words):
+###########################################
+# parse and print phrases 
+###########################################
+
+def phrases(node):
+    """Print phrases."""
+
+    children = node.getchildren()[1]
+    
+    for child in children:
+        # NOTE: not to print "Phrases" 
+        # if child.attrib["class"] == "content-section-sub-header":
+        #     texts = list(child.itertext())
+        #     for text in texts:
+        #         t = text.strip()
+        #         if t:
+        #             console.print(f"[{webster_color.ph_title} {webster_color.bold}]{t}")
+        
+        if child.attrib["class"] == "drp":
+            console.print(f"[{webster_color.ph_item} {webster_color.bold}]{child.text}")
+
+        if child.attrib["class"] == "vg":
+            vg(child)
+
+
+
+###########################################
+# parse and print related phrases 
+###########################################
+
+def related_phrases(node, words):
     """Print related phrases."""
 
-    children = node.getchildren()
-    title = children[0]
-
     print("\n")
-    for t in title.itertext():
-        if t.strip().lower() in words:
-            console.print(f"[bold yellow italic]{t}", end="\n")
-        else:
-            console.print(f"[bold yellow]{t}", end="")
 
-    pr_sec = children[1]
+    children = node.getchildren()
+
+    title = children[1]
+    texts = list(title.itertext())
+    for t in texts:
+        if t.strip():
+            if t.lower() in words:
+                console.print(f"[{webster_color.rph_title} {webster_color.bold} {webster_color.italic}]{t}", end="\n")
+            else:
+                console.print(f"[{webster_color.rph_title} {webster_color.bold}]{t}", end="")
+
+    pr_sec = children[2]
     sub_ps = pr_sec.getchildren()[1]  # divs: related-phrases-list-container-xs
 
     phrases = []    # li tags, each tag has one phrase
@@ -289,12 +326,12 @@ def print_phrases(node, words):
         for t in ts:
             t = t.strip("\n").strip()
             if t != ts[-1]:
-                console.print(f"{t}", end="")
+                console.print(f"[{webster_color.rph_item}]{t}", end="")
             else:
                 if phrase != phrases[-1]:
-                    console.print(f"{t},", end=" ", style="#b2b2b2")
+                    console.print(f"[{webster_color.rph_item}]{t},", end=" ")
                 else:
-                    console.print(f"{t}", end="\n", style="#b2b2b2")
+                    console.print(f"[{webster_color.rph_item}]{t}", end="\n")
 
             # !!! print(repr(t))
             # '\n          '     # if the tag has no text
@@ -304,7 +341,10 @@ def print_phrases(node, words):
             # '\n      '
 
 
-# --- Print dictionary entry ---
+########################################
+# parse and print dictionary-entry-[num]
+########################################
+
 def print_verb_types(node):
     """Print verb types, like transitive, intransitive."""
 
@@ -622,15 +662,16 @@ def print_main_entry(node):
             print_def_bundle(s)     # print class "sb has-num", "sb no-sn" ...
 
 
-def print_phrase_part(node):
-    """Print the phrase part in the main entry."""
+# NOTE: new function phrases()
+# def print_phrase_part(node):
+#     """Print the phrase part in the main entry."""
 
-    for i in node.iterchildren():
-        if (i.tag == "span") and (i.attrib["class"] == "drp"):
-            print("\n")
-            console.print(f"{i.text}", end="\n", style="bold yellow")
-        if (i.tag == "div") and (i.attrib["class"] == "vg"):
-            print_main_entry(i)
+#     for i in node.iterchildren():
+#         if (i.tag == "span") and (i.attrib["class"] == "drp"):
+#             print("\n")
+#             console.print(f"{i.text}", end="\n", style="bold yellow")
+#         if (i.tag == "div") and (i.attrib["class"] == "vg"):
+#             print_main_entry(i)
 
 
 def print_dict_entry(node):
@@ -694,11 +735,16 @@ def print_pron(node):
 ###########################################
 
 
-# --- parse into class "row entry-header" --- #
+# --- parse class "row entry-header" --- #
 def entry_header_content(node):
+    """Print entry header content. e.g. value 1 of 3 noun"""
+
     for elm in node.iterchildren():
         if elm.tag == "h1" or elm.tag == "p":
-            console.print(f"[{webster_color.eh_h1_word} {webster_color.bold}]{elm.text}", end=" ")
+            word = elm.text
+            global word_entries
+            word_entries.append(word)
+            console.print(f"[{webster_color.eh_h1_word} {webster_color.bold}]{word}", end=" ")
 
         if elm.tag == "span":
             num = " ".join(list(elm.itertext()))
@@ -709,38 +755,73 @@ def entry_header_content(node):
             console.print(f"[{webster_color.eh_word_type}]{type}", end="\n")
 
 def entry_attr(node):
-    pass
+    """Print the pronounciation. e.g. val·​ue |ˈval-(ˌ)yü|"""
+
+    for elm in node.iterchildren():
+        if "col word-syllables-prons-header-content" in elm.attrib["class"]:
+            for i in elm.iterchildren():
+                if i.tag == "span" and i.attrib["class"] == "word-syllables-entry":
+                    syllables = i.text
+                    console.print(f"[{webster_color.eh_word_syllables}]{syllables}", end=" ")
+
+                if i.tag == "span" and "prons-entries-list-inline" in i.attrib["class"]:
+                    pron = list(i.itertext())[1].strip()
+                    console.print(f"[{webster_color.eh_pron}]|{pron}|", end="\n")
 
 def row_entry_header(node):
+    """Print class row entry-header, the parent and caller of entry_header_content() and entry_attr()."""
     for elm in node.iterchildren():
         if elm.attrib["class"] == "col-12":
             for i in elm.iterchildren():
                 if "entry-header-content" in i.attrib["class"]:
                     entry_header_content(i)
-                if "row entry-atrr" in i.attrib["class"]:
+                if "row entry-attr" in i.attrib["class"]:
                     entry_attr(i)
     
-# --- end --- #
 
-def row_headword_row_header_ins(node):
+# --- parse class "vg" --- #
+def vg_sseq_entry_item(node):
+    """Print one meaning. e.g. 1: the monetary worth of something."""
     pass
-    
+
+
 def vg(node):
-    pass
+    """Print one entry(e.g. 1 of 3)'s all meanings. e.g. 1 :the monetary worth of somethng 2 :a fair return... 3 :..."""
+
+    for elm in node.iterchildren():
+        if elm.attrib["class"] == "vg-sseq-entry-item":
+            vg_sseq_entry_item(elm)
+
 
 def entry_uros(node):
-    pass
-     
+    """Print other word forms. e.g. valueless, valuelessness"""
 
+    for elm in node.iterdescendants():
+        if elm.tag == "span" and elm.attrib["class"] == "fw-bold ure":
+            console.print(f"[{webster_color.bold} {webster_color.wf}]{elm.text}", end = " ")
 
-def dictionary_entry(node):
+        if elm.tag == "span" and elm.attrib["class"] == "fw-bold fl":
+            console.print(f"[{webster_color.bold} {webster_color.wf_type}]{elm.text}", end = "\n")
+
+# --- parse class "row headword-row header-ins" --- #
+def row_headword_row_header_ins(node):
+    """Print verb types. e.g. valued; valuing"""
+
+    for elm in node.iterchildren():
+        if elm.attrib["class"] == "col":
+            for t in elm.itertext():
+                text = t.strip()
+                if text:
+                    console.print(f"[{webster_color.wt}]{text}", end="")
+
+# --- parse class "dictionary-entry-[number]" --- #
+def dictionary_entry(node, head):
     """Print one entry of the word and its attributes like plural types, pronounciations, tenses, etc."""
 
-    # if head == 1:
-    #     print()
-    # else:
-    #     print("\n")
-
+    if head == 1:
+        print()
+    else:
+        print("\n")
 
     for elm in node.iterchildren():
         try: 
@@ -748,13 +829,14 @@ def dictionary_entry(node):
                 if elm.attrib["class"] == "row entry-header":
                     row_entry_header(elm)
 
-                if elm.attrib["class"] == "row headword-row header_ins":
+                if elm.attrib["class"] == "row headword-row header-ins":
                     row_headword_row_header_ins(elm) 
 
+                # FIXME
                 if elm.attrib["class"] == "vg":
                     vg(elm)
 
-                if elm.attrib["class"] == "entry-uros":
+                if elm.attrib["class"] == "entry-uros ":
                     entry_uros(elm)
         except:
             continue
@@ -775,9 +857,6 @@ def dictionary_entry(node):
     #             console.print(f" [red] {elm.text}", end="")
     #         if has_lb:
     #             console.print(f"[red] {elm.text}", end="")
-    # print()
-    # return word
-
 
 
 # --- Entry point of all prints of a word found ---
@@ -787,7 +866,7 @@ def parse_and_print(nodes, res_url):
     logger.debug(f"{OP[4]} the parsed result of {res_url}")
 
     # A page may have multiple word forms, e.g. "give away", "giveaway"
-    words = []
+    global word_entries
     head = 1
 
     for node in nodes:
@@ -796,48 +875,37 @@ def parse_and_print(nodes, res_url):
         except KeyError:
             attr = node.attrib["class"]
 
-
-        # FIXME 
+        # FIXME: vg not finished
         if "dictionary-entry" in attr:
-            dictionary_entry(node)
+            dictionary_entry(node, head)
+            head += 1
 
+        if attr == "phrases":
+            phrases(node)
 
-    #     # Print one entry header: one word and its types like verb, noun, adj
-    #     # One page has multiple entry headers
-    #     # Also print a phrase entry's name and its types
-    #     if "row entry-header" in attr:
-    #         word = print_word_and_wtype(node, head)
-    #         words.append(word)
-    #         head += 1
+        if attr == "nearby-entries":
+            nearby_entries(node)
 
-    #     # Print pronounciations
-    #     if attr == "row entry-attr":
-    #         print_pron(node)
+        if attr == "synonyms":
+            synonyms(node)
 
-    #     # Print headword forms like verb tenses, noun plurals
-    #     if attr == "row headword-row":
-    #         print_forms(node)
+        if attr == "on-web read-more-content-hint-container":
+            examples(node, word_entries)
 
+        if attr == "related-phrases":
+            related_phrases(node, word_entries)
 
-    #     # Print other word forms limiting 10
-    #     if attr == "other-words-anchor":
-    #         print_other_words(node)
-
-    #     # Print synonyms
-    #     if attr == "synonyms-anchor":
-    #         print_synonyms(node)
-
-    #     # Print web examples
-    #     if attr == "on-web read-more-content-hint-container":
-    #         print_examples(node, words)
-
-    #     # Print related phrases
-    #     if attr == "related-phrases-anchor":
-    #         print_phrases(node, words)
-
-    # dict_name = "The Merriam-Webster Dictionary"
-    # console.print(f"\n{dict_name}", justify="right")
+    dict_name = "The Merriam-Webster Dictionary"
+    console.print(f"\n[{webster_color.dict_name}]{dict_name}", justify="right")
 
     # global res_word
     # if words:
     #     res_word = words[0]
+
+
+#[test]
+# value
+# big
+# run way
+# give away
+# take on

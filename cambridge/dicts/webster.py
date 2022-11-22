@@ -118,7 +118,8 @@ def fresh_run(con, cur, req_url, input_word):
 def parse_dict(res_text, found, res_url, is_fresh):
     """Parse the dict section of the page for the word."""
 
-    tree = etree.HTML(res_text)
+    parser = etree.HTMLParser(remove_comments=True)
+    tree = etree.HTML(res_text, parser)
 
     logger.debug(f"{OP[1]} {res_url}")
 
@@ -325,12 +326,6 @@ def related_phrases(node, words):
                 else:
                     console.print(f"[{webster_color.rph_item}]{t}", end="\n")
 
-            # !!! print(repr(t))
-            # '\n          '     # if the tag has no text
-            # 'beta decay'
-            # '\n          '
-            # 'fall into decay'
-            # '\n      '
 
 
 ########################################
@@ -645,6 +640,42 @@ def print_main_entry(node):
 # parse and print dictionary-entry-[number] 
 ###########################################
 
+# FIXME
+def sb_entry(node):
+    pass
+
+
+# --- parse class "vg" --- #
+def vg_sseq_entry_item(node):
+    """Print one meaning of one entry(noun entry, adjective entry, or verb entry and so forth). e.g. 1: the monetary worth of something."""
+
+    children = node.getchildren()
+    for child in children:
+        # print number label if any
+        if child.attrib["class"] == "vg-sseq-entry-item-label":
+            console.print(f"[{webster_color.bold} {webster_color.meaning_num}]{child.text}")
+
+        # print meaning content
+        if "ms-lg-4 ms-3 w-100" in child.attrib["class"]:
+            for i in child:
+                sb_entry(i)
+
+
+def vg(node):
+    """Print one entry(e.g. 1 of 3)'s all meanings. e.g. 1 :the monetary worth of somethng 2 :a fair return... 3 :..."""
+
+    children = node.getchildren()
+    for elm in children:
+        # print one meaning
+        if elm.attrib["class"] == "vg-sseq-entry-item ":
+            vg_sseq_entry_item(elm)        
+
+        # print transitive or intransitive
+        if elm.attrib["class"] == "vd firstVd":
+            child = elm.getchildren()[0]
+            console.print(f"\n[{webster_color.tran}]{child.text}")
+
+
 # --- parse class "row entry-header" --- #
 def entry_header_content(node):
     """Print entry header content. e.g. value 1 of 3 noun"""
@@ -689,26 +720,6 @@ def row_entry_header(node):
                     entry_attr(i)
     
 
-# --- parse class "vg" --- #
-def vg_sseq_entry_item(node):
-    """Print one meaning. e.g. 1: the monetary worth of something."""
-    pass
-
-
-def vg(node):
-    """Print one entry(e.g. 1 of 3)'s all meanings. e.g. 1 :the monetary worth of somethng 2 :a fair return... 3 :..."""
-
-    children = node.getchildren()[1:]
-    for elm in children:
-        # print one meaning
-        if elm.attrib["class"] == "vg-sseq-entry-item":
-            vg_sseq_entry_item(elm)        
-
-        # print transitive or intransitive
-        if elm.attrib["class"] == "vd firstVd":
-            child = elm.getchildren()[0]
-            console.print(f"\n[{webster_color.tran}]{child.text}")
-
 # --- parse class "entry-uros" --- #
 def entry_uros(node):
     """Print other word forms. e.g. valueless, valuelessness"""
@@ -736,10 +747,11 @@ def row_headword_row_header_ins(node):
 def dictionary_entry(node, head):
     """Print one entry of the word and its attributes like plural types, pronounciations, tenses, etc."""
 
-    if head == 1:
-        print()
-    else:
-        print("\n")
+    # if head == 1:
+    #     print()
+    # else:
+    #     print("\n")
+    print()
 
     for elm in node.iterchildren():
         try: 
@@ -750,7 +762,6 @@ def dictionary_entry(node, head):
                 if elm.attrib["class"] == "row headword-row header-ins":
                     row_headword_row_header_ins(elm) 
 
-                # FIXME
                 if elm.attrib["class"] == "vg":
                     vg(elm)
 
@@ -793,7 +804,6 @@ def parse_and_print(nodes, res_url):
         except KeyError:
             attr = node.attrib["class"]
 
-        # FIXME: vg not finished
         if "dictionary-entry" in attr:
             dictionary_entry(node, head)
             head += 1

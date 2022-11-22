@@ -25,6 +25,9 @@ wf_type = "#4A7D95"
 # --- transitive / intransitive --- #
 tran = "#0074CC"
 
+# --- one meaning of one entry --- #
+meaning_num = "#4A7D95"
+
 
 #####################
 # phrases 

@@ -1,5 +1,6 @@
 bold = "bold"
 italic = "italic"
+accessory = "#4A7D95"
 
 
 #####################
@@ -15,7 +16,7 @@ eh_word_type = "#4A7D95"
 eh_word_syllables = "#757575"
 eh_pron = "#4A7D95"
 
-# --- word tenses, plurals --- #
+# --- verb tenses, noun plurals, adjective comparative forms --- #
 wt = "#525A5B"
 
 # --- other word forms #
@@ -27,7 +28,11 @@ tran = "#0074CC"
 
 # --- one meaning of one entry --- #
 meaning_num = "#4A7D95"
-
+meaning_letter = "#4A7D95"
+meaning_link = "#0074CC"
+meaning_content = "#F4F4F4"
+meaning_badge = "red"
+meaning_sentence = "#757575"
 
 #####################
 # phrases 
@@ -48,7 +53,6 @@ syn_label = "#0F3850"
 # examples on the web 
 #####################
 eg_title = "yellow"
-eg_accessory = "#4A7D95"
 eg_sentence = "#757575"
 eg_word = "yellow"
 

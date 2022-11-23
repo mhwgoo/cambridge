@@ -197,7 +197,7 @@ def nearby_entries(node):
 def synonyms(node):
     """Print synonyms."""
 
-    print("\n")
+    print()
 
     time = 0
 
@@ -254,7 +254,7 @@ def examples(node, words):
                 for index, t in enumerate(list(elm.itertext())):
                     if time in [0, 1, 8, 9, 16, 17, 24, 25]:
                         if index == 0:
-                            console.print(f"\n[{webster_color.eg_accessory} {webster_color.bold}]|", end="")
+                            console.print(f"\n[{webster_color.accessory} {webster_color.bold}]|", end="")
                             console.print(f"[{webster_color.eg_sentence}]{t}", end="")
                         else:
                             if t.strip().lower() in words:
@@ -641,9 +641,105 @@ def print_main_entry(node):
 # parse and print dictionary-entry-[number] 
 ###########################################
 
-# FIXME
+def dtText(node):
+    texts = list(node.itertext())
+
+    # link_index = 0
+
+    for index, text in enumerate(texts):
+        if text == ": ":
+            text = text.strip()
+            # if index != 0:
+            #     link_index = index + 1
+
+        # if index == link_index and index != 0:
+        #     text = text.upper()
+        #     console.print(f"[{webster_color.meaning_link}]{text}", end = "")
+        # else:
+        console.print(f"[{webster_color.meaning_content}]{text}", end = "")
+
+    # print()
+
+def ex_sent(node, ancestor_attr):
+    if ancestor_attr == "sense has-sn has-num-only":
+        console.print(f"\n  [{webster_color.accessory} {webster_color.bold}]|", end="")
+    if ancestor_attr == "sense has-sn has-num" or ancestor_attr == "sense has-sn":
+        console.print(f"\n    [{webster_color.accessory} {webster_color.bold}]|", end="")
+    if ancestor_attr == "sense  no-subnum":
+        console.print(f"\n[{webster_color.accessory} {webster_color.bold}]|", end="")
+
+    for text in node.itertext():
+        console.print(f"[{webster_color.meaning_sentence}]{text}", end = "")
+    
+    
+def sub_content_thread(node, ancestor_attr):
+    children = node.getchildren()
+    for child in children:
+        attr = child.attrib["class"]
+        if ("ex-sent" in attr) and ("aq has-aq" not in attr):
+            ex_sent(child, ancestor_attr)
+
+def dt(node, ancestor_attr, self_attr):
+    children = node.getchildren()
+
+    for child in children:
+        child_attr = child.attrib["class"]
+        
+        if child_attr == "sd": # label before meaning content
+            if self_attr == "sdsense":
+                if "has-num-only" in ancestor_attr: 
+                    console.print(f"  [{webster_color.italic} {webster_color.meaning_badge}]{child.text}", end=" ")
+                elif "no-subnum" in ancestor_attr:
+                    console.print(f"[{webster_color.italic} {webster_color.meaning_badge}]{child.text}", end=" ")
+                else:
+                     console.print(f"    [{webster_color.italic} {webster_color.meaning_badge}]{child.text}", end=" ")
+            else:
+                console.print(f"[{webster_color.italic} {webster_color.meaning_badged}]{child.text}", end=" ")
+        
+        if child_attr == "dtText":
+            dtText(child)   # only meaning text
+
+        if child_attr == "sub-content-thread":
+            sub_content_thread(child, ancestor_attr)  # example under the meaning
+    print()
+            
+
+def sense(node):
+    attr = node.attrib["class"]
+    children = node.getchildren()
+
+    if attr == "sense  no-subnum":
+        sense_content = children[0] # class "sense-content w-100"
+
+    # meaning with "a", "b" letter,  with or without "1", "2" (having siblings before it)
+    if attr == "sense has-sn has-num" or attr == "sense has-sn":
+        sn = children[0].getchildren()[0].text
+        if "has-num" in attr:
+            console.print(f"[{webster_color.bold} {webster_color.meaning_letter}]{sn}", end = " ")
+        else:
+            console.print(f"  [{webster_color.bold} {webster_color.meaning_letter}]{sn}", end = " ")
+        sense_content = children[1]  # class "sense-content w-100"
+
+    # meaning with only number
+    if attr == "sense has-sn has-num-only":
+        sense_content = children[1]  # class "sense-content w-100"
+
+
+    elms = sense_content.getchildren()
+    
+    for elm in elms:
+        elm_attr = elm.attrib["class"]
+        if "badge" in elm_attr:
+            text = "".join(list(elm.itertext()))
+            console.print(f"[{webster_color.italic} {webster_color.meaning_badge}]{text}", end="")
+
+        if elm_attr == "dt " or elm_attr == "dt hasSdSense" or elm_attr == "sdsense":
+            dt(elm, attr, elm_attr)
+            
+
 def sb_entry(node):
-    pass
+    child = node.getchildren()[0]
+    sense(child)
 
 
 # --- parse class "vg" --- #
@@ -654,7 +750,7 @@ def vg_sseq_entry_item(node):
     for child in children:
         # print number label if any
         if child.attrib["class"] == "vg-sseq-entry-item-label":
-            console.print(f"[{webster_color.bold} {webster_color.meaning_num}]{child.text}")
+            console.print(f"[{webster_color.bold} {webster_color.meaning_num}]{child.text}", end=" ")
 
         # print meaning content
         if "ms-lg-4 ms-3 w-100" in child.attrib["class"]:
@@ -667,15 +763,15 @@ def vg(node):
     """Print one entry(e.g. 1 of 3)'s all meanings. e.g. 1 :the monetary worth of somethng 2 :a fair return... 3 :..."""
 
     children = node.getchildren()
-    for elm in children:
-        # print one meaning
-        if elm.attrib["class"] == "vg-sseq-entry-item ":
-            vg_sseq_entry_item(elm)        
+    for child in children:
+        # print one meaning of one entry
+        if "vg-sseq-entry-item" in child.attrib["class"]:
+            vg_sseq_entry_item(child)
 
         # print transitive or intransitive
-        if elm.attrib["class"] == "vd firstVd" or elm.attrib["class"] == "vd":
-            child = elm.getchildren()[0]
-            console.print(f"\n[{webster_color.tran}]{child.text}")
+        if child.attrib["class"] == "vd firstVd" or child.attrib["class"] == "vd":
+            e = child.getchildren()[0]
+            console.print(f"\n[{webster_color.tran}]{e.text}")
 
 
 # --- parse class "row entry-header" --- #
@@ -745,6 +841,8 @@ def row_headword_row_header_ins(node):
             console.print(f"[{webster_color.bold} {webster_color.italic} {webster_color.wt}]{child.text}", end="")
         else:
             console.print(f"[{webster_color.wt}]{child.text}", end="")
+
+    print()
 
 
 # --- parse class "dictionary-entry-[number]" --- #

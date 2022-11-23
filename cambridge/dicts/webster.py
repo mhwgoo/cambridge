@@ -12,13 +12,6 @@ from ..log import logger
 from ..dicts import dict
 from ..colorschemes import webster_color
 
-# TODO sub_num (1) (2) with parent meaning or not
-# If not parent meaing, don't print.
-
-
-# Test fzf preview under development env
-# python main.py l | fzf --preview 'python main.py -w {}'
-
 
 WEBSTER_BASE_URL = "https://www.merriam-webster.com"
 WEBSTER_DICT_BASE_URL = WEBSTER_BASE_URL + "/dictionary/"
@@ -283,7 +276,6 @@ def phrases(node):
             vg(child)
 
 
-
 ###########################################
 # parse and print related phrases 
 ###########################################
@@ -328,337 +320,51 @@ def related_phrases(node, words):
                     console.print(f"[{webster_color.rph_item}]{t}", end="\n")
 
 
+###########################################
+# parse and print see-also 
+###########################################
 
-########################################
-# parse and print dictionary-entry-[num]
-########################################
-
-def print_seealso(node):
+def see_also(node):
     """Print seealso section."""
 
-    console.print("\nSee Also", end="\n", style="bold yellow")
-    children = list(node.iterchildren())
-
-    for i in children:
-        for t in i.itertext():
-            print(t, end="")
-
-        if i != children[-1]:
-            print(",", end=" ")
-    print()
-
-
-def print_num(num):
-    """Print number enumeration."""
-
-    if num != "1":
-        console.print(f"\n[bold]{num}", end=" ")
-    else:
-        console.print(f"[bold]{num}", end=" ")
-
-
-def print_label(node, inline, has_number, is_sdsense, tag_class, label_1_num=1):
-    """Print the label before a definition text, like informal, especially."""
-
-    if isinstance(node, str):
-        text = node.strip()
-    else:
-        text = node.text.strip()
-
-    if inline:
-        console.print(f" {text}", style="italic bold", end=" ")
-
-    else:
-        if not has_number:
-            if is_sdsense:
-                print()
-                console.print(f"{text}", style="italic bold", end=" ")
-            else:
-                console.print(f"{text}", style="italic bold", end=" ")
-
-        else:
-            if is_sdsense:
-                print()
-                console.print(f"   {text}", style="italic bold", end=" ")
-            else:
-                if tag_class == "sb-0":
-                    if label_1_num == 1:
-                        console.print(f" {text}", style="italic bold", end=" ")
-                    else:
-                        console.print(f"{text}", style="italic bold", end=" ")
-                else:
-                    if label_1_num == 1:
-                        print()
-                        console.print(f"   {text}", style="italic bold", end=" ")
-                    else:
-                        console.print(f"{text}", style="italic bold", end=" ")
-
-
-def print_sent(node, has_number, tag_class):
-    "Print one example sentence under the text of one definition item."
-
-    print()
-    if has_number or tag_class != "sb-0":
-        console.print("[#3C8DAD]   //", end=" ")
-    else:
-        console.print("[#3C8DAD]//", end=" ")
-
-    s_words = list(node.itertext())
-
-    for t in s_words:
-        if t == s_words[0] and t.strip() == "":
+    texts = list(node.itertext())
+    for text in texts:
+        text = text.strip()
+        if not text:
             continue
+        if text == "see also":
+            console.print(f"[{webster_color.bold} {webster_color.sa_title}]{text}", end = " ")
         else:
-            console.print(f"[#3C8DAD]{t}", end="")
-
-
-def print_subsense_text(text, subsense_index):
-    """
-    Print one definition text only in the case that it has the form of (1) text or (2) text ... 
-    and must have a general meaning above it without (1) or (2). For example:
-
-    : this is the general meaning
-    (1) text
-    (2) text
-
-    The '(1) text part' or 'the (2) text' part is what this function prints.
-
-    Without the general meaing, it will be treated as a normal definition in `print_def_text`.
-    And '(1)' sign won't get printed.
-    """
-    print(text, subsense_index)
-    if subsense_index == 0:
-        print()
-        console.print(f"  {text}", end="", style="#b2b2b2")
-    if subsense_index > 0:
-        console.print(text, end="", style="#b2b2b2")
-
-
-def print_bare_def(text):
-    """Print a definition text without labels or subsense signs in itself."""
-
-    print()
-    console.print(f"  {text}", end="", style="#b2b2b2")
-
-
-def print_def_text(node, dtText_index, tag_class, has_label_1, has_label_2, subsense_index, before_subnum, has_number):
-    """Print one definition text."""
-
-    ts = list(node.itertext())
-    if ts[0] == " ":
-        ts = ts[1:]
-
-    new_ts = []
-    after = False
-
-    for idx, text in enumerate(ts):
-        if text == ": ":
-            if idx == 0:
-                if has_label_1 or has_label_2 or before_subnum:
-                    continue
-                elif tag_class == "sb-0" and not has_number:
-                    continue
-                else:
-                    text = ":"
-                    new_ts.append(text)
-            else:
-                text = "- "
-                after = True
-                new_ts.append(text)
-        else:
-            if after:
-                text = text.upper()
-                new_ts.append(text)
-            else:
-                new_ts.append(text)
-
-    t = "".join(new_ts)
-
-    if dtText_index == 0:
-        if has_label_1 or has_label_2:
-            console.print(t, end="", style="#b2b2b2")
-        elif tag_class == "sb-0":
-            if not before_subnum and subsense_index > 0:
-                print_bare_def(t)
-            else:
-                console.print(t, end="", style="#b2b2b2")
-        else:
-            if subsense_index == -1:
-                print_bare_def(t)
-            else:
-                if before_subnum:
-                    print_subsense_text(t, subsense_index)
-                else:
-                    print_bare_def(t)
-
-    # If it's not the first dtText, it has to indent
-    # except that it has label
-    else:
-        if has_label_2:
-            console.print(t, end="", style="#b2b2b2")
-        if has_label_1:
-            print()
-            console.print(f"   {t}", end="", style="#b2b2b2")
-        else:
-            if subsense_index == -1:
-                print_bare_def(t)
-            else:
-                if before_subnum:
-                    print_subsense_text(t, subsense_index)
-                else:
-                    print_bare_def(t)
-
-
-def print_def_content(node, has_number, tag_class, has_label_1, is_sdsense, subsense_index, before_subnum):
-    """Print definition content including definition text and its examples."""
-
-    dtText_index = 0    # number of dtText under span "dt " tag
-    children = node.getchildren()
-    has_label_2 = False
-
-    # span "dt " has definite child span "dtText"
-    # and/or children span class starting with "ex-sent"
-    for i in children:
-        attr = i.attrib["class"]
-
-        if attr == "sd":
-            print_label(i, False, has_number, is_sdsense, tag_class)
-            has_label_2 = True
-
-        if attr == "dtText":
-            print_def_text(i, dtText_index, tag_class, has_label_1, has_label_2, subsense_index, before_subnum, has_number)
-            dtText_index += 1
-
-        if attr == "uns":
-            un = i.getchildren()[0]
-            for c in un.iterchildren():
-                cattr = c.attrib["class"]
-                if cattr == "unText":
-                    t = "". join(list(c.itertext()))
-                    if len(children) == 1:
-                        print_label(t, False, False, is_sdsense, tag_class)
-                    else:
-                        print_label(t, True, False, is_sdsense, tag_class)
-                if cattr == "vis":
-                    print_sent(c, has_number, tag_class)
-
-        if "ex-sent " in attr and (attr != "ex-sent aq has-aq sents"):
-            print_sent(i, has_number, tag_class)
-
-
-def print_sense(node, tag_class, subsense_index, before_subnum):
-    """
-    Like print a meaning, b meaning and so forth.
-    """
-
-    has_number = False
-    has_label_1 = False
-    is_sdsense = False
-    label_1_num = 1
-
-    # sense has one child span "dt " or two children: "sn sense- ..." or "dt "
-    for i in node.iterchildren():
-        attr = i.attrib["class"]
-
-        # number and letter enunciation section
-        if "sn sense-" in attr:
-            # no matter is_number or not, has_number is True
-            has_number = True
-            for c in i.iterchildren():
-                if (c.tag == "span") and (c.attrib["class"] == "num"):
-                    print_num(c.text)
-
-                if (c.tag == "span") and (c.attrib["class"] == "sub-num") and before_subnum:
-                    print()
-                    console.print(f"  [bold]{c.text}", end=" ")
-
-        # span "sl" is a label
-        if (attr == "sl") or ("if" in attr) or ("plural" in attr) or ("il" in attr):
-            has_label_1 = True
-            print_label(i, False, has_number, is_sdsense, tag_class, label_1_num)
-            label_1_num += 1
-
-        # definition content section including definition and sentences
-        if "dt " in attr:
-            print_def_content(i, has_number, tag_class, has_label_1, is_sdsense, subsense_index, before_subnum)
-
-        # span section under span section "dt hasSdSense"
-        if attr == "sdsense":
-            is_sdsense = True
-            print_def_content(i, has_number, tag_class, has_label_1, is_sdsense, subsense_index, before_subnum)
-
-
-def print_sub_def(node, tag_class):
-    """
-    Print sub definition within one defition bundle.
-    Peel down to the core of a meaning, b meaning, etc.
-    """
-
-    sense = node.getchildren()[0]
-    index = -1
-    before_subnum = False  # if there is a general definition above (1) and (2)
-
-    if sense.attrib["class"] == "pseq no-subnum":
-        sub_senses = sense.getchildren()
-        for idx, sub in enumerate(sub_senses):
-            if (idx == 0) and (sub.attrib["class"] != "sense has-sn has-subnum"):
-                before_subnum = True
-
-            print_sense(sub, tag_class, idx, before_subnum)
-    else:
-        # Under a span "sb + number", get a child div with a class name being:
-        # "sense no-subnum" or "sense has-number-only" or "sense-has-sn" ...
-        # sense is the only one child of the node
-        print_sense(sense, tag_class, index, before_subnum)
-
-
-def print_def_bundle(node):
-    """
-    Print one bundle of similar definitions and sentences within one entry.
-    Like print definition 1, definition 2 and so forth.
-    """
-
-    children = node.getchildren()   # get spans with class "sb-0", "sb-1" ...
-
-    for c in children:
-        tag_class = c.attrib["class"]
-        print_sub_def(c, tag_class)  # print a span class "sb-0" or "sb-1"
-
-
-def print_main_entry(node):
-    """Print the main entry aside from the phrase part."""
-
-    sections = node.getchildren()  # get class "vd", "sb has-num" ...
-    for s in sections:
-        if s.tag == "p" and ("vd" in s.attrib["class"]):
-            print_verb_types(s)
-
-        if s.tag == "div" and ("sb" in s.attrib["class"]):
-            print_def_bundle(s)     # print class "sb has-num", "sb no-sn" ...
+            console.print(f"[{webster_color.sa_content}]{text}")
 
 
 ###########################################
 # parse and print dictionary-entry-[number] 
 ###########################################
 
-def dtText(node):
+def dtText(node, ancestor_attr, count):
     texts = list(node.itertext())
 
-    # link_index = 0
+    if count != 1:
+        if ancestor_attr == "sense has-sn has-num-only":
+            console.print(f"\n  ", end="")
+        if ancestor_attr == "sense has-sn has-num" or ancestor_attr == "sense has-sn":
+            console.print(f"\n    ", end="")
+        if ancestor_attr == "sense  no-subnum":
+            console.print(f"\n", end="")
 
-    for index, text in enumerate(texts):
+    for text in texts:
+        if text == " ":
+            continue
+
         if text == ": ":
             text = text.strip()
-            # if index != 0:
-            #     link_index = index + 1
 
-        # if index == link_index and index != 0:
-        #     text = text.upper()
-        #     console.print(f"[{webster_color.meaning_link}]{text}", end = "")
-        # else:
+        if "sense" in text:
+            text = " " + text
+
         console.print(f"[{webster_color.meaning_content}]{text}", end = "")
 
-    # print()
 
 def ex_sent(node, ancestor_attr):
     if ancestor_attr == "sense has-sn has-num-only":
@@ -669,7 +375,8 @@ def ex_sent(node, ancestor_attr):
         console.print(f"\n[{webster_color.accessory} {webster_color.bold}]|", end="")
 
     for text in node.itertext():
-        console.print(f"[{webster_color.meaning_sentence}]{text}", end = "")
+        if text.strip():
+            console.print(f"[{webster_color.meaning_sentence}]{text}", end = "")
     
     
 def sub_content_thread(node, ancestor_attr):
@@ -679,8 +386,16 @@ def sub_content_thread(node, ancestor_attr):
         if ("ex-sent" in attr) and ("aq has-aq" not in attr):
             ex_sent(child, ancestor_attr)
 
+        if "vis" in attr:
+            elm = child.getchildren()[0].getchildren()[0]
+            elm_attr = elm.attrib["class"]
+            if ("ex-sent" in elm_attr) and ("aq has-aq" not in elm_attr):
+                ex_sent(child, ancestor_attr)
+            
+
 def dt(node, ancestor_attr, self_attr):
     children = node.getchildren()
+    dtText_count = 1
 
     for child in children:
         child_attr = child.attrib["class"]
@@ -697,7 +412,17 @@ def dt(node, ancestor_attr, self_attr):
                 console.print(f"[{webster_color.italic} {webster_color.meaning_badged}]{child.text}", end=" ")
         
         if child_attr == "dtText":
-            dtText(child)   # only meaning text
+            dtText(child, ancestor_attr, dtText_count)   # only meaning text
+            dtText_count += 1
+
+        if child_attr == "uns":
+            elms = child.getchildren()[0].getchildren()
+            for elm in elms:
+                if elm.attrib["class"] == "unText":
+                    console.print(f" [{webster_color.italic} {webster_color.meaning_badge}]{elm.text}", end=" ")
+                if elm.attrib["class"] == "sub-content-thread":
+                    sub_content_thread(elm, ancestor_attr)
+            
 
         if child_attr == "sub-content-thread":
             sub_content_thread(child, ancestor_attr)  # example under the meaning
@@ -838,7 +563,7 @@ def row_headword_row_header_ins(node):
     children = node.getchildren()[0][0]
     for child in children:
         if child.attrib["class"] == "il  il-badge badge mw-badge-gray-100":
-            console.print(f"[{webster_color.bold} {webster_color.italic} {webster_color.wt}]{child.text}", end="")
+            console.print(f"[{webster_color.bold} {webster_color.italic} {webster_color.wt}]{child.text.strip()}", end=" ")
         else:
             console.print(f"[{webster_color.wt}]{child.text}", end="")
 
@@ -849,10 +574,6 @@ def row_headword_row_header_ins(node):
 def dictionary_entry(node, head):
     """Print one entry of the word and its attributes like plural types, pronounciations, tenses, etc."""
 
-    # if head == 1:
-    #     print()
-    # else:
-    #     print("\n")
     print()
 
     for elm in node.iterchildren():
@@ -869,25 +590,11 @@ def dictionary_entry(node, head):
 
                 if elm.attrib["class"] == "entry-uros ":
                     entry_uros(elm)
+
+                if elm.attrib["class"] == "dxnls":
+                    see_also(elm)
         except:
             continue
-
-
-    # for elm in node.iterdescendants():
-    #     try:
-    #         has_word = ( "hword")
-    #         has_type = (elm.attrib["class"] == "important-blue-link")
-    #         has_lb = (elm.attrib["class"] == "lb")
-    #     except KeyError:
-    #         continue
-    #     else:
-    #         if has_word:
-    #             word = list(elm.itertext())[0]
-    #             console.print(f"[bold #3C8DAD on #DDDDDD]{word}", end="")
-    #         if has_type:
-    #             console.print(f" [red] {elm.text}", end="")
-    #         if has_lb:
-    #             console.print(f"[red] {elm.text}", end="")
 
 
 # --- Entry point of all prints of a word found ---
@@ -928,9 +635,9 @@ def parse_and_print(nodes, res_url):
     dict_name = "The Merriam-Webster Dictionary"
     console.print(f"\n[{webster_color.dict_name}]{dict_name}", justify="right")
 
-    # global res_word
-    # if words:
-    #     res_word = words[0]
+    global res_word
+    if word_entries:
+        res_word = word_entries[0]
 
 
 #[test]

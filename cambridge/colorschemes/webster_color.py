@@ -19,7 +19,7 @@ eh_pron = "#4A7D95"
 # --- verb tenses, noun plurals, adjective comparative forms --- #
 wt = "#525A5B"
 
-# --- other word forms #
+# --- other word forms --- #
 wf = "#FFFFFF"
 wf_type = "#4A7D95"
 
@@ -33,6 +33,13 @@ meaning_link = "#0074CC"
 meaning_content = "#F4F4F4"
 meaning_badge = "red"
 meaning_sentence = "#757575"
+
+# --- see also --- #
+sa_title = "#FFFFFF"
+sa_content = "#4A7D95"
+
+wf = "#FFFFFF"
+wf_type = "#4A7D95"
 
 #####################
 # phrases 

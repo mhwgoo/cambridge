@@ -474,7 +474,7 @@ def vg(node):
         # print transitive or intransitive
         if child.attrib["class"] == "vd firstVd" or child.attrib["class"] == "vd":
             e = child.getchildren()[0]
-            console.print(f"\n[{webster_color.tran}]{e.text}")
+            console.print(f"[{webster_color.tran}]{e.text}")
 
 
 # --- parse class "row entry-header" --- #
@@ -629,7 +629,7 @@ def parse_and_print(nodes, res_url):
             related_phrases(node, word_entries)
 
     dict_name = "The Merriam-Webster Dictionary"
-    console.print(f"\n[{webster_color.dict_name}]{dict_name}", justify="right")
+    console.print(f"[{webster_color.dict_name}]{dict_name}", justify="right")
 
     global res_word
     if word_entries:

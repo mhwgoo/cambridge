@@ -15,7 +15,7 @@ eh_word_type = "#4A7D95"
 eh_word_syllables = "#757575"
 eh_pron = "#4A7D95"
 
-# --- word tenses --- #
+# --- word tenses, plurals --- #
 wt = "#525A5B"
 
 # --- other word forms #

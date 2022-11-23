@@ -658,7 +658,8 @@ def vg_sseq_entry_item(node):
         # print meaning content
         if "ms-lg-4 ms-3 w-100" in child.attrib["class"]:
             for i in child:
-                sb_entry(i)
+                # print class "sb-0 sb-entry", "sb-1 sb-entry" ...
+                sb_entry(i) 
 
 
 def vg(node):
@@ -671,7 +672,7 @@ def vg(node):
             vg_sseq_entry_item(elm)        
 
         # print transitive or intransitive
-        if elm.attrib["class"] == "vd firstVd":
+        if elm.attrib["class"] == "vd firstVd" or elm.attrib["class"] == "vd":
             child = elm.getchildren()[0]
             console.print(f"\n[{webster_color.tran}]{child.text}")
 
@@ -711,6 +712,7 @@ def entry_attr(node):
 
 def row_entry_header(node):
     """Print class row entry-header, the parent and caller of entry_header_content() and entry_attr()."""
+
     for elm in node.iterchildren():
         if elm.attrib["class"] == "col-12":
             for i in elm.iterchildren():
@@ -736,12 +738,13 @@ def entry_uros(node):
 def row_headword_row_header_ins(node):
     """Print verb types. e.g. valued; valuing"""
 
-    for elm in node.iterchildren():
-        if elm.attrib["class"] == "col":
-            for t in elm.itertext():
-                text = t.strip()
-                if text:
-                    console.print(f"[{webster_color.wt}]{text}", end="")
+    children = node.getchildren()[0][0]
+    for child in children:
+        if child.attrib["class"] == "il  il-badge badge mw-badge-gray-100":
+            console.print(f"[{webster_color.bold} {webster_color.italic} {webster_color.wt}]{child.text}", end="")
+        else:
+            console.print(f"[{webster_color.wt}]{child.text}", end="")
+
 
 # --- parse class "dictionary-entry-[number]" --- #
 def dictionary_entry(node, head):

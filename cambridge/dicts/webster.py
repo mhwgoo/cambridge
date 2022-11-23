@@ -211,11 +211,14 @@ def synonyms(node):
             continue
         else:
             if has_title:
-                console.print(f"[{webster_color.bold} {webster_color.syn_title}]{elm.text}", end="")
+                console.print(f"[{webster_color.bold} {webster_color.syn_title}]{elm.text}", end=" ")
 
             if has_em and time == 0:
                 console.print(f"[{webster_color.bold} {webster_color.italic} {webster_color.syn_em}]{elm.text}", end="")
                 time += 1
+
+            if has_label:
+                console.print(f"\n[{webster_color.syn_label} {webster_color.bold}]{elm.text}")
 
             if has_syn:
                 for t in elm.itertext():
@@ -223,8 +226,6 @@ def synonyms(node):
                     if text:
                         console.print(f"[{webster_color.syn_item}]{text}", end=" ")
 
-            if has_label:
-                console.print(f"\n[{webster_color.syn_label} {webster_color.bold}]{elm.text}")
 
 
 ###########################################

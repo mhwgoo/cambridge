@@ -137,7 +137,7 @@ def parse_dict(res_text, found, res_url, is_fresh):
             logger.error("The fetched content is not intended for the word, due to your network or the website reasons, please try again.")
             sys.exit()
 
-        ## [for debug]
+        ## NOTE: [only for debug]
         # for node in nodes:
         #     try:
         #         print("id:    ", node.attrib["id"])
@@ -192,33 +192,30 @@ def synonyms(node):
 
     print()
 
-    time = 0
-
     for elm in node.iterdescendants():
         try:
             has_title = (elm.tag == "h2") # "Synonyms"
             has_label = (elm.tag == "p") and (elm.attrib["class"] == "function-label") # "Noun"
             has_syn = (elm.tag == "ul") # synonym list
-            has_em = (elm.tag == "em")
         except KeyError:
             continue
         else:
             if has_title:
                 console.print(f"[{webster_color.bold} {webster_color.syn_title}]{elm.text}", end=" ")
 
-            if has_em and time == 0:
-                console.print(f"[{webster_color.bold} {webster_color.italic} {webster_color.syn_em}]{elm.text}", end="")
-                time += 1
-
             if has_label:
                 console.print(f"\n[{webster_color.syn_label} {webster_color.bold}]{elm.text}")
 
             if has_syn:
-                for t in elm.itertext():
-                    text = t.strip()
-                    if text:
+                children = elm.getchildren()
+                total_num = len(children)
+                
+                for index, child in enumerate(children):
+                    text = "".join(list(child.itertext())).strip()
+                    if index != (total_num - 1):
+                        console.print(f"[{webster_color.syn_item}]{text},", end=" ")
+                    else:
                         console.print(f"[{webster_color.syn_item}]{text}", end=" ")
-
 
 
 ###########################################
@@ -266,6 +263,7 @@ def examples(node, words):
 def phrases(node):
     """Print phrases."""
 
+    print()
     children = node.getchildren()[1]
     
     for child in children:
@@ -321,27 +319,10 @@ def related_phrases(node, words):
 
 
 ###########################################
-# parse and print see-also 
-###########################################
-
-def see_also(node):
-    """Print seealso section."""
-
-    texts = list(node.itertext())
-    for text in texts:
-        text = text.strip()
-        if not text:
-            continue
-        if text == "see also":
-            console.print(f"[{webster_color.bold} {webster_color.sa_title}]{text}", end = " ")
-        else:
-            console.print(f"[{webster_color.sa_content}]{text}")
-
-
-###########################################
 # parse and print dictionary-entry-[number] 
 ###########################################
 
+# --- parse class "vg" --- #
 def dtText(node, ancestor_attr, count):
     texts = list(node.itertext())
 
@@ -423,7 +404,6 @@ def dt(node, ancestor_attr, self_attr):
                 if elm.attrib["class"] == "sub-content-thread":
                     sub_content_thread(elm, ancestor_attr)
             
-
         if child_attr == "sub-content-thread":
             sub_content_thread(child, ancestor_attr)  # example under the meaning
     print()
@@ -449,14 +429,13 @@ def sense(node):
     if attr == "sense has-sn has-num-only":
         sense_content = children[1]  # class "sense-content w-100"
 
-
     elms = sense_content.getchildren()
     
     for elm in elms:
         elm_attr = elm.attrib["class"]
         if "badge" in elm_attr:
-            text = "".join(list(elm.itertext()))
-            console.print(f"[{webster_color.italic} {webster_color.meaning_badge}]{text}", end="")
+            text = "".join(list(elm.itertext())).strip()
+            console.print(f"[{webster_color.italic} {webster_color.meaning_badge}]{text}", end=" ")
 
         if elm_attr == "dt " or elm_attr == "dt hasSdSense" or elm_attr == "sdsense":
             dt(elm, attr, elm_attr)
@@ -467,7 +446,6 @@ def sb_entry(node):
     sense(child)
 
 
-# --- parse class "vg" --- #
 def vg_sseq_entry_item(node):
     """Print one meaning of one entry(noun entry, adjective entry, or verb entry and so forth). e.g. 1: the monetary worth of something."""
 
@@ -518,6 +496,7 @@ def entry_header_content(node):
             type = " ".join(list(elm.itertext()))
             console.print(f"[{webster_color.eh_word_type}]{type}", end="\n")
 
+
 def entry_attr(node):
     """Print the pronounciation. e.g. val·​ue |ˈval-(ˌ)yü|"""
 
@@ -531,6 +510,7 @@ def entry_attr(node):
                 if i.tag == "span" and "prons-entries-list-inline" in i.attrib["class"]:
                     pron = list(i.itertext())[1].strip()
                     console.print(f"[{webster_color.eh_pron}]|{pron}|", end="\n")
+
 
 def row_entry_header(node):
     """Print class row entry-header, the parent and caller of entry_header_content() and entry_attr()."""
@@ -570,8 +550,23 @@ def row_headword_row_header_ins(node):
     print()
 
 
+# --- parse class "dxnls" --- #
+def see_also(node):
+    """Print seealso section."""
+
+    texts = list(node.itertext())
+    for text in texts:
+        text = text.strip()
+        if not text:
+            continue
+        if text == "see also":
+            console.print(f"[{webster_color.bold} {webster_color.sa_title}]{text}", end = " ")
+        else:
+            console.print(f"[{webster_color.sa_content}]{text}")
+
+
 # --- parse class "dictionary-entry-[number]" --- #
-def dictionary_entry(node, head):
+def dictionary_entry(node):
     """Print one entry of the word and its attributes like plural types, pronounciations, tenses, etc."""
 
     print()
@@ -597,7 +592,10 @@ def dictionary_entry(node, head):
             continue
 
 
-# --- Entry point of all prints of a word found ---
+#####################################################
+# --- Entry point of all prints of a word found --- #
+#####################################################
+
 def parse_and_print(nodes, res_url):
     """Parse and print different sections for the word."""
 
@@ -605,7 +603,6 @@ def parse_and_print(nodes, res_url):
 
     # A page may have multiple word forms, e.g. "give away", "giveaway"
     global word_entries
-    head = 1
 
     for node in nodes:
         try:
@@ -614,8 +611,7 @@ def parse_and_print(nodes, res_url):
             attr = node.attrib["class"]
 
         if "dictionary-entry" in attr:
-            dictionary_entry(node, head)
-            head += 1
+            dictionary_entry(node)
 
         if attr == "phrases":
             phrases(node)
@@ -638,11 +634,3 @@ def parse_and_print(nodes, res_url):
     global res_word
     if word_entries:
         res_word = word_entries[0]
-
-
-#[test]
-# value
-# big
-# run way
-# give away
-# take on

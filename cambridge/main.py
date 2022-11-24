@@ -6,9 +6,6 @@ If you're not satisfied with the result, you can try with "-w" flag to look up t
 
 import sqlite3
 
-from .args import parse_args
-from .cache import DB
-
 def main():
     try:
         con = sqlite3.connect(
@@ -26,14 +23,18 @@ def main():
         print("\nStopped by user")
 
 
-# if __name__ == "__main__":
-#     import os
-#     import sys
+if __name__ == "__main__":
+    import os
+    import sys
 
-#     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-#     from cambridge.args import parse_args
-#     from cambridge.cache import DB
+    from cambridge.args import parse_args
+    from cambridge.cache import DB
 
-#     main()
+    main()
+
+else:
+    from .args import parse_args
+    from .cache import DB
 

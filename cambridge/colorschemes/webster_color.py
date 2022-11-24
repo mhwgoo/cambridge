@@ -1,6 +1,7 @@
 bold = "bold"
 italic = "italic"
 accessory = "#4A7D95"
+badge = "red"
 
 
 #####################
@@ -31,15 +32,12 @@ meaning_num = "#4A7D95"
 meaning_letter = "#4A7D95"
 meaning_link = "#0074CC"
 meaning_content = "#F4F4F4"
-meaning_badge = "red"
+meaning_badge = badge
 meaning_sentence = "#757575"
 
 # --- see also --- #
 sa_title = "#FFFFFF"
 sa_content = "#4A7D95"
-
-wf = "#FFFFFF"
-wf_type = "#4A7D95"
 
 
 #####################

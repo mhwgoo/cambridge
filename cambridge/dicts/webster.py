@@ -534,7 +534,7 @@ def entry_header_content(node):
 
     for elm in node.iterchildren():
         if elm.tag == "h1" or elm.tag == "p":
-            word = elm.text
+            word = "".join(list(elm.itertext()))
             global word_entries
             word_entries.append(word)
             console.print(f"[{webster_color.eh_h1_word} {webster_color.bold}]{word}", end=" ")
@@ -629,7 +629,7 @@ def dictionary_entry(node):
     for elm in node.iterchildren():
         try: 
             if elm.attrib["class"]:
-                if elm.attrib["class"] == "row entry-header":
+                if "row entry-header" in elm.attrib["class"]:
                     row_entry_header(elm)
 
                 if elm.attrib["class"] == "row headword-row header-ins":

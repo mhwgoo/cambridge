@@ -440,18 +440,10 @@ def sense(node, attr, parent_attr, ancestor_attr):
     if attr == "sense has-sn": 
         sn = children[0].getchildren()[0].text
 
-        if "has-subnum" in ancestor_attr and if "sb-0" in parent_attr:
+        if "has-subnum" in ancestor_attr and "sb-0" in parent_attr:
             console.print(f"[{webster_color.bold} {webster_color.meaning_letter}]{sn}", end = " ")
         else:
             console.print(f"  [{webster_color.bold} {webster_color.meaning_letter}]{sn}", end = " ")
-
-        # if "has-subnum" in ancestor_attr:
-        #     if "sb-0" in parent_attr:
-        #         console.print(f"[{webster_color.bold} {webster_color.meaning_letter}]{sn}", end = " ")
-        #     else:
-        #         console.print(f"  [{webster_color.bold} {webster_color.meaning_letter}]{sn}", end = " ")
-        # else:
-        #     console.print(f"  [{webster_color.bold} {webster_color.meaning_letter}]{sn}", end = " ")
 
         sense_content = children[1]  # class "sense-content w-100"
 
@@ -498,7 +490,7 @@ def sb_entry(node, parent_attr):
     else:
         sense(child, child_attr, attr, parent_attr)    # sense(child, "sense has-sn", "sb-0 sb-entry, "sb has-num has-let ms-lg-4 ms-3 w-100")
 
-# FIXME
+
 def vg_sseq_entry_item(node):
     """Print one meaning of one entry(noun entry, adjective entry, or verb entry and so forth). e.g. 1: the monetary worth of something."""
 
@@ -689,6 +681,7 @@ def print_pron(node, end=""):
 
 def print_or_badge(text):
     console.print(f"[{webster_color.badge}]{text}", end = "")
+
 
 #####################################################
 # --- Entry point of all prints of a word found --- #

@@ -87,14 +87,19 @@ def save(con, cur, input_word, response_word, response_url, response_text):
 def print_spellcheck(con, cur, input_word, suggestions, dict, is_ch=False):
     """Parse and print spellcheck info."""
 
-    console.print("[red]" + "\n!!! " + "[/red]" + "[yellow]" + input_word.upper() + "[/yellow]" + " you've entered isn't in the dictionary.\n")
+    if dict == DICTS[1]:
+        console.print("[red]" + "\n" +  input_word.upper() + "[/red]" + " you've entered [u]isn't[/u] in the " + "[blue]" + dict + "[/blue]" + " dictionary.\n")
+    else:
+        console.print("[red]" + "\n" +  input_word.upper() + "[/red]" + " you've entered [u]isn't[/u] in the " + "[yellow]" + dict + "[/yellow]" + " dictionary.\n")
 
     for count, sug in enumerate(suggestions):
-        console.print("[bold]%2d" % (count+1), end="")
-        console.print("[#3C8DAD] %s" % sug)
+        console.print("[bold][%2d]" % (count+1), end="")
+        if dict == DICTS[1]:
+            console.print("[blue] %s" % sug)
+        else:
+            console.print("[yellow] %s" % sug)
    
-
-    console.print("[green]" + "\n>>> " + "[/green]" + "Enter the NUMBER above to look up the word suggestion OR any other KEY to exit:")
+    console.print("[green]" + "\n>>> " + "[/green]" + "Enter the [red]NUMBER[/red] above to [u]look up[/u] the word suggestion || [red]LOWER-CASE LETTER T[/red] to [u]toggle[/u] dictionary || [red]ANY OTHER KEY[/red] to [u]exit[/u]:")
     key = input("")
 
     if key.isnumeric() and (1 <= int(key) <= len(suggestions)):
@@ -102,5 +107,10 @@ def print_spellcheck(con, cur, input_word, suggestions, dict, is_ch=False):
             webster.search_webster(con, cur, suggestions[int(key) - 1])        
         if dict == DICTS[0]:
             cambridge.search_cambridge(con, cur, suggestions[int(key) - 1], False, is_ch)
+    elif key == "t":
+        if dict == DICTS[0]:
+            webster.search_webster(con, cur, input_word)        
+        if dict == DICTS[1]:
+            cambridge.search_cambridge(con, cur, input_word, False, is_ch)
     else:
         sys.exit()

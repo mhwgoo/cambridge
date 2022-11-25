@@ -419,8 +419,7 @@ def dt(node, ancestor_attr, self_attr):
     print()
             
 
-def sense(node, with_subnum=False):
-    attr = node.attrib["class"]
+def sense(node, attr, parent_attr, ancestor_attr):
     children = node.getchildren()
 
     # meaning without any sign
@@ -430,32 +429,36 @@ def sense(node, with_subnum=False):
     # meaning with "1" + "a"
     if attr == "sense has-sn has-num":
         sn = children[0].getchildren()[0].text
-        if with_subnum:
+        if "has-subnum" in ancestor_attr and "sb-0" not in parent_attr:
             console.print(f"  [{webster_color.bold} {webster_color.meaning_letter}]{sn}", end = " ")
         else:
             console.print(f"[{webster_color.bold} {webster_color.meaning_letter}]{sn}", end = " ")
+
         sense_content = children[1]  # class "sense-content w-100"
 
-    # meaing with only "b" or "1" + "a" + "(1)"
+    # meaing with only "b" or "1" + "a" + "(1)", or "1" + "a"
     if attr == "sense has-sn": 
         sn = children[0].getchildren()[0].text
-        if with_subnum:
+
+        if "has-subnum" in ancestor_attr and if "sb-0" in parent_attr:
             console.print(f"[{webster_color.bold} {webster_color.meaning_letter}]{sn}", end = " ")
         else:
             console.print(f"  [{webster_color.bold} {webster_color.meaning_letter}]{sn}", end = " ")
+
+        # if "has-subnum" in ancestor_attr:
+        #     if "sb-0" in parent_attr:
+        #         console.print(f"[{webster_color.bold} {webster_color.meaning_letter}]{sn}", end = " ")
+        #     else:
+        #         console.print(f"  [{webster_color.bold} {webster_color.meaning_letter}]{sn}", end = " ")
+        # else:
+        #     console.print(f"  [{webster_color.bold} {webster_color.meaning_letter}]{sn}", end = " ")
+
         sense_content = children[1]  # class "sense-content w-100"
 
     # meaning with only (2)   
     if attr == "sense has-num-only has-subnum-only":
         console.print(f"    ", end = "")
         sense_content = children[1]  # class "sense-content w-100"
-
-    # meaning with only badge
-    if attr == "sen has-num-only":
-        for elm in node.getchildren():
-            if "badge mw-badge" in elm.attrib["class"]:
-                print_meaning_badge(elm.text)
-                print()
 
     # meaning with only number
     if attr == "sense has-sn has-num-only":
@@ -483,14 +486,17 @@ def sense(node, with_subnum=False):
                     print_meaning_content(text, end="")
 
 
-def sb_entry(node):
+def sb_entry(node, parent_attr):
     child = node.getchildren()[0]
-    if child.attrib["class"] == "pseq no-subnum":
+    attr = node.attrib["class"]         # "sb-0 sb-entry"
+    child_attr = child.attrib["class"]  # "sense has-sn" or "pseq no-subnum"
+    if "pseq" in child_attr:
         elms = child.getchildren()[0].getchildren()
         for e in elms:
-            sense(e, True)
+            e_attr = e.attrib["class"]  # "sense has-sn"
+            sense(e, e_attr, attr, parent_attr)        # sense(child, "sense has-sn", "sb-0 sb-entry", "....")
     else:
-        sense(child, False)
+        sense(child, child_attr, attr, parent_attr)    # sense(child, "sense has-sn", "sb-0 sb-entry, "sb has-num has-let ms-lg-4 ms-3 w-100")
 
 # FIXME
 def vg_sseq_entry_item(node):
@@ -498,15 +504,21 @@ def vg_sseq_entry_item(node):
 
     children = node.getchildren()
     for child in children:
+        attr = child.attrib["class"]
         # print number label if any
-        if child.attrib["class"] == "vg-sseq-entry-item-label":
+        if attr == "vg-sseq-entry-item-label":
             console.print(f"[{webster_color.bold} {webster_color.meaning_num}]{child.text}", end=" ")
 
         # print meaning content
-        if "ms-lg-4 ms-3 w-100" in child.attrib["class"]:
-            for i in child:
+        if "ms-lg-4 ms-3 w-100" in attr:
+            for c in child.iterchildren():
+                if c.getchildren()[0].attrib["class"] == "sen has-num-only":
+                    print_meaning_badge(c.getchildren()[0][1].text)
+                    print()
+                    continue
+                    
                 # print class "sb-0 sb-entry", "sb-1 sb-entry" ...
-                sb_entry(i) 
+                sb_entry(c, attr) 
 
 
 def vg(node):

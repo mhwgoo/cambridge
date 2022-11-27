@@ -156,7 +156,7 @@ def list_words(args, con, cur):
 
         # if there is only one word/phrase to delete
         if len(ids) == 1:
-            word = " ".join(to_delete).strip()
+            word = " ".join(to_delete).strip().strip(",")
             delete(word, con, cur)
 
         # if there are multiple words/phrase to delete

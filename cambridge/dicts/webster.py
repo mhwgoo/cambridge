@@ -78,12 +78,6 @@ def fresh_run(con, cur, req_url, input_word):
     nodes = parse_dict(res_text, found, res_url, True)
 
     if found:
-        # res_word may not be returned when `save` is called by concurrency
-        # word wiin res_url is still the input_word formatted
-        global res_word
-        if not res_word:
-            res_word = input_word
-
         parse_thread = threading.Thread(
             target=parse_and_print, args=(nodes, res_url,)
         )
@@ -137,6 +131,14 @@ def parse_dict(res_text, found, res_url, is_fresh):
             logger.error("The fetched content is not intended for the word, due to your network or the website reasons, please try again.")
             sys.exit()
 
+
+        result = tree.xpath("//*[@id='dictionary-entry-1']/div[1]/div/div[1]/h1/text()")
+        if not result:
+            result = tree.xpath("//*[@id='dictionary-entry-1']/div[1]/div/div/h1/span/text()")
+
+        global res_word
+        res_word = result[0]
+
         ## NOTE: [only for debug]
         # for node in nodes:
         #     try:
@@ -174,7 +176,8 @@ def nearby_entries(node):
                 console.print(f"[{webster_color.bold} {webster_color.nearby_title}]{elm.text}", end="")
 
             if has_em:
-                console.print(f"[{webster_color.bold} {webster_color.italic} {webster_color.nearby_em}]{elm.text}", end="\n")
+                word = "".join(list(elm.itertext()))
+                console.print(f"[{webster_color.bold} {webster_color.italic} {webster_color.nearby_em}]{word}", end="\n")
 
             if has_word:
                 console.print(f"[{webster_color.nearby_word}]{elm.text}", end="\n")
@@ -721,7 +724,3 @@ def parse_and_print(nodes, res_url):
 
     dict_name = "The Merriam-Webster Dictionary"
     console.print(f"[{webster_color.dict_name}]{dict_name}", justify="right")
-
-    global res_word
-    if word_entries:
-        res_word = word_entries[0]

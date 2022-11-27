@@ -51,7 +51,7 @@ def get_cache(con, cur, word, resquest_url):
 def get_response_words(cur):
     """Get all response words for l command on terminal"""
 
-    cur.execute("SELECT response_word, created_at FROM words")
+    cur.execute("SELECT input_word, response_word, response_url, created_at FROM words")
     data = cur.fetchall()
     return data
 
@@ -59,7 +59,7 @@ def get_response_words(cur):
 def get_random_words(cur):
     """Get random response words for l -r command on terminal"""
 
-    cur.execute("SELECT response_word FROM words ORDER BY RANDOM() LIMIT 20")
+    cur.execute("SELECT input_word, response_word, response_url FROM words ORDER BY RANDOM() LIMIT 20")
     data = cur.fetchall()
     return data
 

@@ -13,7 +13,7 @@ from .cache import (
 from .log import logger
 from .settings import OP, DICTS
 from .dicts import webster, cambridge
-from .console import console
+from .console import console, table
 
 
 def parse_args():
@@ -176,30 +176,41 @@ def list_words(args, con, cur):
                 delete(word, con, cur)
                 
 
-    elif args.random:
-        try:
-            # data is something like [('hello',), ('good',), ('world',)]
-            data = get_random_words(cur)
-        except sqlite3.OperationalError:
-            logger.error("You may haven't searched any word yet")
-        else:
-            for i in data:
-                print(i[0])
-
     else:
-        try:
-            # data is something like [('hello',), ('good',), ('world',)]
-            data = get_response_words(cur)
-        except sqlite3.OperationalError:
-            logger.error("You may haven't searched any word yet")
-        else:
-            if args.time:
-                data.sort(reverse=True, key=lambda tup: tup[1])
+        if args.random:
+            try:
+                # data is something like [('hello',), ('good',), ('world',)]
+                data = get_random_words(cur)
+            except sqlite3.OperationalError:
+                logger.error("You may haven't searched any word yet")
             else:
-                data.sort()
+                print_table(data)
 
-            for i in data:
-                console.print(i[0], justify="left")
+        else:
+            try:
+                # data is something like [('hello',), ('good',), ('world',)]
+                data = get_response_words(cur)
+            except sqlite3.OperationalError:
+                logger.error("You may haven't searched any word yet")
+            else:
+                if args.time:
+                    data.sort(reverse=False, key=lambda tup: tup[3])
+                else:
+                    data.sort()
+                print_table(data)
+
+
+def print_table(data):
+    for index, entry in enumerate(data):
+        num = str(index + 1)
+        input_word, response_word = entry[0], entry[1]
+        if "cambridge" in entry[2]:
+            dict_name = DICTS[0]
+        else:
+            dict_name = DICTS[1]
+        table.add_row(num, input_word, response_word, dict_name)
+    console.print(table)
+
 
 
 def search_word(args, con, cur):

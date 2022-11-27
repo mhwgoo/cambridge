@@ -214,11 +214,11 @@ def synonyms(node):
                 total_num = len(children)
                 
                 for index, child in enumerate(children):
-                    text = "".join(list(child.itertext())).strip()
+                    syn = "".join(list(child.itertext())).strip()
                     if index != (total_num - 1):
-                        console.print(f"[{webster_color.syn_item}]{text},", end=" ")
+                        console.print(f"[{webster_color.syn_item}]{syn},", end=" ")
                     else:
-                        console.print(f"[{webster_color.syn_item}]{text}", end=" ")
+                        console.print(f"[{webster_color.syn_item}]{syn}", end=" ")
 
 
 ###########################################
@@ -410,9 +410,12 @@ def dt(node, ancestor_attr, self_attr):
             elms = child.getchildren()[0].getchildren()
             for elm in elms:
                 if elm.attrib["class"] == "unText":
-                    text = "".join(list(elm.itertext()))
-                    format_basedon_ancestor(ancestor_attr, prefix="")
-                    print_meaning_badge(text)
+                    text = "".join(list(elm.itertext())).strip()
+                    if "mdash" in elm.getprevious().attrib["class"]:
+                        print_meaning_badge(text)
+                    else:
+                        format_basedon_ancestor(ancestor_attr, prefix="")
+                        print_meaning_badge(text)
 
                 if elm.attrib["class"] == "sub-content-thread":
                     sub_content_thread(elm, ancestor_attr)
@@ -443,7 +446,7 @@ def sense(node, attr, parent_attr, ancestor_attr):
     if attr == "sense has-sn": 
         sn = children[0].getchildren()[0].text
 
-        if "has-subnum" in ancestor_attr and "sb-0" in parent_attr:
+        if ("has-subnum" in ancestor_attr and "sb-0" in parent_attr) or ("no-sn letter-only" in ancestor_attr):
             console.print(f"[{webster_color.bold} {webster_color.meaning_letter}]{sn}", end = " ")
         else:
             console.print(f"  [{webster_color.bold} {webster_color.meaning_letter}]{sn}", end = " ")
@@ -650,6 +653,7 @@ def dictionary_entry(node):
                 if elm.attrib["class"] == "mt-3":
                     badge = elm.getchildren()[0]  # class with "badge mw-badge"
                     print_meaning_badge(badge.text)
+                    print()
 
         except:
             continue

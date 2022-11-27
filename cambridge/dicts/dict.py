@@ -51,21 +51,31 @@ def cache_run(con, cur, input_word, req_url, dict):
     # data is a tuple (response_url, response_text) if any
     data = get_cache(con, cur, input_word, req_url)
 
-    if data is not None:
-        res_url, res_text = data
-
-        if DICTS[0].lower() in res_url:
-            print(f'{OP[5]} "{input_word}" from {DICTS[0]} in cache. Not to use it, try again with -f or --fresh option')
-            logger.debug(f"{OP[1]} {res_url}")
-            soup = make_a_soup(res_text)
-            cambridge.parse_and_print(soup, res_url)
+    if data is None:
+        if "s" != input_word[-1]:
+            return False
         else:
-            print(f'{OP[5]} "{input_word}" from {DICTS[1]} in cache. Not to use it, try again with -f or --fresh option')
-            nodes = webster.parse_dict(res_text, True, res_url, False)
-            webster.parse_and_print(nodes, res_url)
-        return True
+            data = get_cache(con, cur, input_word[:-1], req_url)
+            if data is None:
+                if "es" != input_word[-2:]:
+                    return False
+                else:
+                    data = get_cache(con, cur, input_word[:-2], req_url)
+                    if data is None:
+                        return False
 
-    return False
+    res_url, res_word, res_text = data
+
+    if DICTS[0].lower() in res_url:
+        print(f'{OP[5]} "{res_word}" from {DICTS[0]} in cache. Not to use it, try again with -f or --fresh option')
+        logger.debug(f"{OP[1]} {res_url}")
+        soup = make_a_soup(res_text)
+        cambridge.parse_and_print(soup, res_url)
+    else:
+        print(f'{OP[5]} "{res_word}" from {DICTS[1]} in cache. Not to use it, try again with -f or --fresh option')
+        nodes = webster.parse_dict(res_text, True, res_url, False)
+        webster.parse_and_print(nodes, res_url)
+    return True
 
 
 def save(con, cur, input_word, response_word, response_url, response_text):

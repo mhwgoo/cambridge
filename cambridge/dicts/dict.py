@@ -88,9 +88,9 @@ def print_spellcheck(con, cur, input_word, suggestions, dict, is_ch=False):
     """Parse and print spellcheck info."""
 
     if dict == DICTS[1]:
-        console.print("[red]" + "\n" +  input_word.upper() + "[/red]" + " you've entered [u]isn't[/u] in the " + "[blue]" + dict + "[/blue]" + " dictionary.\n")
+        console.print("[red bold]" + input_word.upper() + "[/red bold]" + " you've entered isn't in the " + "[blue]" + dict + "[/blue]" + " dictionary.\n")
     else:
-        console.print("[red]" + "\n" +  input_word.upper() + "[/red]" + " you've entered [u]isn't[/u] in the " + "[yellow]" + dict + "[/yellow]" + " dictionary.\n")
+        console.print("[red bold]" + input_word.upper() + "[/red bold]" + " you've entered isn't in the " + "[yellow]" + dict + "[/yellow]" + " dictionary.\n")
 
     for count, sug in enumerate(suggestions):
         console.print("[bold][%2d]" % (count+1), end="")
@@ -99,8 +99,10 @@ def print_spellcheck(con, cur, input_word, suggestions, dict, is_ch=False):
         else:
             console.print("[yellow] %s" % sug)
    
-    console.print("[green]" + "\n>>> " + "[/green]" + "Enter the [red]NUMBER[/red] above to [u]look up[/u] the word suggestion || [red]LOWER-CASE LETTER T[/red] to [u]toggle[/u] dictionary || [red]ANY OTHER KEY[/red] to [u]exit[/u]:")
-    key = input("")
+    console.print("\nEnter the [bold]NUMBER[/bold] above to [u]look up[/u] the word suggestion || [bold]LOWER-CASE LETTER T[/bold] to [u]toggle[/u] dictionary || [bold]ANY OTHER KEY[/bold] to [u]exit[/u]:")
+
+    key = input("You typed: ")
+    print()
 
     if key.isnumeric() and (1 <= int(key) <= len(suggestions)):
         if dict == DICTS[1]:

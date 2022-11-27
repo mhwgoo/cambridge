@@ -8,10 +8,10 @@ from .log import logger
 
 
 class ParsedNoneError(Exception):
-    """Used when bs4 returned None whereas there's target content existing within the document"""
+    """Used when bs4 parsing returned None, when there's document fetched, which may not be the right document for the word."""
 
     def __init__(self, response_url):
-        self.message = "The word isn't in the Cambridge Dictionary yet. See " + response_url 
+        self.message = "The word isn't in the Cambridge Dictionary yet; or the html document returned isn't about the word because of your temporary slow network. See " + response_url 
 
     def __str__(self):
         return self.message

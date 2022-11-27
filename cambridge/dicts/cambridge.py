@@ -144,18 +144,13 @@ def parse_first_dict(res_url, soup):
     logger.debug(f"{OP[1]} {res_url}")
 
     while True:
-        try:
-            # first_dict = soup.find("div", "pr dictionary")
-            first_dict = soup.find("div", "pr di superentry")
-        except Exception as e:
-            attempt = call_on_error(e, res_url, attempt, OP[3])
+        # first_dict = soup.find("div", "pr dictionary")
+        first_dict = soup.find("div", "pr di superentry")
+        if first_dict is None:
+            attempt = call_on_error(ParsedNoneError(res_url), res_url, attempt, OP[3])
             continue
         else:
-            if first_dict is None:
-                attempt = call_on_error(ParsedNoneError(res_url), res_url, attempt, OP[3])
-                continue
-            else:
-                break
+            break
 
     return first_dict
 

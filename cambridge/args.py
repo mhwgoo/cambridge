@@ -151,11 +151,11 @@ def list_words(args, con, cur):
         
         for index, item in enumerate(to_delete):
             # multiple words/phrases are seperated by ","
-            if "," in item:
+            if "," in item or ("," not in item and index == len(to_delete) - 1):
                 ids.append(index)
 
         # if there is only one word/phrase to delete
-        if not ids:
+        if len(ids) == 1:
             word = " ".join(to_delete).strip()
             delete(word, con, cur)
 

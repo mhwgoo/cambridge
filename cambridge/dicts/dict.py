@@ -67,14 +67,16 @@ def cache_run(con, cur, input_word, req_url, dict):
     res_url, res_word, res_text = data
 
     if DICTS[0].lower() in res_url:
-        print(f'{OP[5]} "{res_word}" from {DICTS[0]} in cache. Not to use it, try again with -f or --fresh option')
         logger.debug(f"{OP[1]} {res_url}")
         soup = make_a_soup(res_text)
         cambridge.parse_and_print(soup, res_url)
+        if dict == DICTS[1]:
+            console.print(f'{OP[5]} "{res_word}" from {DICTS[0]} in cache. You can add "-f -w" to fetch the {DICTS[1]} dictionary', justify="left", style="#757575")
     else:
-        print(f'{OP[5]} "{res_word}" from {DICTS[1]} in cache. Not to use it, try again with -f or --fresh option')
         nodes = webster.parse_dict(res_text, True, res_url, False)
         webster.parse_and_print(nodes, res_url)
+        if dict == DICTS[0]:
+            console.print(f'{OP[5]} "{res_word}" from {DICTS[1]} in cache. You can add "-f" to fetch the {DICTS[0]} dictionary', justify="left", style="#757575")
     return True
 
 

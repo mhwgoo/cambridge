@@ -195,19 +195,23 @@ def list_words(args, con, cur):
             else:
                 if args.time:
                     data.sort(reverse=False, key=lambda tup: tup[3])
+                    print_table(data)
                 else:
                     data.sort()
-                print_table(data)
+                    # Not using print_table() is for fzf preview
+                    for entry in data:
+                        print(entry[1])
 
 
 def print_table(data):
-    for entry in data:
+    for index, entry in enumerate(data):
+        num = str(index + 1)
         input_word, response_word = entry[0], entry[1]
         if "cambridge" in entry[2]:
             dict_name = DICTS[0]
         else:
             dict_name = DICTS[1]
-        table.add_row(input_word, response_word, dict_name)
+        table.add_row(num, input_word, response_word, dict_name)
     console.print(table)
 
 

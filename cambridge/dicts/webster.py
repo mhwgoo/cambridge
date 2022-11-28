@@ -350,10 +350,14 @@ def dtText(node, ancestor_attr, count):
         if text == ": ":
             text = text.strip()
 
-        # FIXME when meaning similar to another word's sense 1, 2, ... "another word" and "sense" squeezes together
-        # if "sense" in text:
-        #     text = " " + text
-        print_meaning_content(text, end="")
+        if "sense " in text:
+            for t in text:
+                if t.isnumeric():
+                    text_new = " " + text
+                    print_meaning_content(text_new, end="")
+                    break
+        else:
+            print_meaning_content(text, end="")
 
     console.print("", end = " ")
 

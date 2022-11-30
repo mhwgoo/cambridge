@@ -408,7 +408,7 @@ def dt(node, ancestor_attr, self_attr):
             dtText_count += 1
 
         if child_attr == "uns":
-            if child.getprevious().attrib["class"] == "sub-content-thread":
+            if child.getprevious() and child.getprevious().attrib["class"] == "sub-content-thread":
                 print()
 
             elms = child.getchildren()[0].getchildren()

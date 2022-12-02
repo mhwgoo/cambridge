@@ -348,7 +348,6 @@ def dtText(node, ancestor_attr, count):
 
         if text == ": ":
             text = text.strip()
-            continue
 
         if text == " see also ":
             print_meaning_badge(text.strip())

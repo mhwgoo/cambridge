@@ -268,7 +268,6 @@ def phrases(node):
 
     print()
     children = node.getchildren()[1]
-    
     for child in children:
         try:
             if child.attrib["class"] == "drp":
@@ -349,6 +348,15 @@ def dtText(node, ancestor_attr, count):
 
         if text == ": ":
             text = text.strip()
+            continue
+
+        if text == " see also ":
+            print_meaning_badge(text.strip())
+            continue
+
+        if text == " see ":
+            print_meaning_badge("->" + text.strip())
+            continue
 
         if "sense " in text:
             for t in text:
@@ -392,40 +400,34 @@ def dt(node, ancestor_attr, self_attr):
     dtText_count = 1
 
     for child in children:
-        child_attr = child.attrib["class"]
-        
-        if child_attr == "sd": # label before meaning content
-            if self_attr == "sdsense":
-                format_basedon_ancestor(ancestor_attr, prefix="")
-                print_meaning_badge(child.text)
+        child_attr = child.get("class")
+        if child_attr is not None:
+            if child_attr == "sd": # label before meaning content
+                if self_attr == "sdsense":
+                    format_basedon_ancestor(ancestor_attr, prefix="")
+                    print_meaning_badge(child.text)
+                else:
+                    print_meaning_badge(child.text)
+            if child_attr == "dtText":
+                dtText(child, ancestor_attr, dtText_count)   # only meaning text
+                dtText_count += 1
+            if child_attr == "uns":
+                if child.getprevious() is not None and child.getprevious().attrib["class"] == "sub-content-thread":
+                    print()
+                elms = child.getchildren()[0].getchildren()
+                for elm in elms:
+                    if elm.attrib["class"] == "unText":
+                        text = "".join(list(elm.itertext())).strip()
+                        if "mdash" in elm.getprevious().attrib["class"]:
+                            print_meaning_badge(text)
+                        else:
+                            format_basedon_ancestor(ancestor_attr, prefix="")
+                            print_meaning_badge(text)
+                    if elm.attrib["class"] == "sub-content-thread":
+                        sub_content_thread(elm, ancestor_attr)
+            if child_attr == "sub-content-thread":
+                sub_content_thread(child, ancestor_attr)  # example under the meaning
 
-
-            else:
-                print_meaning_badge(child.text)
-        
-        if child_attr == "dtText":
-            dtText(child, ancestor_attr, dtText_count)   # only meaning text
-            dtText_count += 1
-
-        if child_attr == "uns":
-            if child.getprevious() is not None and child.getprevious().attrib["class"] == "sub-content-thread":
-                print()
-
-            elms = child.getchildren()[0].getchildren()
-            for elm in elms:
-                if elm.attrib["class"] == "unText":
-                    text = "".join(list(elm.itertext())).strip()
-                    if "mdash" in elm.getprevious().attrib["class"]:
-                        print_meaning_badge(text)
-                    else:
-                        format_basedon_ancestor(ancestor_attr, prefix="")
-                        print_meaning_badge(text)
-
-                if elm.attrib["class"] == "sub-content-thread":
-                    sub_content_thread(elm, ancestor_attr)
-            
-        if child_attr == "sub-content-thread":
-            sub_content_thread(child, ancestor_attr)  # example under the meaning
     print()
             
 
@@ -468,24 +470,31 @@ def sense(node, attr, parent_attr, ancestor_attr):
 
     elms = sense_content.getchildren()
     for elm in elms:
-        elm_attr = elm.attrib["class"]
-        if "badge" in elm_attr:
-            text = "".join(list(elm.itertext())).strip()
-            print_meaning_badge(text)
+        elm_attr = elm.get("class")
+        if elm_attr is not None:
+            if "badge" in elm_attr:
+                text = "".join(list(elm.itertext())).strip()
+                print_meaning_badge(text)
 
-        if elm_attr == "dt " or elm_attr == "dt hasSdSense" or elm_attr == "sdsense":
-            dt(elm, attr, elm_attr)
+            if elm_attr == "dt " or elm_attr == "dt hasSdSense" or elm_attr == "sdsense":
+                dt(elm, attr, elm_attr)
 
-        if elm_attr == "et":
-            texts = list(elm.itertext())
-            for index, text in enumerate(texts):
-                if index == 0:
-                    text = text.replace("\n", "")
-                    print_meaning_content(text, end="")
-                elif index == len(texts) - 1:
-                    print_meaning_content(text, end=" ")
+            if elm_attr == "et":
+                texts = list(elm.itertext())
+                for index, text in enumerate(texts):
+                    if index == 0:
+                        text = text.replace("\n", "")
+                        print(text, end="")  # print_meaning_content not work, not print anything
+                    elif index == len(texts) - 1 and index != 0:
+                        print_meaning_content(text, end=" ")
+                    else:
+                        print_meaning_content(text, end="")
+        else:
+            for i in elm.iterchildren():
+                if i.get("class") == "vl":
+                    print_meaning_badge(i.text.strip())                
                 else:
-                    print_meaning_content(text, end="")
+                    print_meaning_content(i.text, end=" ")
 
 
 def sb_entry(node, parent_attr):
@@ -667,12 +676,12 @@ def dictionary_entry(node):
 # --- print abstractions --- #
 ##############################
 
-def print_meaning_badge(text):
-    console.print(f"[{webster_color.italic} {webster_color.meaning_badge}]{text}", end=" ")
+def print_meaning_badge(text, end=" "):
+    console.print(f"[{webster_color.italic} {webster_color.meaning_badge}]{text}", end=end)
 
 
 def print_meaning_content(text, end=""):
-    console.print(f"[{webster_color.meaning_content}]{text}", end = end)
+    console.print(f"[{webster_color.meaning_content}]{text}", end=end)
 
 
 def format_basedon_ancestor(ancestor_attr, prefix="", suffix=""):

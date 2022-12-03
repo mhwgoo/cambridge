@@ -418,7 +418,9 @@ def dt(node, ancestor_attr, self_attr):
                     if elm.attrib["class"] == "unText":
                         text = "".join(list(elm.itertext())).strip()
                         if "mdash" in elm.getprevious().attrib["class"]:
-                            print_meaning_badge(text)
+                            if child.getprevious().get("class") == "sub-content-thread": # see "beat"
+                                format_basedon_ancestor(ancestor_attr, prefix="")
+                            print_meaning_badge("->" + text)
                         else:
                             format_basedon_ancestor(ancestor_attr, prefix="")
                             print_meaning_badge(text)
@@ -429,6 +431,18 @@ def dt(node, ancestor_attr, self_attr):
 
     print()
             
+
+def et(node):
+    texts = list(node.itertext())
+    for index, text in enumerate(texts):
+        if index == 0:
+            text = text.replace("\n", "")
+            print(text, end="")  # print_meaning_content not work, not print anything
+        elif index == len(texts) - 1 and index != 0:
+            print_meaning_content(text, end=" ")
+        else:
+            print_meaning_content(text, end="")
+
 
 def sense(node, attr, parent_attr, ancestor_attr):
     children = node.getchildren()
@@ -448,7 +462,7 @@ def sense(node, attr, parent_attr, ancestor_attr):
         sense_content = children[1]  # class "sense-content w-100"
 
     # meaing with only "b" or "1" + "a" + "(1)", or "1" + "a"
-    if attr == "sense has-sn": 
+    if attr == "sense has-sn" or attr == "sen has-sn": 
         sn = children[0].getchildren()[0].text
 
         if ("has-subnum" in ancestor_attr and "sb-0" in parent_attr) or ("no-sn letter-only" in ancestor_attr):
@@ -461,39 +475,43 @@ def sense(node, attr, parent_attr, ancestor_attr):
     # meaning with only (2)   
     if attr == "sense has-num-only has-subnum-only":
         console.print(f"    ", end = "")
-        sense_content = children[1]  # class "sense-content w-100"
+        sense_content = children[1]
 
     # meaning with only number
     if attr == "sense has-sn has-num-only":
-        sense_content = children[1]  # class "sense-content w-100"
+        sense_content = children[1]
 
-    elms = sense_content.getchildren()
-    for elm in elms:
-        elm_attr = elm.get("class")
-        if elm_attr is not None:
-            if "badge" in elm_attr:
-                text = "".join(list(elm.itertext())).strip()
-                print_meaning_badge(text)
+    sense_content_attr = sense_content.get("class")
+    if "sl badge mw-badge" in sense_content_attr:  # see "buck"
+        print_meaning_badge(sense_content.text, end="\n")
+    
+    else: # "sense-content w-100" 
+        elms = sense_content.getchildren()
+        for elm in elms:
+            elm_attr = elm.get("class")
+            if elm_attr is not None:
+                if "badge" in elm_attr:
+                    text = "".join(list(elm.itertext())).strip()
+                    print_meaning_badge(text)
 
-            if elm_attr == "dt " or elm_attr == "dt hasSdSense" or elm_attr == "sdsense":
-                dt(elm, attr, elm_attr)
+                if elm_attr == "dt " or elm_attr == "dt hasSdSense" or elm_attr == "sdsense":
+                    dt(elm, attr, elm_attr)
 
-            if elm_attr == "et":
-                texts = list(elm.itertext())
-                for index, text in enumerate(texts):
-                    if index == 0:
-                        text = text.replace("\n", "")
-                        print(text, end="")  # print_meaning_content not work, not print anything
-                    elif index == len(texts) - 1 and index != 0:
-                        print_meaning_content(text, end=" ")
+                if elm_attr == "et":
+                    et(elm)
+
+                if elm_attr == "il ":
+                    print_meaning_badge(elm.text.strip(), end=" ")
+            
+                if elm_attr == "if":
+                    print_meaning_content(elm.text.strip(), end=" ")
+
+            else:
+                for i in elm.iterchildren():
+                    if i.get("class") == "vl":
+                        print_meaning_badge(i.text.strip())                
                     else:
-                        print_meaning_content(text, end="")
-        else:
-            for i in elm.iterchildren():
-                if i.get("class") == "vl":
-                    print_meaning_badge(i.text.strip())                
-                else:
-                    print_meaning_content(i.text, end=" ")
+                        print_meaning_content(i.text, end=" ")
 
 
 def sb_entry(node, parent_attr):
@@ -522,8 +540,13 @@ def vg_sseq_entry_item(node):
         # print meaning content
         if "ms-lg-4 ms-3 w-100" in attr:
             for c in child.iterchildren():
-                if c.getchildren()[0].attrib["class"] == "sen has-num-only":
-                    print_meaning_badge(c.getchildren()[0][1].text)
+                cc = c.getchildren()
+                if cc[0].get("class") == "sen has-num-only":
+                    ccc = cc[0][1]
+                    if "sl badge mw-badge" in ccc.get("class"):
+                        print_meaning_badge(ccc.text)
+                    if ccc.get("class") == "et":
+                        et(ccc)
                     print()
                     continue
                     

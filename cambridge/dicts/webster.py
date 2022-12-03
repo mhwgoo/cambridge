@@ -418,7 +418,7 @@ def dt(node, ancestor_attr, self_attr):
                     if elm.attrib["class"] == "unText":
                         text = "".join(list(elm.itertext())).strip()
                         if "mdash" in elm.getprevious().attrib["class"]:
-                            if child.getprevious().get("class") == "sub-content-thread": # see "beat"
+                            if child.getprevious() is not None and child.getprevious().get("class") == "sub-content-thread": # see "beat"
                                 format_basedon_ancestor(ancestor_attr, prefix="")
                             print_meaning_badge("->" + text)
                         else:
@@ -502,9 +502,9 @@ def sense(node, attr, parent_attr, ancestor_attr):
 
                 if elm_attr == "il ":
                     print_meaning_badge(elm.text.strip(), end=" ")
-            
+                
                 if elm_attr == "if":
-                    print_meaning_content(elm.text.strip(), end=" ")
+                    console.print(f"[{webster_color.wt}]{elm.text}", end=" ")
 
             else:
                 for i in elm.iterchildren():
@@ -542,11 +542,16 @@ def vg_sseq_entry_item(node):
             for c in child.iterchildren():
                 cc = c.getchildren()
                 if cc[0].get("class") == "sen has-num-only":
-                    ccc = cc[0][1]
-                    if "sl badge mw-badge" in ccc.get("class"):
-                        print_meaning_badge(ccc.text)
-                    if ccc.get("class") == "et":
-                        et(ccc)
+                    ccc = cc[0]
+                    for i in ccc.iterchildren():
+                        i_attr = i.get("class")
+                        if i_attr is not None:
+                            if ("badge mw-badge" in i_attr) or ("il" in i_attr):
+                                print_meaning_badge(i.text.strip())
+                            if "if" in i_attr:
+                                console.print(f"[{webster_color.wt}]{i.text}", end=" ")
+                            if i_attr == "et":
+                                et(i)
                     print()
                     continue
                     
@@ -633,18 +638,36 @@ def row_headword_row_header_ins(node):
 
     children = node.getchildren()[0].getchildren()[0]
     for child in children:
-        attr = child.attrib["class"]
-        if attr == "il  il-badge badge mw-badge-gray-100":
-            console.print(f"[{webster_color.bold} {webster_color.italic} {webster_color.wt}]{child.text.strip()}", end=" ")
-        elif attr == "prt-a":
-            print_pron(child, end="")
-        elif attr == "il ":
-            print_or_badge(child.text)
-        else:
-            console.print(f"[{webster_color.wt}]{child.text}", end="")
+        attr = child.get("class")
+        if attr is not None:
+            if attr == "il  il-badge badge mw-badge-gray-100":
+                console.print(f"[{webster_color.bold} {webster_color.italic} {webster_color.wt}]{child.text.strip()}", end=" ")
+            elif attr == "prt-a":
+                print_pron(child, end="")
+            elif attr == "il ":
+                print_or_badge(child.text)
+            else:
+                console.print(f"[{webster_color.wt}]{child.text}", end="")
 
     print()
 
+
+# --- parse class "row headword-row header-vrs" --- #
+def row_headword_row_header_vrs(node):
+    """Print word variants. e.g. premise variants or less commonly premiss"""
+
+    children = node.getchildren()[0].getchildren()[0]
+    for child in children.iterdescendants():
+        attr = child.get("class")
+        if attr is not None:
+            if "badge mw-badge" in attr:
+                console.print(f"[{webster_color.bold} {webster_color.italic} {webster_color.wt}]{child.text.strip()}", end=" ")
+            elif attr == "il " or attr == "vl":
+                print_or_badge(child.text)
+            else:
+                console.print(f"[{webster_color.wt}]{child.text}", end="")
+
+    print()
 
 # --- parse class "dxnls" --- #
 def see_also(node):
@@ -675,6 +698,9 @@ def dictionary_entry(node):
 
                 if elm.attrib["class"] == "row headword-row header-ins":
                     row_headword_row_header_ins(elm) 
+
+                if elm.attrib["class"] == "row headword-row header-vrs":
+                    row_headword_row_header_vrs(elm) 
 
                 if elm.attrib["class"] == "vg":
                     vg(elm)

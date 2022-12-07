@@ -20,6 +20,7 @@ sub_text = ""
 res_word = ""
 word_entries = []
 
+# TODO: bling
 
 # ----------Request Web Resouce----------
 def search_webster(con, cur, input_word, is_fresh=False):

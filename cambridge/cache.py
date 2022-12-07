@@ -28,6 +28,7 @@ def create_table(con, cur):
 
 
 def insert_into_table(con, cur, input_word, response_word, url, text):
+    response_word = response_word.lower()
     cur.execute(
         "INSERT INTO words (input_word, response_word, created_at, response_url, response_text) VALUES (?, ?, ?, ?, ?)",
         (input_word, response_word, current_datetime, url, text),

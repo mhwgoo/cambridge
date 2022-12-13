@@ -20,7 +20,7 @@ sub_text = ""
 res_word = ""
 word_entries = []
 
-# TODO: give someone up, bling, gravity, entrench, honeybun, wildcard, [on the toes, step on the toes, knock on the door] - api
+# TODO: entry, give someone up, bling, gravity, entrench, honeybun, wildcard, [on the toes, step on the toes, knock on the door] - api
 
 # ----------Request Web Resouce----------
 def search_webster(con, cur, input_word, is_fresh=False):

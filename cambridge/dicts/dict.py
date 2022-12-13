@@ -26,6 +26,8 @@ def fetch(url, session):
     while True:
         try:
             r = session.get(url, timeout=9.05)
+            # Only when calling raise_for_status, will requests raise HTTPError if any. See: https://blog.csdn.net/Odaokai/article/details/100133503
+            r.raise_for_status()
         except requests.exceptions.HTTPError as e:
             attempt = call_on_error(e, url, attempt, OP[2])
             continue
@@ -111,20 +113,20 @@ def print_spellcheck(con, cur, input_word, suggestions, dict, is_ch=False):
             console.print("[blue] %s" % sug)
         else:
             console.print("[yellow] %s" % sug)
-   
-    console.print("\nEnter the [bold]NUMBER[/bold] above to [u]look up[/u] the word suggestion || [bold]LOWER-CASE LETTER T[/bold] to [u]toggle[/u] dictionary || [bold]ANY OTHER KEY[/bold] to [u]exit[/u]:")
+
+    console.print("\nEnter [bold][NUMBER][/bold] above to [u]look up[/u] the word suggestion, press [bold][ENTER][/bold] to [u]toggle[/u] dictionary, or [bold][ANY OTHER KEY][/bold] to [u]exit[/u]:")
 
     key = input("You typed: ")
     print()
 
     if key.isnumeric() and (1 <= int(key) <= len(suggestions)):
         if dict == DICTS[1]:
-            webster.search_webster(con, cur, suggestions[int(key) - 1])        
+            webster.search_webster(con, cur, suggestions[int(key) - 1])
         if dict == DICTS[0]:
-            cambridge.search_cambridge(con, cur, suggestions[int(key) - 1], False, is_ch)
-    elif key == "t":
+           cambridge.search_cambridge(con, cur, suggestions[int(key) - 1], False, is_ch)
+    elif key == "":
         if dict == DICTS[0]:
-            webster.search_webster(con, cur, input_word)        
+            webster.search_webster(con, cur, input_word)
         if dict == DICTS[1]:
             cambridge.search_cambridge(con, cur, input_word, False, is_ch)
     else:

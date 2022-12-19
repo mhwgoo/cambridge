@@ -20,7 +20,7 @@ sub_text = ""
 res_word = ""
 word_entries = []
 
-# TODO: entry, give someone up, bling, gravity, entrench, honeybun, wildcard, [on the toes, step on the toes, knock on the door] - api
+# TODO: rolling, entry, give someone up, bling, gravity, entrench, honeybun, wildcard, [on the toes, step on the toes, knock on the door] - api
 
 # ----------Request Web Resouce----------
 def search_webster(con, cur, input_word, is_fresh=False):
@@ -475,7 +475,7 @@ def sense(node, attr, parent_attr, ancestor_attr):
 
     # meaning with only (2)   
     if attr == "sense has-num-only has-subnum-only":
-        console.print(f"    ", end = "")
+        console.print("    ", end = "")
         sense_content = children[1]
 
     # meaning with only number
@@ -736,13 +736,13 @@ def print_meaning_content(text, end=""):
 def format_basedon_ancestor(ancestor_attr, prefix="", suffix=""):
     console.print(prefix, end="")
     if ancestor_attr == "sense has-sn has-num-only":
-        console.print(f"  ", end=suffix)
+        console.print("  ", end=suffix)
     if ancestor_attr == "sense has-sn has-num" or ancestor_attr == "sense has-sn":
-        console.print(f"    ", end=suffix)
+        console.print("    ", end=suffix)
     if ancestor_attr == "sense  no-subnum":
-        console.print(f"", end=suffix)
+        console.print("", end=suffix)
     if ancestor_attr == "sense has-num-only has-subnum-only":
-        console.print(f"    ", end=suffix)
+        console.print("    ", end=suffix)
 
 def print_pron(node, end=""):
     pron = list(node.itertext())[1].strip()

@@ -1,11 +1,8 @@
 """Parse and print cambridge dictionary."""
 
-import sys
 import requests
 import threading
-import sqlite3
 
-from ..cache import insert_into_table
 from ..console import console
 from ..errors import ParsedNoneError, call_on_error
 from ..settings import OP, DICTS
@@ -218,14 +215,15 @@ def parse_head_pron(head):
     if w_pron_uk:
         w_pron_uk = replace_all(w_pron_uk.text)
     # In bs4, not found element returns None, not raise error
-    w_pron_us = head.find("span", "us dpron-i").find("span", "pron dpron")
-    if w_pron_us:
-        w_pron_us = replace_all(w_pron_us.text)
-        console.print(
-            "[bold]UK [/bold]" + w_pron_uk + "[bold] US [/bold]" + w_pron_us, end="  "
-        )
-    else:
-        console.print("[bold]UK [/bold]" + w_pron_uk, end="  ")
+    if head.find("span", "us dpron-i"):
+        w_pron_us = head.find("span", "us dpron-i").find("span", "pron dpron")
+        if w_pron_us:
+            w_pron_us = replace_all(w_pron_us.text)
+            console.print(
+                "[bold]UK [/bold]" + w_pron_uk + "[bold] US [/bold]" + w_pron_us, end="  "
+            )
+        else:
+            console.print("[bold]UK [/bold]" + w_pron_uk, end="  ")
 
 
 def parse_head_tense(head):

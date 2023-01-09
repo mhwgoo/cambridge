@@ -20,7 +20,7 @@ sub_text = ""
 res_word = ""
 word_entries = []
 
-# TODO: rolling, entry, give someone up, bling, gravity, entrench, honeybun, wildcard, [on the toes, step on the toes, knock on the door] - api
+# TODO: flavor, rolling, entry, give someone up, bling, gravity, entrench, honeybun, wildcard, [on the toes, step on the toes, knock on the door] - api
 
 # ----------Request Web Resouce----------
 def search_webster(con, cur, input_word, is_fresh=False):
@@ -252,7 +252,7 @@ def examples(node, words):
                             console.print(f"[{webster_color.eg_sentence}]{t}", end="")
                         else:
                             if t.strip().lower() in words:
-                                console.print(f"[{webster_color.eg_word} {webster_color.italic}]{t}", end="")
+                                console.print(f"[{webster_color.eg_word}]{t}", end="")
                             else:
                                 console.print(f"[{webster_color.eg_sentence}]{t}", end="")
                     else:

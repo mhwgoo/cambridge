@@ -31,7 +31,7 @@ tran = "#0074CC"
 meaning_num = "#4A7D95"
 meaning_letter = "#4A7D95"
 meaning_link = "#0074CC"
-meaning_content = "#F4F4F4"
+meaning_content = "#005577"
 meaning_badge = badge
 meaning_sentence = "#757575"
 

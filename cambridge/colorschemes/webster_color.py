@@ -31,9 +31,9 @@ tran = "#0074CC"
 meaning_num = "#4A7D95"
 meaning_letter = "#4A7D95"
 meaning_link = "#0074CC"
-meaning_content = "#005577"
+meaning_content = "#FFFFFF"
 meaning_badge = badge
-meaning_sentence = "#757575"
+meaning_sentence = "#b2b2b2"
 
 # --- see also --- #
 sa_title = "#FFFFFF"
@@ -60,7 +60,7 @@ syn_label = "#0F3850"
 # examples on the web 
 #####################
 eg_title = "yellow"
-eg_sentence = "#757575"
+eg_sentence = "#b2b2b2"
 eg_word = "yellow"
 
 

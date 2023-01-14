@@ -25,12 +25,12 @@ wf = "#FFFFFF"
 wf_type = "#4A7D95"
 
 # --- transitive / intransitive --- #
-tran = "#0074CC"
+tran = "#4A7D95"
 
 # --- one meaning of one entry --- #
 meaning_num = "#4A7D95"
 meaning_letter = "#4A7D95"
-meaning_link = "#0074CC"
+meaning_link = "#4A7D95"
 meaning_content = "#FFFFFF"
 meaning_badge = badge
 meaning_sentence = "#b2b2b2"
@@ -51,7 +51,7 @@ ph_item = "#FFFFFF"
 # synonyms 
 #####################
 syn_title = "yellow"
-syn_item = "#0074CC"
+syn_item = "#4A7D95"
 syn_em = "yellow"
 syn_label = "#0F3850"
 
@@ -68,7 +68,7 @@ eg_word = "yellow"
 # related phrases 
 #####################
 rph_title = "yellow"
-rph_item = "#0074CC"
+rph_item = "#4A7D95"
 
 
 #####################
@@ -77,7 +77,7 @@ rph_item = "#0074CC"
 nearby_title = "yellow"
 nearby_em = "yellow"
 nearby_word = "#757575"
-nearby_item = "#0074CC"
+nearby_item = "#4A7D95"
 
 
 #####################

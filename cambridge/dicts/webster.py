@@ -730,7 +730,7 @@ def print_meaning_badge(text, end=" "):
 
 
 def print_meaning_content(text, end=""):
-    console.print(f"[{webster_color.bold} {webster_color.meaning_content}]{text}", end=end)
+    console.print(f"[{webster_color.meaning_content}]{text}", end=end)
 
 def format_basedon_ancestor(ancestor_attr, prefix="", suffix=""):
     console.print(prefix, end="")

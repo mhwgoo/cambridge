@@ -21,7 +21,7 @@ eh_pron = "#4A7D95"
 wt = "#525A5B"
 
 # --- other word forms --- #
-wf = "#FFFFFF"
+wf = "#4A7D95"
 wf_type = "#4A7D95"
 
 # --- transitive / intransitive --- #
@@ -31,12 +31,12 @@ tran = "#4A7D95"
 meaning_num = "#4A7D95"
 meaning_letter = "#4A7D95"
 meaning_link = "#4A7D95"
-meaning_content = "#FFFFFF"
+meaning_content = "#4A7D95"
 meaning_badge = badge
 meaning_sentence = "#b2b2b2"
 
 # --- see also --- #
-sa_title = "#FFFFFF"
+sa_title = "#4A7D95"
 sa_content = "#4A7D95"
 
 
@@ -44,7 +44,7 @@ sa_content = "#4A7D95"
 # phrases 
 #####################
 ph_title = "yellow"
-ph_item = "#FFFFFF"
+ph_item = "#4A7D95"
 
 
 #####################

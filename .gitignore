@@ -4,3 +4,4 @@ cambridge/colorschemes/__pycache__/*
 dist/
 ideas/
 cambridge/.idea
+venv

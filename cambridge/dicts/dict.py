@@ -115,7 +115,7 @@ def print_spellcheck(con, cur, input_word, suggestions, dict, is_ch=False):
         else:
             console.print("[yellow] %s" % sug)
 
-    console.print("\nEnter [bold][NUMBER][/bold] above to [u]look up[/u] the word suggestion, press [bold][ENTER][/bold] to [u]toggle[/u] dictionary, or [bold][ANY OTHER KEY][/bold] to [u]exit[/u]:")
+    console.print("\nEnter [bold][NUMBER][/bold] above to look up the word suggestion, press [bold][ENTER][/bold] to toggle dictionary, or [bold][ANY OTHER KEY][/bold] to exit:")
 
     key = input("You typed: ")
     print()

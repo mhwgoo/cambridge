@@ -33,7 +33,7 @@ meaning_letter = "#4A7D95"
 meaning_link = "#4A7D95"
 meaning_content = "#4A7D95"
 meaning_badge = badge
-meaning_sentence = "#b2b2b2"
+meaning_sentence = "#757575"
 
 # --- see also --- #
 sa_title = "#4A7D95"
@@ -60,7 +60,7 @@ syn_label = "#0F3850"
 # examples on the web 
 #####################
 eg_title = "yellow"
-eg_sentence = "#b2b2b2"
+eg_sentence = "#757575"
 eg_word = "yellow"
 
 

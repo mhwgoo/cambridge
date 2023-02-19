@@ -348,7 +348,7 @@ def parse_meaning(def_block):
     meaning_lan = def_block.find("span", "trans dtrans dtrans-se break-cj")
     if meaning_lan:
         meaning_lan_words = meaning_lan.text
-        print("\033[93m" + meaning_lan_words + "\033[0m")
+        print(meaning_lan_words)
 
 
 def parse_pmeaning(def_block):
@@ -366,7 +366,7 @@ def parse_pmeaning(def_block):
     meaning_lan = def_block.find("span", "trans dtrans dtrans-se break-cj")
     if meaning_lan:
         meaning_lan_words = meaning_lan.text
-        print("  " + "\033[93m" + meaning_lan_words + "\033[0m")
+        print("  " + meaning_lan_words)
 
 
 def parse_example(def_block):
@@ -392,12 +392,12 @@ def parse_example(def_block):
             if e.find("span", "lab dlab"):
                 lab = replace_all(e.find("span", "lab dlab").text)
                 console.print(
-                    "[#b2b2b2]"
+                    "[#757575]"
                     + "  • "
-                    + "[/#b2b2b2]"
+                    + "[/#757575]"
                     + lab
                     + " "
-                    + "[#b2b2b2]"
+                    + "[#757575]"
                     + example
                     + " "
                     + example_lan_sent
@@ -405,12 +405,12 @@ def parse_example(def_block):
             elif e.find("span", "gram dgram"):
                 gram = replace_all(e.find("span", "gram dgram").text)
                 console.print(
-                    "[#b2b2b2]"
+                    "[#757575]"
                     + "  • "
-                    + "[/#b2b2b2]"
+                    + "[/#757575]"
                     + gram
                     + " "
-                    + "[#b2b2b2]"
+                    + "[#757575]"
                     + example
                     + " "
                     + exmaple_lan_sent
@@ -418,18 +418,18 @@ def parse_example(def_block):
             elif e.find("span", "lu dlu"):
                 lu = replace_all(e.find("span", "lu dlu").text)
                 console.print(
-                    "[#b2b2b2]"
+                    "[#757575]"
                     + "  • "
-                    + "[/#b2b2b2]"
+                    + "[/#757575]"
                     + lu
                     + " "
-                    + "[#b2b2b2]"
+                    + "[#757575]"
                     + example
                     + " "
                     + example_lan_sent
                 )
             else:
-                console.print("[#b2b2b2]" + "  • " + example + " " + example_lan_sent)
+                console.print("[#757575]" + "  • " + example + " " + example_lan_sent)
 
 
 def parse_synonym(def_block):
@@ -438,12 +438,12 @@ def parse_synonym(def_block):
     if def_block.find("div", "xref synonyms hax dxref-w lmt-25"):
         s_block = def_block.find("div", "xref synonyms hax dxref-w lmt-25")
     s_title = s_block.strong.text.upper()
-    console.print("[bold #b2b2b2]" + "\n  " + s_title)
+    console.print("[bold #757575]" + "\n  " + s_title)
     for s in s_block.find_all(
         "div", ["item lc lc1 lpb-10 lpr-10", "item lc lc1 lc-xs6-12 lpb-10 lpr-10"]
     ):
         s = s.text
-        console.print("[#b2b2b2]" + "  • " + s)
+        console.print("[#757575]" + "  • " + s)
 
 
 def parse_see_also(def_block):
@@ -452,10 +452,10 @@ def parse_see_also(def_block):
     if def_block.find("div", "xref see_also hax dxref-w lmt-25"):
         see_also_block = def_block.find("div", "xref see_also hax dxref-w lmt-25")
     see_also = see_also_block.strong.text.upper()
-    console.print("[bold #b2b2b2]" + "\n  " + see_also)
+    console.print("[bold #757575]" + "\n  " + see_also)
     for word in see_also_block.find_all("div", "item lc lc1 lpb-10 lpr-10"):
         word = word.text
-        console.print("[#b2b2b2]" + "  • " + word)
+        console.print("[#757575]" + "  • " + word)
 
 
 def parse_compare(def_block):
@@ -464,7 +464,7 @@ def parse_compare(def_block):
     if def_block.find("div", "xref compare hax dxref-w"):
         compare_block = def_block.find("div", "xref compare hax dxref-w")
     compare = compare_block.strong.text.upper()
-    console.print("[bold #b2b2b2]" + "\n  " + compare)
+    console.print("[bold #757575]" + "\n  " + compare)
     for word in compare_block.find_all(
         "div", ["item lc lc1 lpb-10 lpr-10", "item lc lc1 lc-xs6-12 lpb-10 lpr-10"]
     ):
@@ -472,18 +472,18 @@ def parse_compare(def_block):
         usage = word.find("span", "x-lab dx-lab")
         if usage:
             usage = usage.text
-            console.print("[#b2b2b2]" + "  • " + item + "[/#b2b2b2]" + usage)
+            console.print("[#757575]" + "  • " + item + "[/#757575]" + usage)
         else:
-            console.print("[#b2b2b2]" + "  • " + item)
+            console.print("[#757575]" + "  • " + item)
 
 
 def parse_usage_note(def_block):
     usage_block = def_block.find("div", "usagenote dusagenote daccord")
     usagenote = usage_block.h5.text
-    console.print("[bold #b2b2b2]" + "\n  " + usagenote)
+    console.print("[bold #757575]" + "\n  " + usagenote)
     for item in usage_block.find_all("li", "text"):
         item = item.text
-        console.print("[#b2b2b2]" + "    " + item)
+        console.print("[#757575]" + "    " + item)
 
 
 def parse_def(def_block):
@@ -516,7 +516,7 @@ def parse_idiom(block):
     if block.find("div", "xref idioms hax dxref-w lmt-25 lmb-25"):
         idiom_block = block.find("div", "xref idioms hax dxref-w lmt-25 lmb-25")
     idiom_title = idiom_block.h3.text.upper()
-    console.print("[bold #b2b2b2]" + "\n" + idiom_title)
+    console.print("[bold #757575]" + "\n" + idiom_title)
     for idiom in idiom_block.find_all(
         "div",
         [
@@ -525,7 +525,7 @@ def parse_idiom(block):
         ],
     ):
         idiom = idiom.text
-        console.print("[#b2b2b2]" + "  • " + idiom)
+        console.print("[#757575]" + "  • " + idiom)
 
 
 def parse_phrasal_verb(block):
@@ -534,13 +534,13 @@ def parse_phrasal_verb(block):
     if block.find("div", "xref phrasal_verb hax dxref-w lmt-25 lmb-25"):
         pv_block = block.find("div", "xref phrasal_verb hax dxref-w lmt-25 lmb-25")
     pv_title = pv_block.h3.text.upper()
-    console.print("[bold #b2b2b2]" + "\n" + pv_title)
+    console.print("[bold #757575]" + "\n" + pv_title)
     for pv in pv_block.find_all(
         "div",
         ["item lc lc1 lc-xs6-12 lpb-10 lpr-10", "item lc lc1 lpb-10 lpr-10"],
     ):
         pv = pv.text
-        console.print("[#b2b2b2]" + "  • " + pv)
+        console.print("[#757575]" + "  • " + pv)
 
 
 def parse_dict_body(block):

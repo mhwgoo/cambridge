@@ -339,10 +339,10 @@ def parse_meaning(def_block):
         usage_b = meaning_b.find("span", "lab dlab")
         usage = replace_all(usage_b.text)
         meaning_words = replace_all(meaning_b.text).split(usage)[-1]
-        print(usage + "\033[33m" + meaning_words + "\033[0m")
+        print(usage + "\033[33;1m" + meaning_words + "\033[0m")
     else:
         meaning_words = replace_all(meaning_b.text)
-        print("\033[33m" + meaning_words + "\033[0m")
+        print("\033[33;1m" + meaning_words + "\033[0m")
 
     # Print the meaning's specific language translation if any
     meaning_lan = def_block.find("span", "trans dtrans dtrans-se break-cj")
@@ -357,10 +357,10 @@ def parse_pmeaning(def_block):
         usage_b = meaning_b.find("span", "lab dlab")
         usage = replace_all(usage_b.text)
         meaning_words = replace_all(meaning_b.text).split(usage)[-1]
-        print("  " + usage + "\033[33m" + meaning_words + "\033[0m")
+        print("  " + usage + "\033[33;1m" + meaning_words + "\033[0m")
     else:
         meaning_words = replace_all(meaning_b.text)
-        print("  " + "\033[33m" + meaning_words + "\033[0m")
+        print("  " + "\033[33;1m" + meaning_words + "\033[0m")
 
     # Print the meaning's specific language translation if any
     meaning_lan = def_block.find("span", "trans dtrans dtrans-se break-cj")

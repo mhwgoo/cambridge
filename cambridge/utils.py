@@ -33,6 +33,8 @@ def replace_all(string):
         .replace("B2", "")
         .replace("C1", "")
         .replace("C2", "")
+        .replace("[", "")
+        .replace("]", "")
         .strip()
     )
 

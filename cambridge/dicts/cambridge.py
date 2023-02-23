@@ -220,10 +220,10 @@ def parse_head_pron(head):
         if w_pron_us:
             w_pron_us = replace_all(w_pron_us.text)
             console.print(
-                "[bold]UK [/bold]" + w_pron_uk + "[bold] US [/bold]" + w_pron_us, end="  "
+                "UK " + w_pron_uk + " US " + w_pron_us, end="  "
             )
         else:
-            console.print("[bold]UK [/bold]" + w_pron_uk, end="  ")
+            console.print("UK " + w_pron_uk, end="  ")
 
 
 def parse_head_tense(head):
@@ -316,7 +316,7 @@ def parse_ptitle(block):
     if block.find("span", "phrase-info dphrase-info"):
         phrase_info = replace_all(
             block.find("span", "phrase-info dphrase-info").text
-        ).strip("[").strip("]")
+        )
         print(f"\n\033[1m  {p_title}\33[0m {phrase_info}")
     else:
         print(f"\n\033[1m  {p_title}\033[0m")

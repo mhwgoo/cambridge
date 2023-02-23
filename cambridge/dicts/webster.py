@@ -505,7 +505,7 @@ def sense(node, attr, parent_attr, ancestor_attr):
                     print_meaning_badge(elm.text.strip(), end=" ")
                 
                 if elm_attr == "if":
-                    console.print(f"[{webster_color.wt}]{elm.text}", end=" ")
+                    console.print(f"{elm.text}", end=" ")
 
             else:
                 for i in elm.iterchildren():
@@ -550,7 +550,7 @@ def vg_sseq_entry_item(node):
                             if ("badge mw-badge" in i_attr) or ("il" in i_attr):
                                 print_meaning_badge(i.text.strip())
                             if "if" in i_attr:
-                                console.print(f"[{webster_color.wt}]{i.text}", end=" ")
+                                console.print(f"{i.text}", end=" ")
                             if i_attr == "et":
                                 et(i)
                     print()
@@ -642,13 +642,13 @@ def row_headword_row_header_ins(node):
         attr = child.get("class")
         if attr is not None:
             if attr == "il  il-badge badge mw-badge-gray-100":
-                console.print(f"[{webster_color.bold} {webster_color.italic} {webster_color.wt}]{child.text.strip()}", end=" ")
+                console.print(f"[{webster_color.bold} {webster_color.italic}]{child.text.strip()}", end=" ")
             elif attr == "prt-a":
                 print_pron(child, end="")
             elif attr == "il ":
                 print_or_badge(child.text)
             else:
-                console.print(f"[{webster_color.wt}]{child.text}", end="")
+                console.print(f"{child.text}", end="")
 
     print()
 
@@ -662,11 +662,11 @@ def row_headword_row_header_vrs(node):
         attr = child.get("class")
         if attr is not None:
             if "badge mw-badge" in attr:
-                console.print(f"[{webster_color.bold} {webster_color.italic} {webster_color.wt}]{child.text.strip()}", end=" ")
+                console.print(f"[{webster_color.bold} {webster_color.italic}]{child.text.strip()}", end=" ")
             elif attr == "il " or attr == "vl":
                 print_or_badge(child.text)
             else:
-                console.print(f"[{webster_color.wt}]{child.text}", end="")
+                console.print(f"{child.text}", end="")
 
     print()
 

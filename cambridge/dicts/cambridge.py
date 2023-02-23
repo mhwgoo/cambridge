@@ -228,12 +228,12 @@ def parse_head_pron(head):
 
 def parse_head_tense(head):
     w_tense = replace_all(head.find("span", "irreg-infls dinfls").text)
-    console.print("[bold]" + w_tense, end="  ")
+    console.print(w_tense, end="  ")
 
 
 def parse_head_domain(head):
     domain = replace_all(head.find("span", "domain ddomain").text)
-    console.print("[bold]" + domain, end="  ")
+    console.print(domain, end="  ")
 
 
 def parse_head_usage(head):
@@ -255,16 +255,16 @@ def parse_head_usage(head):
 def parse_head_var(head):
     if head.find("span", "var dvar"):
         w_var = replace_all(head.find("span", "var dvar").text)
-        console.print("[bold]" + w_var, end="  ")
+        console.print(w_var, end="  ")
     if head.find_next_sibling("span", "var dvar"):
         w_var = replace_all(head.find_next_sibling("span", "var dvar").text)
-        console.print("[bold]" + w_var, end="  ")
+        console.print(w_var, end="  ")
 
 
 def parse_head_spellvar(head):
     for i in head.find_all("span", "spellvar dspellvar"):
         spell_var = replace_all(i.text)
-        console.print("[bold]" + spell_var, end="  ")
+        console.print(spell_var, end="  ")
 
 
 def parse_dict_head(block):
@@ -281,7 +281,7 @@ def parse_dict_head(block):
             word = parse_head_title(head)
         if w_type:
             console.print(
-                f"\n[bold #3C8DAD on #DDDDDD]{word}[/bold #3C8DAD on #DDDDDD]  [bold]{w_type}[/bold] {usage}"
+                f"\n[bold #0A1B27 on #F4f4f4]{word}[/bold #0A1B27 on #F4f4f4]  {w_type} {usage}"
             )
         if head.find("span", "uk dpron-i"):
             if head.find("span", "uk dpron-i").find("span", "pron dpron"):
@@ -300,24 +300,24 @@ def parse_dict_head(block):
 
         print()
     else:
-        console.print("[bold #3C8DAD on #DDDDDD]" + word)
+        console.print("[bold #0A1B27 on #F4F4F4]" + word)
         if info:
-            console.print(f"[bold]{info[0]}[/bold] {info[1]}")
+            console.print(f"{info[0]} {info[1]}")
 
 
 # ----------Parse Dict Body----------
 def parse_def_title(block):
     d_title = replace_all(block.find("h3", "dsense_h").text)
-    console.print("[bold #3C8DAD]" + "\n" + d_title)
+    console.print("[#87D5A2]" + "\n" + d_title)
 
 
 def parse_ptitle(block):
     p_title = block.find("span", "phrase-title dphrase-title").text
     if block.find("span", "phrase-info dphrase-info"):
-        phrase_info = "  - " + replace_all(
+        phrase_info = replace_all(
             block.find("span", "phrase-info dphrase-info").text
-        )
-        print(f"\n\033[1m  {p_title} {phrase_info}\033[0m")
+        ).strip("[").strip("]")
+        print(f"\n\033[1m  {p_title}\33[0m {phrase_info}")
     else:
         print(f"\n\033[1m  {p_title}\033[0m")
 
@@ -339,10 +339,10 @@ def parse_meaning(def_block):
         usage_b = meaning_b.find("span", "lab dlab")
         usage = replace_all(usage_b.text)
         meaning_words = replace_all(meaning_b.text).split(usage)[-1]
-        print(usage + "\033[33;1m" + meaning_words + "\033[0m")
+        print(usage + "\033[94m" + meaning_words + "\033[0m")
     else:
         meaning_words = replace_all(meaning_b.text)
-        print("\033[33;1m" + meaning_words + "\033[0m")
+        print("\033[94m" + meaning_words + "\033[0m")
 
     # Print the meaning's specific language translation if any
     meaning_lan = def_block.find("span", "trans dtrans dtrans-se break-cj")
@@ -357,10 +357,10 @@ def parse_pmeaning(def_block):
         usage_b = meaning_b.find("span", "lab dlab")
         usage = replace_all(usage_b.text)
         meaning_words = replace_all(meaning_b.text).split(usage)[-1]
-        print("  " + usage + "\033[33;1m" + meaning_words + "\033[0m")
+        print("  " + usage + "\033[94m" + meaning_words + "\033[0m")
     else:
         meaning_words = replace_all(meaning_b.text)
-        print("  " + "\033[33;1m" + meaning_words + "\033[0m")
+        print("  " + "\033[94m" + meaning_words + "\033[0m")
 
     # Print the meaning's specific language translation if any
     meaning_lan = def_block.find("span", "trans dtrans dtrans-se break-cj")

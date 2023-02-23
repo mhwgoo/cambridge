@@ -572,7 +572,7 @@ def vg(node):
         # print transitive or intransitive
         if child.attrib["class"] == "vd firstVd" or child.attrib["class"] == "vd":
             e = child.getchildren()[0]
-            console.print(f"[{webster_color.tran}]{e.text}")
+            console.print(f"[{webster_color.bold}]{e.text}")
 
 
 # --- parse class "row entry-header" --- #

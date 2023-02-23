@@ -18,15 +18,14 @@ eh_word_syllables = "#757575" # UNUSED
 eh_pron = "#4A7D95" # UNUSED
 
 # --- verb tenses, noun plurals, adjective comparative forms --- #
-# UNUSED
-wt = "#525A5B"  
+wt = "#525A5B" # UNUSED  
 
 # --- other word forms --- #
 wf = "#4A7D95"
 wf_type = "#4A7D95"
 
 # --- transitive / intransitive --- #
-tran = "yellow"
+tran = "yellow" # UNUSED
 
 # --- one meaning of one entry --- #
 meaning_num = "#757575"

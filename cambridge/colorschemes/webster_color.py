@@ -28,8 +28,8 @@ wf_type = "#4A7D95"
 tran = "#4A7D95"
 
 # --- one meaning of one entry --- #
-meaning_num = "#4A7D95"
-meaning_letter = "#4A7D95"
+meaning_num = "#757575"
+meaning_letter = "#757575"
 meaning_link = "#4A7D95"
 meaning_content = "#4A7D95"
 meaning_badge = badge
@@ -51,7 +51,7 @@ ph_item = "#4A7D95"
 # synonyms 
 #####################
 syn_title = "#87D5A2"
-syn_item = "#4A7D95"
+syn_item = "#757575"
 syn_em = "#87D5A2"
 syn_label = "#0F3850"
 

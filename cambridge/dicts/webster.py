@@ -603,7 +603,7 @@ def entry_attr(node):
             for i in elm.iterchildren():
                 if i.tag == "span" and i.attrib["class"] == "word-syllables-entry":
                     syllables = i.text
-                    console.print(f"[{webster_color.eh_word_syllables}]{syllables}", end=" ")
+                    console.print(f"{syllables}", end=" ")
 
                 if i.tag == "span" and "prons-entries-list-inline" in i.attrib["class"]:
                     print_pron(i, end="\n")
@@ -745,7 +745,7 @@ def format_basedon_ancestor(ancestor_attr, prefix="", suffix=""):
 
 def print_pron(node, end=""):
     pron = list(node.itertext())[1].strip()
-    console.print(f"[{webster_color.eh_pron}]|{pron}|", end=end)
+    console.print(f"|{pron}|", end=end)
 
 
 def print_or_badge(text):

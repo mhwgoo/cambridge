@@ -104,16 +104,16 @@ def print_spellcheck(con, cur, input_word, suggestions, dict, is_ch=False):
     """Parse and print spellcheck info."""
 
     if dict == DICTS[1]:
-        console.print("[red bold]" + input_word.upper() + "[/red bold]" + " you've entered isn't in the " + "[blue]" + dict + "[/blue]" + " dictionary.\n")
+        console.print("[red bold]" + input_word.upper() + "[/red bold]" + " you've entered isn't in the " + "[#4A7D95]" + dict + "[/#4A7D95]" + " dictionary.\n")
     else:
-        console.print("[red bold]" + input_word.upper() + "[/red bold]" + " you've entered isn't in the " + "[yellow]" + dict + "[/yellow]" + " dictionary.\n")
+        console.print("[red bold]" + input_word.upper() + "[/red bold]" + " you've entered isn't in the " + "[#3AB0FF]" + dict + "[/#3AB0FF]" + " dictionary.\n")
 
     for count, sug in enumerate(suggestions):
         console.print("[bold]%2d" % (count+1), end="")
         if dict == DICTS[1]:
-            console.print("[blue] %s" % sug)
+            console.print("[#4A7D95] %s" % sug)
         else:
-            console.print("[yellow] %s" % sug)
+            console.print("[#3AB0FF] %s" % sug)
 
     console.print("\nEnter [bold][NUMBER][/bold] above to look up the word suggestion, press [bold][ENTER][/bold] to toggle dictionary, or [bold][ANY OTHER KEY][/bold] to exit:")
 

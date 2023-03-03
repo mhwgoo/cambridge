@@ -22,7 +22,8 @@ CAMBRIDGE_SPELLCHECK_URL = CAMBRIDGE_URL + "/spellcheck/english/?q="
 
 CAMBRIDGE_DICT_BASE_URL_CN = CAMBRIDGE_URL + "/dictionary/english-chinese-simplified/"
 CAMBRIDGE_SPELLCHECK_URL_CN = CAMBRIDGE_URL + "/spellcheck/english-chinese-simplified/?q="
-# CAMBRIDGE_DICT_BASE_URL_CN_TRADITIONAL = "https://dictionary.cambridge.org/dictionary/english-chinese-traditional/"
+# CAMBRIDGE_DICT_BASE_URL_CN = "https://dictionary.cambridge.org/dictionary/english-chinese-traditional/"
+# CAMBRIDGE_SPELLCHECK_URL_CN = CAMBRIDGE_URL + "/spellcheck/english-chinese-traditional/?q="
 
 # ----------Request Web Resource----------
 def search_cambridge(con, cur, input_word, is_fresh=False, is_ch=False):
@@ -94,9 +95,11 @@ def fresh_run(con, cur, req_url, input_word, is_ch):
         suggestions = []
 
         for ul in nodes.find_all("ul", "hul-u"):
-            for i in ul.find_all("li"):
-                sug = replace_all(i.text)
-                suggestions.append(sug)
+            
+            if "We have these words with similar spellings or pronunciations:" in ul.find_previous_sibling().text:
+                for i in ul.find_all("li"):
+                    sug = replace_all(i.text)
+                    suggestions.append(sug)
 
         logger.debug(f"{OP[4]} the parsed result of {spell_res_url}")
         dict.print_spellcheck(con, cur, input_word, suggestions, DICTS[0], is_ch)

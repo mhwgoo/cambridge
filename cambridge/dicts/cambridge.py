@@ -22,8 +22,9 @@ CAMBRIDGE_SPELLCHECK_URL = CAMBRIDGE_URL + "/spellcheck/english/?q="
 
 CAMBRIDGE_DICT_BASE_URL_CN = CAMBRIDGE_URL + "/dictionary/english-chinese-simplified/"
 CAMBRIDGE_SPELLCHECK_URL_CN = CAMBRIDGE_URL + "/spellcheck/english-chinese-simplified/?q="
-# CAMBRIDGE_DICT_BASE_URL_CN = "https://dictionary.cambridge.org/dictionary/english-chinese-traditional/"
-# CAMBRIDGE_SPELLCHECK_URL_CN = CAMBRIDGE_URL + "/spellcheck/english-chinese-traditional/?q="
+# CAMBRIDGE_DICT_BASE_URL_CN_TRADITIONAL = "https://dictionary.cambridge.org/dictionary/english-chinese-traditional/"
+# CAMBRIDGE_SPELLCHECK_URL_CN_TRADITIONAL = CAMBRIDGE_URL + "/spellcheck/english-chinese-traditional/?q="
+
 
 # ----------Request Web Resource----------
 def search_cambridge(con, cur, input_word, is_fresh=False, is_ch=False):

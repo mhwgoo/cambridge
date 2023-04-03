@@ -1,5 +1,5 @@
-requests==2.28.1
-lxml==4.9.1
-fake_user_agent==2.1.8
-beautifulsoup4==4.11.1
-rich==13.3.1
+requests
+lxml
+fake_user_agent
+beautifulsoup4
+rich

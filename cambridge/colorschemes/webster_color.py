@@ -9,7 +9,7 @@ badge = "red"
 #####################
 
 # --- entry-header-content --- #
-eh_h1_word = "#87D5A2"
+eh_h1_word = "#2E8B57"
 eh_fg_entry_num = "#0A1B27"
 eh_bg_entry_num = "#F4F4F4"
 eh_entry_num = "{} on {}".format(eh_fg_entry_num, eh_bg_entry_num)
@@ -43,39 +43,39 @@ sa_content = "#4A7D95"
 #####################
 # phrases 
 #####################
-ph_title = "#87D5A2"
+ph_title = "#2E8B57"
 ph_item = "#4A7D95"
 
 
 #####################
 # synonyms 
 #####################
-syn_title = "#87D5A2"
+syn_title = "#2E8B57"
 syn_item = "#757575"
-syn_em = "#87D5A2"
+syn_em = "#2E8B57"
 syn_label = "#0F3850"
 
 
 #####################
 # examples on the web 
 #####################
-eg_title = "#87D5A2"
+eg_title = "#2E8B57"
 eg_sentence = "#757575"
-eg_word = "#87D5A2"
+eg_word = "#2E8B57"
 
 
 #####################
 # related phrases 
 #####################
-rph_title = "#87D5A2"
+rph_title = "#2E8B57"
 rph_item = "#4A7D95"
 
 
 #####################
 # nearby entries 
 #####################
-nearby_title = "#87D5A2"
-nearby_em = "#87D5A2"
+nearby_title = "#2E8B57"
+nearby_em = "#2E8B57"
 nearby_word = "#757575"
 nearby_item = "#4A7D95"
 

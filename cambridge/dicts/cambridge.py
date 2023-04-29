@@ -312,7 +312,7 @@ def parse_dict_head(block):
 # ----------Parse Dict Body----------
 def parse_def_title(block):
     d_title = replace_all(block.find("h3", "dsense_h").text)
-    console.print("[#87D5A2]" + "\n" + d_title)
+    console.print("[#2E8B57]" + "\n" + d_title)
 
 
 def parse_ptitle(block):
@@ -343,10 +343,10 @@ def parse_meaning(def_block):
         usage_b = meaning_b.find("span", "lab dlab")
         usage = replace_all(usage_b.text)
         meaning_words = replace_all(meaning_b.text).split(usage)[-1]
-        print(usage + "\033[94m" + meaning_words + "\033[0m")
+        print(usage + "\033[34m" + meaning_words + "\033[0m")
     else:
         meaning_words = replace_all(meaning_b.text)
-        print("\033[94m" + meaning_words + "\033[0m")
+        print("\033[34m" + meaning_words + "\033[0m")
 
     # Print the meaning's specific language translation if any
     meaning_lan = def_block.find("span", "trans dtrans dtrans-se break-cj")
@@ -361,10 +361,10 @@ def parse_pmeaning(def_block):
         usage_b = meaning_b.find("span", "lab dlab")
         usage = replace_all(usage_b.text)
         meaning_words = replace_all(meaning_b.text).split(usage)[-1]
-        print("  " + usage + "\033[94m" + meaning_words + "\033[0m")
+        print("  " + usage + "\033[34m" + meaning_words + "\033[0m")
     else:
         meaning_words = replace_all(meaning_b.text)
-        print("  " + "\033[94m" + meaning_words + "\033[0m")
+        print("  " + "\033[34m" + meaning_words + "\033[0m")
 
     # Print the meaning's specific language translation if any
     meaning_lan = def_block.find("span", "trans dtrans dtrans-se break-cj")

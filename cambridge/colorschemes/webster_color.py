@@ -1,7 +1,7 @@
 bold = "bold"
 italic = "italic"
 accessory = "#4A7D95"
-badge = "red"
+badge = "#00ff00"
 
 
 #####################
@@ -36,8 +36,8 @@ meaning_badge = badge
 meaning_sentence = "#757575"
 
 # --- see also --- #
-sa_title = "#4A7D95"
-sa_content = "#4A7D95"
+sa_title = "#2E8B57" #UNUSED
+sa_content = "#757575"
 
 
 #####################

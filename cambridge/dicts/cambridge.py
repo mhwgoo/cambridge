@@ -2,9 +2,9 @@
 
 import requests
 import threading
-
+import sys
 from ..console import console
-from ..errors import ParsedNoneError, call_on_error
+from ..errors import ParsedNoneError, NoResultError, call_on_error
 from ..settings import OP, DICTS
 from ..log import logger
 from ..utils import (
@@ -24,8 +24,6 @@ CAMBRIDGE_DICT_BASE_URL_CN = CAMBRIDGE_URL + "/dictionary/english-chinese-simpli
 CAMBRIDGE_SPELLCHECK_URL_CN = CAMBRIDGE_URL + "/spellcheck/english-chinese-simplified/?q="
 # CAMBRIDGE_DICT_BASE_URL_CN_TRADITIONAL = "https://dictionary.cambridge.org/dictionary/english-chinese-traditional/"
 # CAMBRIDGE_SPELLCHECK_URL_CN_TRADITIONAL = CAMBRIDGE_URL + "/spellcheck/english-chinese-traditional/?q="
-
-# FIXME: There is something wrong with locating the first dictionary, e.g. https://dictionary.cambridge.org/dictionary/english/pull-out
 
 # ----------Request Web Resource----------
 def search_cambridge(con, cur, input_word, is_fresh=False, is_ch=False):
@@ -117,27 +115,22 @@ def parse_and_print(first_dict, res_url):
     attempt = 0
     while True:
         try:
-            result = first_dict.find(
-                "div", ["pr entry-body__el", "entry-body__el clrd js-share-holder"]
+            blocks = first_dict.find_all(
+                "div", ["pr entry-body__el", "entry-body__el clrd js-share-holder", "pr idiom-block"]
             )
         except AttributeError as e:
             attempt = call_on_error(e, res_url, attempt, OP[3])
             continue
         else:
-            if result:
-                blocks = first_dict.find_all(
-                    "div", ["pr entry-body__el", "entry-body__el clrd js-share-holder"]
-                )
-                break
+            if blocks:
+                for block in blocks:
+                    parse_dict_head(block)
+                    parse_dict_body(block)
+                    parse_dict_name(first_dict)
+                return
             else:
-                blocks = first_dict.find_all("div", "pr idiom-block")
-                break
-
-    for block in blocks:
-        parse_dict_head(block)
-        parse_dict_body(block)
-    parse_dict_name(first_dict)
-
+                logger.error(NoResultError())
+                sys.exit()           
 
 def parse_first_dict(res_url, soup):
     """Parse the dict section of the page for the word."""

@@ -21,7 +21,6 @@ res_word = ""
 word_entries = []
 
 # TODO: oneself, take, up front, blowup, time on, flavor, rolling, entry, give someone up, bling, gravity, entrench, honeybun, wildcard, [on the toes, step on the toes, knock on the door] - api
-# FIXME: web example, not exact word highlight, but include the word original form
 
 # ----------Request Web Resouce----------
 def search_webster(con, cur, input_word, is_fresh=False):
@@ -252,7 +251,13 @@ def examples(node, words):
                             console.print(f"\n[{webster_color.accessory} {webster_color.bold}]|", end="")
                             console.print(f"[{webster_color.eg_sentence}]{t}", end="")
                         else:
-                            if t.strip().lower() in words:
+                            hit = False
+                            for w in words:
+                                if w in t.strip().lower():
+                                    hit = True
+                                    break
+
+                            if hit:
                                 console.print(f"[{webster_color.eg_word}]{t}", end="")
                             else:
                                 console.print(f"[{webster_color.eg_sentence}]{t}", end="")
@@ -681,10 +686,13 @@ def see_also(node):
         if not text:
             continue
         if text == "see also":
-            console.print(f"[{webster_color.bold} {webster_color.sa_title}]{text}", end = " ")
+            console.print(f"\n[{webster_color.bold}]{text}", end = "\n")
+        elif text == ",":
+            console.print(f"[{webster_color.sa_content}]{text}", end = " ")
         else:
-            console.print(f"[{webster_color.sa_content}]{text}")
+            console.print(f"[{webster_color.sa_content}]{text}", end = "")
 
+    print()
 
 # --- parse class "dictionary-entry-[number]" --- #
 def dictionary_entry(node):

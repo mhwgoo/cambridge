@@ -95,7 +95,6 @@ def fresh_run(con, cur, req_url, input_word, is_ch):
         suggestions = []
 
         for ul in nodes.find_all("ul", "hul-u"):
-            
             if "We have these words with similar spellings or pronunciations:" in ul.find_previous_sibling().text:
                 for i in ul.find_all("li"):
                     sug = replace_all(i.text)
@@ -130,7 +129,7 @@ def parse_and_print(first_dict, res_url):
                 return
             else:
                 logger.error(NoResultError())
-                sys.exit()           
+                sys.exit()
 
 def parse_first_dict(res_url, soup):
     """Parse the dict section of the page for the word."""
@@ -237,7 +236,7 @@ def parse_head_domain(head):
 def parse_head_usage(head):
     head_usage = head.find("span", "lab dlab")
 
-    # NOTE: <span class = "var dvar"> </span>, attrs["class"] returns a list 
+    # NOTE: <span class = "var dvar"> </span>, attrs["class"] returns a list
     if head_usage is not None and head_usage.parent.attrs["class"] != ["var", "dvar"]:
         w_usage = replace_all(head_usage.text)
         return w_usage
@@ -450,10 +449,16 @@ def parse_see_also(def_block):
     if def_block.find("div", "xref see_also hax dxref-w lmt-25"):
         see_also_block = def_block.find("div", "xref see_also hax dxref-w lmt-25")
     see_also = see_also_block.strong.text.upper()
-    console.print("[bold #757575]" + "\n  " + see_also)
-    for word in see_also_block.find_all("div", "item lc lc1 lpb-10 lpr-10"):
-        word = word.text
-        console.print("[#757575]" + "  • " + word)
+    console.print("[bold]" + "\n  " + see_also)
+    items = see_also_block.find_all("span", "x-h dx-h")
+    for item in items:
+        console.print("[#757575]  " + item.text, end = " ")
+
+    modifiers = see_also_block.find_all("span", "x-pos dx-pos")
+    for mod in modifiers:
+        console.print(mod.text, end = " ")
+
+    print()
 
 
 def parse_compare(def_block):
@@ -526,6 +531,14 @@ def parse_idiom(block):
         console.print("[#757575]" + "  • " + idiom)
 
 
+def parse_sole_idiom(block):
+    idiom_sole_meaning = block.find("div", "def ddef_d db")
+    if idiom_sole_meaning is not None:
+        print("\033[34m" + idiom_sole_meaning.text + "\033[0m")
+    parse_example(block)
+    parse_see_also(block)
+
+
 def parse_phrasal_verb(block):
     if block.find("div", "xref phrasal_verbs hax dxref-w lmt-25 lmb-25"):
         pv_block = block.find("div", "xref phrasal_verbs hax dxref-w lmt-25 lmb-25")
@@ -581,6 +594,10 @@ def parse_dict_body(block):
         ],
     ):
         parse_phrasal_verb(block)
+
+    if block.find("div", "idiom-block"):
+        idiom_sole_block = block.find("div", "idiom-block")
+        parse_sole_idiom(idiom_sole_block)
 
 
 # ----------Parse Dict Name----------

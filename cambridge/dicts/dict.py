@@ -90,11 +90,11 @@ def save(con, cur, input_word, response_word, response_url, response_text):
         insert_into_table(con, cur, input_word, response_word, response_url, response_text)
     except sqlite3.IntegrityError as error:
         if "UNIQUE constraint" in str(error):
-            logger.debug(f'{OP[8]} caching "{input_word}" - [ERROR] - already cached before\n')
+            logger.debug(f'{OP[8]} caching "{input_word}", because it has been already cached before\n')
         else:
-            logger.debug(f'{OP[8]} caching "{input_word}" - [ERROR] - {error}\n')
+            logger.debug(f'{OP[8]} caching "{input_word}" - {error}\n')
     except sqlite3.InterfaceError as error:
-        logger.debug(f'{OP[8]} caching "{input_word}" - [ERROR] - {error}\n')
+        logger.debug(f'{OP[8]} caching "{input_word}" - {error}\n')
 
     else:
         logger.debug(f'{OP[7]} the search result of "{input_word}"')

@@ -1,7 +1,7 @@
 bold = "bold"
 italic = "italic"
 accessory = "#4A7D95"
-badge = "#00ff00"
+badge = "#b22222"
 
 
 #####################

@@ -446,14 +446,15 @@ def parse_synonym(def_block):
 def parse_see_also(def_block):
     if def_block.find("div", "xref see_also hax dxref-w"):
         see_also_block = def_block.find("div", "xref see_also hax dxref-w")
-    if def_block.find("div", "xref see_also hax dxref-w lmt-25"):
+    elif def_block.find("div", "xref see_also hax dxref-w lmt-25"):
         see_also_block = def_block.find("div", "xref see_also hax dxref-w lmt-25")
+    else:
+        return
     see_also = see_also_block.strong.text.upper()
     console.print("[bold]" + "\n  " + see_also)
     items = see_also_block.find_all("span", "x-h dx-h")
     for item in items:
         console.print("[#757575]  " + item.text, end = " ")
-
     modifiers = see_also_block.find_all("span", "x-pos dx-pos")
     for mod in modifiers:
         console.print(mod.text, end = " ")
@@ -555,27 +556,35 @@ def parse_phrasal_verb(block):
 
 
 def parse_dict_body(block):
-    for subblock in block.find_all("div", ["pr dsense", "pr dsense dsense-noh"]):
-        if subblock.find("h3", "dsense_h"):
-            parse_def_title(subblock)
+    subblocks = block.find_all("div", ["pr dsense", "pr dsense dsense-noh"])
 
-        for child in subblock.find("div", "sense-body dsense_b").children:
-            try:
-                if child.attrs["class"] == ["def-block", "ddef_block"]:
-                    parse_def(child)
+    if subblocks:
+        for subblock in subblocks:
+            if subblock.find("h3", "dsense_h"):
+                parse_def_title(subblock)
 
-                if child.attrs["class"] == [
-                    "pr",
-                    "phrase-block",
-                    "dphrase-block",
-                    "lmb-25",
-                ] or child.attrs["class"] == ["pr", "phrase-block", "dphrase-block"]:
-                    parse_ptitle(child)
+            for child in subblock.find("div", "sense-body dsense_b").children:
+                try:
+                    if child.attrs["class"] == ["def-block", "ddef_block"]:
+                        parse_def(child)
 
-                    for i in child.find_all("div", "def-block ddef_block"):
-                        parse_def(i)
-            except Exception:
-                pass
+                    if child.attrs["class"] == [
+                        "pr",
+                        "phrase-block",
+                        "dphrase-block",
+                        "lmb-25",
+                    ] or child.attrs["class"] == ["pr", "phrase-block", "dphrase-block"]:
+                        parse_ptitle(child)
+
+                        for i in child.find_all("div", "def-block ddef_block"):
+                            parse_def(i)
+                except Exception:
+                    pass
+ 
+    else:
+        if block.find("div", "idiom-block"):
+            idiom_sole_block = block.find("div", "idiom-block")
+            parse_sole_idiom(idiom_sole_block)
 
     if block.find(
         "div",
@@ -594,10 +603,6 @@ def parse_dict_body(block):
         ],
     ):
         parse_phrasal_verb(block)
-
-    if block.find("div", "idiom-block"):
-        idiom_sole_block = block.find("div", "idiom-block")
-        parse_sole_idiom(idiom_sole_block)
 
 
 # ----------Parse Dict Name----------

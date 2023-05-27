@@ -18,10 +18,12 @@ WEBSTER_DICT_BASE_URL = WEBSTER_BASE_URL + "/dictionary/"
 
 sub_text = ""
 res_word = ""
-word_entries = []
+word_entries = []  # A page may have multiple word entries, e.g. "give away", "giveaway"
+word_forms = [] # A word may have multiple word forms, e.g. "ran", "running", "run", "flies"
 
 # TODO: up front, blowup, time on, flavor, rolling, entry, give someone up, bling, gravity, entrench, honeybun, wildcard, [on the toes, step on the toes, knock on the door] - api
 # TODO: update README
+# TODO: examples on the web, catch different tenses, e.g. bring on
 
 # ----------Request Web Resouce----------
 def search_webster(con, cur, input_word, is_fresh=False):
@@ -230,7 +232,7 @@ def synonyms(node):
 # NOTE: 
 # Wester scrapes the web for examples in the way that it only finds the exact match of the word.
 # If the word is a verb, only gets the word without tenses; if the word is a noun, only its single form.
-def examples(node, words):
+def examples(node):
     """Print recent examples on the web."""
 
     print()
@@ -253,8 +255,16 @@ def examples(node, words):
                             console.print(f"[{webster_color.eg_sentence}]{t}", end="")
                         else:
                             hit = False
+                            global word_entries, word_forms
+                            words = set(word_entries)
+                            forms = set(word_forms)
+                            text = t.strip().lower()
                             for w in words:
-                                if w in t.strip().lower():
+                                if w in text:
+                                    hit = True
+                                    break
+                            for f in forms:
+                                if f == text:
                                     hit = True
                                     break
 
@@ -299,7 +309,7 @@ def phrases(node):
 # parse and print related phrases 
 ###########################################
 
-def related_phrases(node, words):
+def related_phrases(node):
     """Print related phrases."""
 
     print("\n")
@@ -308,6 +318,9 @@ def related_phrases(node, words):
 
     title = children[1]
     texts = list(title.itertext())
+    global word_entries
+    words = set(word_entries)
+    
     for t in texts:
         if t.strip():
             if t.lower() in words:
@@ -656,6 +669,9 @@ def row_headword_row_header_ins(node):
                 print_or_badge(child.text)
             else:
                 console.print(f"{child.text}", end="")
+                if attr == "if":
+                    global word_forms
+                    word_forms.append(child.text)
 
     print()
 
@@ -771,9 +787,6 @@ def parse_and_print(nodes, res_url):
 
     logger.debug(f"{OP[4]} the parsed result of {res_url}")
 
-    # A page may have multiple word forms, e.g. "give away", "giveaway"
-    global word_entries
-
     for node in nodes:
         try:
             attr = node.attrib["id"]
@@ -793,10 +806,10 @@ def parse_and_print(nodes, res_url):
             synonyms(node)
 
         if attr == "on-web read-more-content-hint-container":
-            examples(node, word_entries)
+            examples(node)
 
         if attr == "related-phrases":
-            related_phrases(node, word_entries)
+            related_phrases(node)
 
     dict_name = "The Merriam-Webster Dictionary"
     console.print(f"[{webster_color.dict_name}]{dict_name}", justify="right")

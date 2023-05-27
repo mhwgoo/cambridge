@@ -305,7 +305,7 @@ def parse_dict_head(block):
 # ----------Parse Dict Body----------
 def parse_def_title(block):
     d_title = replace_all(block.find("h3", "dsense_h").text)
-    console.print("[#2E8B57]" + "\n" + d_title)
+    console.print("[yellow]" + "\n" + d_title)
 
 
 def parse_ptitle(block):

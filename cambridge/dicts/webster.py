@@ -21,9 +21,8 @@ res_word = ""
 word_entries = []  # A page may have multiple word entries, e.g. "give away", "giveaway"
 word_forms = [] # A word may have multiple word forms, e.g. "ran", "running", "run", "flies"
 
-# TODO: up front, blowup, time on, flavor, rolling, entry, give someone up, bling, gravity, entrench, honeybun, wildcard, [on the toes, step on the toes, knock on the door] - api
+# TODO: up front, blowup, time on, flavor, rolling, entry, give someone up, bling, gravity, entrench, honeybun, wildcard, [on the toes, step on the toes, knock on the door]
 # TODO: update README
-# TODO: examples on the web, catch different tenses, e.g. bring on
 
 # ----------Request Web Resouce----------
 def search_webster(con, cur, input_word, is_fresh=False):

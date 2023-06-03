@@ -408,10 +408,12 @@ def sub_content_thread(node, ancestor_attr):
             ex_sent(child, ancestor_attr)
 
         if "vis" in attr:
-            elm = child.getchildren()[0].getchildren()[0]
-            elm_attr = elm.attrib["class"]
-            if ("ex-sent" in elm_attr) and ("aq has-aq" not in elm_attr):
-                ex_sent(elm, ancestor_attr)
+            elms = child.getchildren()
+            for e in elms:
+                elm = e.getchildren()[0]
+                elm_attr = elm.attrib["class"]
+                if ("ex-sent" in elm_attr) and ("aq has-aq" not in elm_attr):
+                    ex_sent(elm, ancestor_attr)
             
 
 def dt(node, ancestor_attr, self_attr):

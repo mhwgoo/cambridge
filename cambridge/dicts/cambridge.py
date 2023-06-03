@@ -410,7 +410,7 @@ def parse_example(def_block):
                     + "[#757575]"
                     + example
                     + " "
-                    + exmaple_lan_sent
+                    + example_lan_sent
                 )
             elif e.find("span", "lu dlu"):
                 lu = replace_all(e.find("span", "lu dlu").text)

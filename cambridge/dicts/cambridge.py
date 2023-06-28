@@ -125,7 +125,7 @@ def parse_and_print(first_dict, res_url):
                 for block in blocks:
                     parse_dict_head(block)
                     parse_dict_body(block)
-                    parse_dict_name(first_dict)
+                parse_dict_name(first_dict)
                 return
             else:
                 logger.error(NoResultError())

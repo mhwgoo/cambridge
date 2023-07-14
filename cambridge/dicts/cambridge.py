@@ -25,6 +25,9 @@ CAMBRIDGE_SPELLCHECK_URL_CN = CAMBRIDGE_URL + "/spellcheck/english-chinese-simpl
 # CAMBRIDGE_DICT_BASE_URL_CN_TRADITIONAL = "https://dictionary.cambridge.org/dictionary/english-chinese-traditional/"
 # CAMBRIDGE_SPELLCHECK_URL_CN_TRADITIONAL = CAMBRIDGE_URL + "/spellcheck/english-chinese-traditional/?q="
 
+#TODO: stir see also
+
+
 # ----------Request Web Resource----------
 def search_cambridge(con, cur, input_word, is_fresh=False, is_ch=False):
     if is_ch:
@@ -305,7 +308,7 @@ def parse_dict_head(block):
 # ----------Parse Dict Body----------
 def parse_def_title(block):
     d_title = replace_all(block.find("h3", "dsense_h").text)
-    console.print("[yellow]" + "\n" + d_title)
+    console.print("[#ff8c00]" + "\n" + d_title)
 
 
 def parse_ptitle(block):

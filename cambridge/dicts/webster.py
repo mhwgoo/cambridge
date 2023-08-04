@@ -21,7 +21,7 @@ res_word = ""
 word_entries = []  # A page may have multiple word entries, e.g. "give away", "giveaway"
 word_forms = [] # A word may have multiple word forms, e.g. "ran", "running", "run", "flies"
 
-# TODO: run(with 2 digit item list), up front, blowup, time on, flavor, rolling, entry, give someone up, bling, gravity, entrench, honeybun, wildcard, [on the toes, step on the toes, knock on the door]
+# TODO: green noun 3a, jitter(sense 1), run(with 2 digit item list), up front, blowup, time on, flavor, rolling, entry, give someone up, bling, gravity, entrench, honeybun, wildcard, [on the toes, step on the toes, knock on the door]
 # TODO: update README
 
 # ----------Request Web Resouce----------

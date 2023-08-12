@@ -25,7 +25,7 @@ CAMBRIDGE_SPELLCHECK_URL_CN = CAMBRIDGE_URL + "/spellcheck/english-chinese-simpl
 # CAMBRIDGE_DICT_BASE_URL_CN_TRADITIONAL = "https://dictionary.cambridge.org/dictionary/english-chinese-traditional/"
 # CAMBRIDGE_SPELLCHECK_URL_CN_TRADITIONAL = CAMBRIDGE_URL + "/spellcheck/english-chinese-traditional/?q="
 
-#TODO: stir/hold see also, carry last list
+#TODO: stir/hold/upfront(chinese) see also, carry last list
 
 
 # ----------Request Web Resource----------

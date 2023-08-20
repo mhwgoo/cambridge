@@ -25,7 +25,7 @@ word_forms = [] # A word may have multiple word forms, e.g. "ran", "running", "r
 # TODO: update README
 
 # ----------Request Web Resouce----------
-def search_webster(con, cur, input_word, is_fresh=False):
+def search_webster(con, cur, input_word, is_fresh=False, no_suggestions=False):
     """
     Entry point for dealing with Mirriam Webster Dictionary.
     It first checks the cache, if the word has been cached,
@@ -39,9 +39,9 @@ def search_webster(con, cur, input_word, is_fresh=False):
     if not is_fresh:
         cached = dict.cache_run(con, cur, input_word, req_url, DICTS[1])
         if not cached:
-            fresh_run(con, cur, req_url, input_word)
+            fresh_run(con, cur, req_url, input_word, no_suggestions)
     else:
-        fresh_run(con, cur, req_url, input_word)
+        fresh_run(con, cur, req_url, input_word, no_suggestions)
 
 
 def fetch_webster(request_url, input_word):
@@ -72,7 +72,7 @@ def fetch_webster(request_url, input_word):
             return False, (res_url, res_text)
 
 
-def fresh_run(con, cur, req_url, input_word):
+def fresh_run(con, cur, req_url, input_word, no_suggestions=False):
     """Print the result without cache."""
 
     result = fetch_webster(req_url, input_word)
@@ -88,21 +88,23 @@ def fresh_run(con, cur, req_url, input_word):
 
         dict.save(con, cur, input_word, res_word, res_url, sub_text)
 
-    else:
-        logger.debug(f"{OP[4]} the parsed result of {res_url}")
-
-        suggestions = []
-        for node in nodes:
-            if node.tag != "h1":
-                for word in node.itertext():
-                    w = word.strip()
-                    if w.startswith("The"):
-                        continue
-                    else:
-                        sug = w.strip()
-                        suggestions.append(sug)
-        
-        dict.print_spellcheck(con, cur, input_word, suggestions, DICTS[1])
+    else:        
+        if no_suggestions:
+            sys.exit()
+        else:
+            logger.debug(f"{OP[4]} the parsed result of {res_url}")
+            suggestions = []
+            for node in nodes:
+                if node.tag != "h1":
+                    for word in node.itertext():
+                        w = word.strip()
+                        if w.startswith("The"):
+                            continue
+                        else:
+                            sug = w.strip()
+                            suggestions.append(sug)
+                        
+            dict.print_spellcheck(con, cur, input_word, suggestions, DICTS[1])
 
 
 def parse_dict(res_text, found, res_url, is_fresh):

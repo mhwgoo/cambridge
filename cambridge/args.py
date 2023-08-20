@@ -15,7 +15,6 @@ from .settings import OP, DICTS
 from .dicts import webster, cambridge
 from .console import console, table
 
-# TODO NOT FOUND "value,apple" in cache
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Terminal Version of Cambridge Dictionary by default. Also supports Merriam-Webster Dictionary."
@@ -38,7 +37,7 @@ def parse_args():
         "-d",
         "--delete",
         nargs="+",
-        help="delete a word/phrase or multiple words/phrases(seperated by ',') from cache",
+        help="delete a word/phrase or multiple words/phrases(seperated by ', ') from cache",
     )
 
     # Add an optional argument for l command
@@ -102,6 +101,14 @@ def parse_args():
         help="look up a word/phrase in Cambridge Dictionary with Chinese translation",
     )
 
+    # Add an optional argument for s command
+    parser_sw.add_argument(
+        "-n",
+        "--nosuggestions",
+        action="store_true",
+        help="look up a word/phrase and show spelling suggestions if not found",
+    )
+
     if len(sys.argv) == 1:
         parser.print_help()
         console.print("[blue]\nCommand l")
@@ -132,7 +139,7 @@ def parse_args():
 def delete(word, con, cur):
     deleted, data = delete_word(con, cur, word)
 
-    if deleted:
+    if deleted and data is not None:
         if "cambridge" in data[1]:
             print(f'{OP[9]} "{word}" from {DICTS[0]} in cache successfully')
         else:
@@ -221,7 +228,7 @@ def search_word(args, con, cur):
     First checks the args having "verbose" in it or not, if so, the debug mode will be turned on.
     Then it checks which dictionary is intended, and then calls respective dictionary function.
     """
-
+    print(args)
     if args.verbose:
         logging.getLogger(__package__).setLevel(logging.DEBUG)
 
@@ -232,12 +239,13 @@ def search_word(args, con, cur):
     is_webster = args.webster
     is_fresh = args.fresh
     is_ch = args.chinese
-
+    no_suggestions = args.nosuggestions
+    
     if is_webster and is_ch:
         print("Webster Dictionary doesn't support English to other language. Try again without -c(--chinese) option")
         sys.exit()
 
     if is_webster:
-        webster.search_webster(con, cur, input_word, is_fresh)
+        webster.search_webster(con, cur, input_word, is_fresh, no_suggestions)
     else:
-        cambridge.search_cambridge(con, cur, input_word, is_fresh, is_ch)
+        cambridge.search_cambridge(con, cur, input_word, is_fresh, is_ch, no_suggestions)

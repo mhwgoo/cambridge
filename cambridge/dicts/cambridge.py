@@ -29,7 +29,7 @@ CAMBRIDGE_SPELLCHECK_URL_CN = CAMBRIDGE_URL + "/spellcheck/english-chinese-simpl
 
 
 # ----------Request Web Resource----------
-def search_cambridge(con, cur, input_word, is_fresh=False, is_ch=False):
+def search_cambridge(con, cur, input_word, is_fresh=False, is_ch=False, no_suggestions=False):
     if is_ch:
         req_url = get_request_url(CAMBRIDGE_DICT_BASE_URL_CN, input_word, DICTS[0])
     else:
@@ -38,9 +38,9 @@ def search_cambridge(con, cur, input_word, is_fresh=False, is_ch=False):
     if not is_fresh:
         cached = dict.cache_run(con, cur, input_word, req_url, DICTS[0])
         if not cached:
-            fresh_run(con, cur, req_url, input_word, is_ch)
+            fresh_run(con, cur, req_url, input_word, is_ch, no_suggestions)
     else:
-        fresh_run(con, cur, req_url, input_word, is_ch)
+        fresh_run(con, cur, req_url, input_word, is_ch, no_suggestions)
 
 
 def fetch_cambridge(req_url, input_word, is_ch):
@@ -70,7 +70,7 @@ def fetch_cambridge(req_url, input_word, is_ch):
             return True, (res_url, res_text)
 
 
-def fresh_run(con, cur, req_url, input_word, is_ch):
+def fresh_run(con, cur, req_url, input_word, is_ch, no_suggestions=False):
     """Print the result without cache."""
 
     result = fetch_cambridge(req_url, input_word, is_ch)
@@ -90,21 +90,24 @@ def fresh_run(con, cur, req_url, input_word, is_ch):
         dict.save(con, cur, input_word, response_word, res_url, str(first_dict))
 
     else:
-        spell_res_url, spell_res_text = result[1]
+        if no_suggestions:
+            sys.exit()
+        else:
+            spell_res_url, spell_res_text = result[1]
 
-        logger.debug(f"{OP[1]} {spell_res_url}")
-        soup = make_a_soup(spell_res_text)
-        nodes = soup.find("div", "hfl-s lt2b lmt-10 lmb-25 lp-s_r-20")
-        suggestions = []
+            logger.debug(f"{OP[1]} {spell_res_url}")
+            soup = make_a_soup(spell_res_text)
+            nodes = soup.find("div", "hfl-s lt2b lmt-10 lmb-25 lp-s_r-20")
+            suggestions = []
 
-        for ul in nodes.find_all("ul", "hul-u"):
-            if "We have these words with similar spellings or pronunciations:" in ul.find_previous_sibling().text:
-                for i in ul.find_all("li"):
-                    sug = replace_all(i.text)
-                    suggestions.append(sug)
+            for ul in nodes.find_all("ul", "hul-u"):
+                if "We have these words with similar spellings or pronunciations:" in ul.find_previous_sibling().text:
+                    for i in ul.find_all("li"):
+                        sug = replace_all(i.text)
+                        suggestions.append(sug)
 
-        logger.debug(f"{OP[4]} the parsed result of {spell_res_url}")
-        dict.print_spellcheck(con, cur, input_word, suggestions, DICTS[0], is_ch)
+            logger.debug(f"{OP[4]} the parsed result of {spell_res_url}")
+            dict.print_spellcheck(con, cur, input_word, suggestions, DICTS[0], is_ch)
 
 
 # ----------The Entry Point For Parse And Print----------

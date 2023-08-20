@@ -90,7 +90,7 @@ def fresh_run(con, cur, req_url, input_word, no_suggestions=False):
 
     else:        
         if no_suggestions:
-            sys.exit()
+            sys.exit(-1)
         else:
             logger.debug(f"{OP[4]} the parsed result of {res_url}")
             suggestions = []

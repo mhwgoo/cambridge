@@ -91,7 +91,7 @@ def fresh_run(con, cur, req_url, input_word, is_ch, no_suggestions=False):
 
     else:
         if no_suggestions:
-            sys.exit()
+            sys.exit(-1)
         else:
             spell_res_url, spell_res_text = result[1]
 

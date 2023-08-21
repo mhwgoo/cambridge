@@ -25,8 +25,6 @@ CAMBRIDGE_SPELLCHECK_URL_CN = CAMBRIDGE_URL + "/spellcheck/english-chinese-simpl
 # CAMBRIDGE_DICT_BASE_URL_CN_TRADITIONAL = "https://dictionary.cambridge.org/dictionary/english-chinese-traditional/"
 # CAMBRIDGE_SPELLCHECK_URL_CN_TRADITIONAL = CAMBRIDGE_URL + "/spellcheck/english-chinese-traditional/?q="
 
-#TODO: stir/hold/upfront(chinese) see also, carry last list
-
 
 # ----------Request Web Resource----------
 def search_cambridge(con, cur, input_word, is_fresh=False, is_ch=False, no_suggestions=False):
@@ -458,7 +456,7 @@ def parse_see_also(def_block):
         return
     see_also = see_also_block.strong.text.upper()
     console.print("[bold]" + "\n  " + see_also)
-    items = see_also_block.find_all("span", "x-h dx-h")
+    items = see_also_block.find_all("span", ["x-h dx-h", "x-p dx-p"])
     for item in items:
         console.print("[#757575]  " + item.text, end = " ")
     modifiers = see_also_block.find_all("span", "x-pos dx-pos")

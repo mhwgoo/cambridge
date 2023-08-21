@@ -42,7 +42,8 @@ pip uninstall cambridge && rm -rf $HOME/.cache/cambridge # uninstall and remove 
 ```
 
 ## Usages
-#### Command s (hidden). For looking up a dictionary. Flags can be put before or after `<word/phrase>`.
+#### Command s (hidden)
+For looking up a dictionary. Flags can be put before or after `<word/phrase>`.
 ```bash
 camb <word/phrase>               # look up a word/phrase in Cambridge Dictionary
 camb <word/phrase> -w            # look up a word/phrase in Merriam-Webster Dictionary
@@ -56,7 +57,8 @@ camb <word/phrase> -f            # look up a word/phrase afresh without using ca
 camb <word/phrase> -n            # look up a word/phrase without showing spelling suggestions if not found
 ```
 
-#### Command l. For finding and deletinng items in the cache.
+#### Command l
+For finding and deletinng items in the cache.
 ```bash
 camb l                           # list words/phrases found before in alphabetical order
 camb l -t                        # list words/phrases found before in reverse chronological order

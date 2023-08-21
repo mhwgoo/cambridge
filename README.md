@@ -7,7 +7,10 @@ By default, it is English to English translation. For English to Chinese, add '-
 Supports looking up the Merriam-Webster Dictionary, with `-w` or `--webster` option. Webster has no foreign language translation in itself.
 
 ## Screenshots
+Look up a word/phrase in Cambridge Dictionary
 ![look up a word in Cambridge Dictionary](/screenshots/cambridge.png)
+
+Look up a word/phrase in Merriam-Webster Dictionary
 ![look up a word in Merriam-Webster Dictionary](/screenshots/webster.png)
 
 ## Why This
@@ -21,6 +24,7 @@ I'm a terminal person tired of pulling out a GUI app or browser, inputting words
 5. only the first dictionary from Cambridge, avoiding confuses by multiple dictionaries
 6. a list of word/phrase suggestions will be given, if not found
 7. `camb l` to list words and phrases you've found before
+8. color customized at least to black, white, blue, grey terminal backgrounds
 
 ## `fzf`
 With [fzf](https://github.com/junegunn/fzf) installed, `camb l | fzf --preview 'camb {}'` will get you a taste of the `fzf` magic: 
@@ -36,7 +40,7 @@ With [fzf](https://github.com/junegunn/fzf) installed, `camb l | fzf --preview '
 pip install cambridge
 ```
 
-## Usage
+## Usages
 ```bash
 camb <word/phrase>               # look up a word/phrase in Cambridge Dictionary
 camb <word/phrase> -v            # look up a word/phrase in verbose/debug mode
@@ -52,4 +56,7 @@ camb l -d                        # delete one or multiple words/phrases(separate
 
 camb <phrase with an apostrophe> # camb "a stone's throw" | camb a stone\'s throw
 camb <phrase with a slash>       # camb "have your/its moments" | camb have your\/its moments
+
+camb -h, --help                  # show this help message and exit
+camb -v, --version               # print the current version of the program
 ```

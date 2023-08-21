@@ -41,23 +41,28 @@ pip install cambridge
 ```
 
 ## Usages
+Flags can be put "AFTER" or "BEFORE" `<word/phrase>`.
+
 ```bash
+# Command s (hidden)
 camb <word/phrase>               # look up a word/phrase in Cambridge Dictionary
 camb <word/phrase> -w            # look up a word/phrase in Merriam-Webster Dictionary
 camb <word/phrase> -c            # look up a word/phrase in Cambridge with Chinese translation
+
+camb <phrase with apostrophe '>  # camb "a stone's throw" | camb a stone\'s throw
+camb <phrase with slash \>       # camb "have your/its moments" | camb have your\/its moments
 
 camb <word/phrase> -v            # look up a word/phrase in verbose/debug mode
 camb <word/phrase> -f            # look up a word/phrase afresh without using cache
 camb <word/phrase> -n            # look up a word/phrase without showing spelling suggestions if not found
 
+# Command l
 camb l                           # list words/phrases found before in alphabetical order
 camb l -t                        # list words/phrases found before in reverse chronological order
 camb l -r                        # list 20 words/phrases from the word list randomly 
 camb l -d                        # delete one or multiple words/phrases(separated by ", ") from the list
 
-camb <phrase with an apostrophe> # camb "a stone's throw" | camb a stone\'s throw
-camb <phrase with a slash>       # camb "have your/its moments" | camb have your\/its moments
-
+# General options
 camb -h, --help                  # show this help message and exit
 camb -v, --version               # print the current version of the program
 ```

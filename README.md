@@ -24,7 +24,7 @@ I'm a terminal person tired of pulling out a GUI app or browser, inputting words
 5. only the first dictionary from Cambridge, avoiding confuses by multiple dictionaries
 6. a list of word/phrase suggestions will be given, if not found
 7. `camb l` to list words and phrases you've found before
-8. color customized at least to black, white, blue, grey terminal backgrounds
+8. color customized to black, white, blue, grey terminal backgrounds
 
 ## `fzf`
 With [fzf](https://github.com/junegunn/fzf) installed, `camb l | fzf --preview 'camb {}'` will get you a taste of the `fzf` magic: 
@@ -48,7 +48,7 @@ camb <word/phrase> -c            # look up a word/phrase in Cambridge with Chine
 
 camb <word/phrase> -v            # look up a word/phrase in verbose/debug mode
 camb <word/phrase> -f            # look up a word/phrase afresh without using cache
-camb <word/phrase> -n            # look up a word/phrase and not show spelling suggestions if not found
+camb <word/phrase> -n            # look up a word/phrase without showing spelling suggestions if not found
 
 camb l                           # list words/phrases found before in alphabetical order
 camb l -t                        # list words/phrases found before in reverse chronological order

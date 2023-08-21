@@ -113,7 +113,7 @@ def parse_args():
         "-n",
         "--nosuggestions",
         action="store_true",
-        help="look up a word/phrase and not show spelling suggestions if not found",
+        help="look up a word/phrase without showing spelling suggestions if not found",
     )
 
     if len(sys.argv) == 1:

@@ -7,7 +7,8 @@ By default, it is English to English translation. For English to Chinese, add '-
 Supports looking up the Merriam-Webster Dictionary, with `-w` or `--webster` option. Webster has no foreign language translation in itself.
 
 ## Screenshots
-![look up a word](/screenshots/word.png)
+![look up a word in Cambridge Dictionary](/screenshots/cambridge.png)
+![look up a word in Merriam-Webster Dictionary](/screenshots/webster.png)
 
 ## Why This
 I'm a terminal person tired of pulling out a GUI app or browser, inputting words in the search bar, hitting the search button and then waiting for the result to render with a bunch of unnecessary static files coming along. Not only is the time taken long, but also switching apps back and forth can be annoying. So I wrote this console application with features to my satisfaction.
@@ -42,6 +43,7 @@ camb <word/phrase> -v            # look up a word/phrase in verbose/debug mode
 camb <word/phrase> -w            # look up a word/phrase in Merriam-Webster Dictionary
 camb <word/phrase> -f            # look up a word/phrase afresh without using cache
 camb <word/phrase> -c            # look up a word/phrase in Cambridge with Chinese translation
+camb <word/phrase> -n            # look up a word/phrase and not show spelling suggestions if not found
 
 camb l                           # list words/phrases found before in alphabetical order
 camb l -t                        # list words/phrases found before in reverse chronological order

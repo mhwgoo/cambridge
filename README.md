@@ -7,10 +7,10 @@ By default, it is English to English translation. For English to Chinese, add '-
 Supports looking up the Merriam-Webster Dictionary, with `-w` or `--webster` option. Webster has no foreign language translation in itself.
 
 ## Screenshots
-**Look up a word/phrase in Cambridge Dictionary**
+#### Look up Cambridge Dictionary
 ![look up a word in Cambridge Dictionary](/screenshots/cambridge.png)
 
-**Look up a word/phrase in Merriam-Webster Dictionary**
+#### Look up Merriam-Webster Dictionary
 ![look up a word in Merriam-Webster Dictionary](/screenshots/webster.png)
 
 ## Why This
@@ -35,16 +35,15 @@ With [fzf](https://github.com/junegunn/fzf) installed, `camb l | fzf --preview '
 
 ![list words](/screenshots/fzf.png)
 
-## Installation
+## Installation & Uninstallation
 ```python
-pip install cambridge
+pip install cambridge # install
+pip uninstall cambridge && rm -rf $HOME/.cache/cambridge # uninstall and remove cache
 ```
 
 ## Usages
-Flags can be put "AFTER" or "BEFORE" `<word/phrase>`.
-
+#### Command s (hidden). For looking up a dictionary. Flags can be put before or after `<word/phrase>`.
 ```bash
-# Command s (hidden)
 camb <word/phrase>               # look up a word/phrase in Cambridge Dictionary
 camb <word/phrase> -w            # look up a word/phrase in Merriam-Webster Dictionary
 camb <word/phrase> -c            # look up a word/phrase in Cambridge with Chinese translation
@@ -55,14 +54,18 @@ camb <phrase with slash \>       # camb "have your/its moments" | camb have your
 camb <word/phrase> -v            # look up a word/phrase in verbose/debug mode
 camb <word/phrase> -f            # look up a word/phrase afresh without using cache
 camb <word/phrase> -n            # look up a word/phrase without showing spelling suggestions if not found
+```
 
-# Command l
+#### Command l. For finding and deletinng items in the cache.
+```bash
 camb l                           # list words/phrases found before in alphabetical order
 camb l -t                        # list words/phrases found before in reverse chronological order
 camb l -r                        # list 20 words/phrases from the word list randomly 
 camb l -d                        # delete one or multiple words/phrases(separated by ", ") from the list
+```
 
-# General options
+#### General options
+```bash
 camb -h, --help                  # show this help message and exit
 camb -v, --version               # print the current version of the program
 ```

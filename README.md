@@ -46,7 +46,7 @@ camb <word/phrase> -c            # look up a word/phrase in Cambridge with Chine
 camb l                           # list words/phrases found before in alphabetical order
 camb l -t                        # list words/phrases found before in reverse chronological order
 camb l -r                        # list 20 words/phrases from the word list randomly 
-camb l -d                        # delete one or multiple words/phrases(seperated by ",") from the list
+camb l -d                        # delete one or multiple words/phrases(seperated by ", ") from the list
 
 camb <phrase with an apostrophe> # camb "a stone's throw" | camb a stone\'s throw
 camb <phrase with a slash>       # camb "have your/its moments" | camb have your\/its moments

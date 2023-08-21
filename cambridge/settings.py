@@ -1,5 +1,7 @@
 """Script to store static data."""
 
+VERSION = "3.6.2"
+
 OP = [
     "FETCHING",
     "PARSING",
@@ -14,3 +16,4 @@ OP = [
 ]
 
 DICTS = ["CAMBRIDGE", "MERRIAM WEBSTER"]
+

@@ -11,13 +11,20 @@ from .cache import (
     delete_word,
 )
 from .log import logger
-from .settings import OP, DICTS
+from .settings import OP, DICTS, VERSION
 from .dicts import webster, cambridge
 from .console import console, table
 
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Terminal Version of Cambridge Dictionary by default. Also supports Merriam-Webster Dictionary."
+    )
+
+    parser.add_argument(
+        "-v",
+        "--version",
+        action="store_true",
+        help="print the current version of the program",
     )
 
     # Add sub-command capability that can identify different sub-command name
@@ -37,7 +44,7 @@ def parse_args():
         "-d",
         "--delete",
         nargs="+",
-        help="delete a word/phrase or multiple words/phrases(seperated by ', ') from cache",
+        help="delete a word/phrase or multiple words/phrases(separated by ', ') from cache",
     )
 
     # Add an optional argument for l command
@@ -110,13 +117,14 @@ def parse_args():
     )
 
     if len(sys.argv) == 1:
-        parser.print_help()
-        console.print("[blue]\nCommand l")
-        parser_lw.print_help()
-        console.print("[blue]\nCommand s (hidden for convinience)")
-        parser_sw.print_help()
+        print_help(parser, parser_lw, parser_sw)
 
-        sys.exit()
+    elif sys.argv[1] == "-v" or sys.argv[1] == "--version":
+            print("cambridge " + VERSION)
+            sys.exit()
+            
+    elif sys.argv[1] == "-h" or sys.argv[1] == "--help":
+            print_help(parser, parser_lw, parser_sw)
 
     elif sys.argv[1] != "l" and len(sys.argv) > 1:
         to_parse = []
@@ -134,6 +142,16 @@ def parse_args():
         args = parser.parse_args()
 
     return args
+
+
+def print_help(parser, parser_lw, parser_sw):
+    parser.print_help()
+    console.print("[blue]\nCommand l")
+    parser_lw.print_help()
+    console.print("[blue]\nCommand s (hidden for convinience)")
+    parser_sw.print_help()
+
+    sys.exit()
 
 
 def delete(word, con, cur):

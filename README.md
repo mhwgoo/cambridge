@@ -7,10 +7,10 @@ By default, it is English to English translation. For English to Chinese, add '-
 Supports looking up the Merriam-Webster Dictionary, with `-w` or `--webster` option. Webster has no foreign language translation in itself.
 
 ## Screenshots
-Look up a word/phrase in Cambridge Dictionary
+**Look up a word/phrase in Cambridge Dictionary**
 ![look up a word in Cambridge Dictionary](/screenshots/cambridge.png)
 
-Look up a word/phrase in Merriam-Webster Dictionary
+**Look up a word/phrase in Merriam-Webster Dictionary**
 ![look up a word in Merriam-Webster Dictionary](/screenshots/webster.png)
 
 ## Why This
@@ -43,10 +43,11 @@ pip install cambridge
 ## Usages
 ```bash
 camb <word/phrase>               # look up a word/phrase in Cambridge Dictionary
-camb <word/phrase> -v            # look up a word/phrase in verbose/debug mode
 camb <word/phrase> -w            # look up a word/phrase in Merriam-Webster Dictionary
-camb <word/phrase> -f            # look up a word/phrase afresh without using cache
 camb <word/phrase> -c            # look up a word/phrase in Cambridge with Chinese translation
+
+camb <word/phrase> -v            # look up a word/phrase in verbose/debug mode
+camb <word/phrase> -f            # look up a word/phrase afresh without using cache
 camb <word/phrase> -n            # look up a word/phrase and not show spelling suggestions if not found
 
 camb l                           # list words/phrases found before in alphabetical order

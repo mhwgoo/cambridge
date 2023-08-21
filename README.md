@@ -45,29 +45,29 @@ pip uninstall cambridge && rm -rf $HOME/.cache/cambridge # uninstall and remove 
 #### Command s (hidden)
 For looking up a dictionary. Flags can be put before or after `<word/phrase>`.
 ```bash
-camb <word/phrase>               # look up a word/phrase in Cambridge Dictionary
-camb <word/phrase> -w            # look up a word/phrase in Merriam-Webster Dictionary
-camb <word/phrase> -c            # look up a word/phrase in Cambridge with Chinese translation
+camb <word/phrase>                 # look up a word/phrase in Cambridge Dictionary
+camb <word/phrase> -w              # look up a word/phrase in Merriam-Webster Dictionary
+camb <word/phrase> -c              # look up a word/phrase in Cambridge with Chinese translation
 
-camb <phrase with apostrophe '>  # camb "a stone's throw" | camb a stone\'s throw
-camb <phrase with slash \>       # camb "have your/its moments" | camb have your\/its moments
+camb <phrase with apostrophe "'">  # camb "a stone's throw" | camb a stone\'s throw
+camb <phrase with slash "\">       # camb "have your/its moments" | camb have your\/its moments
 
-camb <word/phrase> -v            # look up a word/phrase in verbose/debug mode
-camb <word/phrase> -f            # look up a word/phrase afresh without using cache
-camb <word/phrase> -n            # look up a word/phrase without showing spelling suggestions if not found
+camb <word/phrase> -v              # look up a word/phrase in verbose/debug mode
+camb <word/phrase> -f              # look up a word/phrase afresh without using cache
+camb <word/phrase> -n              # look up a word/phrase without showing spelling suggestions if not found
 ```
 
 #### Command l
 For finding and deletinng items in the cache.
 ```bash
-camb l                           # list words/phrases found before in alphabetical order
-camb l -t                        # list words/phrases found before in reverse chronological order
-camb l -r                        # list 20 words/phrases from the word list randomly 
-camb l -d                        # delete one or multiple words/phrases(separated by ", ") from the list
+camb l                             # list words/phrases found before in alphabetical order
+camb l -t                          # list words/phrases found before in reverse chronological order
+camb l -r                          # list 20 words/phrases from the word list randomly 
+camb l -d                          # delete one or multiple words/phrases(separated by ", ") from the list
 ```
 
 #### General options
 ```bash
-camb -h, --help                  # show this help message and exit
-camb -v, --version               # print the current version of the program
+camb -h, --help                    # show this help message and exit
+camb -v, --version                 # print the current version of the program
 ```

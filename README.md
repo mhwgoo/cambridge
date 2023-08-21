@@ -58,7 +58,7 @@ camb <word/phrase> -n              # look up a word/phrase without showing spell
 ```
 
 #### Command l
-For finding and deletinng items in the cache.
+For listing and deletinng items in the cache.
 ```bash
 camb l                             # list words/phrases found before in alphabetical order
 camb l -t                          # list words/phrases found before in reverse chronological order

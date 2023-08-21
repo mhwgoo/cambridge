@@ -26,9 +26,11 @@ def fetch(url, session):
     while True:
         try:
             r = session.get(url, timeout=9.05)
-            # r.raise_for_status()
             # Only when calling raise_for_status, will requests raise HTTPError if any. See: https://blog.csdn.net/Odaokai/article/details/100133503
             # for webster, only when status code is 404, can we know to redirect to spellcheck page, so you can't exit on 404
+            if r.status_code >= 500:
+                r.raise_for_status()
+            
         except requests.exceptions.HTTPError as e:
             attempt = call_on_error(e, url, attempt, OP[2])
             continue

@@ -1,6 +1,6 @@
 """Script to store static data."""
 
-VERSION = "3.6.2"
+VERSION = "3.6.3"
 
 OP = [
     "FETCHING",
@@ -16,4 +16,3 @@ OP = [
 ]
 
 DICTS = ["CAMBRIDGE", "MERRIAM WEBSTER"]
-

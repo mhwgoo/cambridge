@@ -11,7 +11,7 @@ from ..utils import get_request_url
 from ..log import logger
 from ..dicts import dict
 from ..colorschemes import webster_color
-
+from ..errors import ParsedNoneError, NoResultError
 
 WEBSTER_BASE_URL = "https://www.merriam-webster.com"
 WEBSTER_DICT_BASE_URL = WEBSTER_BASE_URL + "/dictionary/"
@@ -89,7 +89,7 @@ def fresh_run(con, cur, req_url, input_word, no_suggestions=False):
 
         dict.save(con, cur, input_word, res_word, res_url, sub_text)
 
-    else:        
+    else:
         if no_suggestions:
             sys.exit(-1)
         else:
@@ -104,7 +104,7 @@ def fresh_run(con, cur, req_url, input_word, no_suggestions=False):
                         else:
                             sug = w.strip()
                             suggestions.append(sug)
-                        
+
             dict.print_spellcheck(con, cur, input_word, suggestions, DICTS[1])
 
 
@@ -127,23 +127,28 @@ def parse_dict(res_text, found, res_url, is_fresh):
         """
 
         nodes = tree.xpath(s)
-        
+
         if is_fresh:
             global sub_text
             sub_tree = tree.xpath('//*[@id="left-content"]')
             sub_text = etree.tostring(sub_tree[0]).decode('utf-8')
-        
+
         if len(nodes) < 2:
-            logger.error("The fetched content is not intended for the word, due to your network or the website reasons, please try again.")
+            print(NoResultError(DICTS[1]))
             sys.exit()
 
-
-        result = tree.xpath("//*[@id='dictionary-entry-1']/div[1]/div/div[1]/h1/text()")
-        if not result:
-            result = tree.xpath("//*[@id='dictionary-entry-1']/div[1]/div/div/h1/span/text()")
-
         global res_word
-        res_word = result[0]
+        result = tree.xpath("//*[@id='dictionary-entry-1']/div[1]/div/div[1]/h1/text()")
+
+        if result:
+            res_word = result[0]
+        else:
+            result = tree.xpath("//*[@id='dictionary-entry-1']/div[1]/div/div/h1/span/text()")
+            if not result:
+                print(NoResultError(DICTS[1]))
+                sys.exit()
+            else:
+                res_word = result[0]
 
         ## NOTE: [only for debug]
         # for node in nodes:
@@ -151,14 +156,18 @@ def parse_dict(res_text, found, res_url, is_fresh):
         #         print("id:    ", node.attrib["id"])
         #     except KeyError:
         #         print("class: ", node.attrib["class"])
-        
+
         # sys.exit()
 
     else:
-        nodes = tree.xpath('//div[@class="widget spelling-suggestion"]')[0]
-
+        result = tree.xpath('//div[@class="widget spelling-suggestion"]')
+        if result:
+            nodes = result[0]
+        else:
+            print(NoResultError(DICTS[1]))
+            sys.exit()
     return nodes
-    
+
 
 ###########################################
 # parse and print nearby entries
@@ -193,7 +202,7 @@ def nearby_entries(node):
 
 
 ###########################################
-# parse and print synonyms 
+# parse and print synonyms
 ###########################################
 
 def synonyms(node):
@@ -218,7 +227,7 @@ def synonyms(node):
             if has_syn:
                 children = elm.getchildren()
                 total_num = len(children)
-                
+
                 for index, child in enumerate(children):
                     syn = "".join(list(child.itertext())).strip()
                     if index != (total_num - 1):
@@ -228,10 +237,10 @@ def synonyms(node):
 
 
 ###########################################
-# parse and print examples 
+# parse and print examples
 ###########################################
 
-# NOTE: 
+# NOTE:
 # Wester scrapes the web for examples in the way that it only finds the exact match of the word.
 # If the word is a verb, only gets the word without tenses; if the word is a noun, only its single form.
 def examples(node):
@@ -280,7 +289,7 @@ def examples(node):
 
 
 ###########################################
-# parse and print phrases 
+# parse and print phrases
 ###########################################
 
 def phrases(node):
@@ -308,7 +317,7 @@ def phrases(node):
 
 
 ###########################################
-# parse and print related phrases 
+# parse and print related phrases
 ###########################################
 
 def related_phrases(node):
@@ -322,7 +331,7 @@ def related_phrases(node):
     texts = list(title.itertext())
     global word_entries
     words = set(word_entries)
-    
+
     for t in texts:
         if t.strip():
             if t.lower() in words:
@@ -355,7 +364,7 @@ def related_phrases(node):
 
 
 ###########################################
-# parse and print dictionary-entry-[number] 
+# parse and print dictionary-entry-[number]
 ###########################################
 
 # --- parse class "vg" --- #
@@ -400,8 +409,8 @@ def ex_sent(node, ancestor_attr):
     for text in node.itertext():
         if text.strip():
             console.print(f"[{webster_color.meaning_sentence}]{text}", end = "")
-    
-    
+
+
 def sub_content_thread(node, ancestor_attr):
     children = node.getchildren()
     for child in children:
@@ -417,7 +426,7 @@ def sub_content_thread(node, ancestor_attr):
                 elm_attr = elm.attrib["class"]
                 if ("ex-sent" in elm_attr) and ("aq has-aq" not in elm_attr):
                     ex_sent(elm, ancestor_attr)
-            
+
 
 def dt(node, ancestor_attr, self_attr):
     children = node.getchildren()
@@ -455,7 +464,7 @@ def dt(node, ancestor_attr, self_attr):
                 sub_content_thread(child, ancestor_attr)  # example under the meaning
 
     print()
-            
+
 
 def et(node):
     texts = list(node.itertext())
@@ -487,7 +496,7 @@ def sense(node, attr, parent_attr, ancestor_attr):
         sense_content = children[1]  # class "sense-content w-100"
 
     # meaing with only "b" or "1" + "a" + "(1)", or "1" + "a"
-    if attr == "sense has-sn" or attr == "sen has-sn": 
+    if attr == "sense has-sn" or attr == "sen has-sn":
         sn = children[0].getchildren()[0].text
 
         if ("has-subnum" in ancestor_attr and "sb-0" in parent_attr) or ("no-sn letter-only" in ancestor_attr):
@@ -497,7 +506,7 @@ def sense(node, attr, parent_attr, ancestor_attr):
 
         sense_content = children[1]  # class "sense-content w-100"
 
-    # meaning with only (2)   
+    # meaning with only (2)
     if attr == "sense has-num-only has-subnum-only":
         console.print("    ", end = "")
         sense_content = children[1]
@@ -509,8 +518,8 @@ def sense(node, attr, parent_attr, ancestor_attr):
     sense_content_attr = sense_content.get("class")
     if "sl badge mw-badge" in sense_content_attr:  # see "buck"
         print_meaning_badge(sense_content.text, end="\n")
-    
-    else: # "sense-content w-100" 
+
+    else: # "sense-content w-100"
         elms = sense_content.getchildren()
         for elm in elms:
             elm_attr = elm.get("class")
@@ -527,14 +536,14 @@ def sense(node, attr, parent_attr, ancestor_attr):
 
                 if elm_attr == "il ":
                     print_meaning_badge(elm.text.strip(), end=" ")
-                
+
                 if elm_attr == "if":
                     console.print(f"{elm.text}", end=" ")
 
             else:
                 for i in elm.iterchildren():
                     if i.get("class") == "vl":
-                        print_meaning_badge(i.text.strip())                
+                        print_meaning_badge(i.text.strip())
                     else:
                         print_meaning_content(i.text, end=" ")
 
@@ -579,9 +588,9 @@ def vg_sseq_entry_item(node):
                                 et(i)
                     print()
                     continue
-                    
+
                 # print class "sb-0 sb-entry", "sb-1 sb-entry" ...
-                sb_entry(c, attr) 
+                sb_entry(c, attr)
 
 
 def vg(node):
@@ -643,7 +652,7 @@ def row_entry_header(node):
                     entry_header_content(i)
                 if "row entry-attr" in i.attrib["class"]:
                     entry_attr(i)
-    
+
 
 # --- parse class "entry-uros" --- #
 def entry_uros(node):
@@ -722,16 +731,16 @@ def dictionary_entry(node):
     print()
 
     for elm in node.iterchildren():
-        try: 
+        try:
             if elm.attrib["class"]:
                 if "row entry-header" in elm.attrib["class"]:
                     row_entry_header(elm)
 
                 if elm.attrib["class"] == "row headword-row header-ins":
-                    row_headword_row_header_ins(elm) 
+                    row_headword_row_header_ins(elm)
 
                 if elm.attrib["class"] == "row headword-row header-vrs":
-                    row_headword_row_header_vrs(elm) 
+                    row_headword_row_header_vrs(elm)
 
                 if elm.attrib["class"] == "vg":
                     vg(elm)
@@ -741,7 +750,7 @@ def dictionary_entry(node):
 
                 if elm.attrib["class"] == "dxnls":
                     see_also(elm)
-                
+
                 if elm.attrib["class"] == "mt-3":
                     badge = elm.getchildren()[0]  # class with "badge mw-badge"
                     print_meaning_badge(badge.text)

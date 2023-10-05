@@ -132,7 +132,7 @@ def parse_and_print(first_dict, res_url):
                 parse_dict_name(first_dict)
                 return
             else:
-                logger.error(NoResultError())
+                print(NoResultError(DICTS[0]))
                 sys.exit()
 
 def parse_first_dict(res_url, soup):
@@ -145,7 +145,7 @@ def parse_first_dict(res_url, soup):
         # first_dict = soup.find("div", "pr dictionary")
         first_dict = soup.find("div", "pr di superentry")
         if first_dict is None:
-            attempt = call_on_error(ParsedNoneError(res_url), res_url, attempt, OP[3])
+            attempt = call_on_error(ParsedNoneError(DICTS[0], res_url), res_url, attempt, OP[3])
             continue
         else:
             break
@@ -584,7 +584,7 @@ def parse_dict_body(block):
                             parse_def(i)
                 except Exception:
                     pass
- 
+
     else:
         if block.find("div", "idiom-block"):
             idiom_sole_block = block.find("div", "idiom-block")

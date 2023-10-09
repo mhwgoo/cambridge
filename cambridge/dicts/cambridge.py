@@ -98,6 +98,10 @@ def fresh_run(con, cur, req_url, input_word, is_ch, no_suggestions=False):
             nodes = soup.find("div", "hfl-s lt2b lmt-10 lmb-25 lp-s_r-20")
             suggestions = []
 
+            if not nodes:
+                print(NoResultError(DICTS[0]))
+                sys.exit()
+
             for ul in nodes.find_all("ul", "hul-u"):
                 if "We have these words with similar spellings or pronunciations:" in ul.find_previous_sibling().text:
                     for i in ul.find_all("li"):

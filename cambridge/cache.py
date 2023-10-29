@@ -13,10 +13,11 @@ def create_table(con, cur):
     cur.execute(
         """CREATE TABLE words (
         "input_word" TEXT NOT NULL,
-        "response_word" TEXT UNIQUE NOT NULL,
+        "response_word" TEXT NOT NULL,
         "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        "response_url" TEXT UNIQUE NOT NULL,
-        "response_text" TEXT NOT NULL)"""
+        "response_url" TEXT NOT NULL,
+        "response_text" TEXT NOT NULL,
+        UNIQUE(response_word,response_url))"""
     )
     con.commit()
 

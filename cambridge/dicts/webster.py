@@ -11,7 +11,7 @@ from ..utils import get_request_url
 from ..log import logger
 from ..dicts import dict
 from ..colorschemes import webster_color
-from ..errors import ParsedNoneError, NoResultError
+from ..errors import NoResultError
 
 WEBSTER_BASE_URL = "https://www.merriam-webster.com"
 WEBSTER_DICT_BASE_URL = WEBSTER_BASE_URL + "/dictionary/"
@@ -22,8 +22,6 @@ word_entries = [] # A page may have multiple word entries, e.g. "give away", "gi
 word_forms = [] # A word may have multiple word forms, e.g. "ran", "running", "run", "flies"
 
 # TODO: green noun 3a, jitter(sense 1), run(with 2 digit item list), up front, blowup, time on, flavor, rolling, entry, give someone up, bling, gravity, entrench, honeybun, wildcard, [on the toes, step on the toes, knock on the door]
-# TODO: multiple same input words and how to get cache
-# TODO: add --version flag, how to read version from __init__.py
 
 # ----------Request Web Resouce----------
 def search_webster(con, cur, input_word, is_fresh=False, no_suggestions=False):

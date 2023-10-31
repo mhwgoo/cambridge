@@ -1,6 +1,6 @@
 """Script to store static data."""
 
-VERSION = "3.6.3"
+VERSION = "3.6.4"
 
 OP = [
     "FETCHING",
@@ -13,6 +13,7 @@ OP = [
     "CACHED",
     "CANCELLED",
     "DELETED",
+    "UPDATED",
 ]
 
 DICTS = ["CAMBRIDGE", "MERRIAM WEBSTER"]

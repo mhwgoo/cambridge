@@ -5,7 +5,7 @@ import sqlite3
 import requests
 from fake_user_agent import user_agent
 
-from ..cache import insert_into_table, get_cache
+from ..cache import insert_into_table, get_cache, delete_word
 from ..log import logger
 from ..settings import OP, DICTS
 from ..errors import call_on_error
@@ -75,13 +75,11 @@ def cache_run(con, cur, input_word, req_url, dict):
         logger.debug(f"{OP[1]} {res_url}")
         soup = make_a_soup(res_text)
         cambridge.parse_and_print(soup, res_url)
-        if dict == DICTS[1]:
-            console.print(f'{OP[5]} "{res_word}" from {DICTS[0]} in cache. You can add "-f -w" to fetch the {DICTS[1]} dictionary', justify="left", style="#757575")
+        console.print(f'{OP[5]} "{res_word}" from {dict} in cache. You can add "-f -w" to fetch the {DICTS[1]} dictionary', justify="left", style="#757575")
     else:
         nodes = webster.parse_dict(res_text, True, res_url, False)
         webster.parse_and_print(nodes, res_url)
-        if dict == DICTS[0]:
-            console.print(f'{OP[5]} "{res_word}" from {DICTS[1]} in cache. You can add "-f" to fetch the {DICTS[0]} dictionary', justify="left", style="#757575")
+        console.print(f'{OP[5]} "{res_word}" from {dict} in cache. You can add "-f" to fetch the {DICTS[0]} dictionary', justify="left", style="#757575")
     return True
 
 
@@ -91,8 +89,16 @@ def save(con, cur, input_word, response_word, response_url, response_text):
     try:
         insert_into_table(con, cur, input_word, response_word, response_url, response_text)
     except sqlite3.IntegrityError as error:
-        if "UNIQUE constraint" in str(error):
-            logger.debug(f'{OP[8]} caching "{input_word}", because it has been already cached before\n')
+        error_str = str(error)
+        if "UNIQUE constraint" in error_str:
+            # For version v3.6.3 and prior, whose cache db has `response_word` column being UNIQUE
+            # in this case, update the record with the new search result
+            if "response_word" in error_str:
+                delete_word(con, cur, response_word)
+                insert_into_table(con, cur, input_word, response_word, response_url, response_text)
+                logger.debug(f'{OP[10]} cache for "{input_word}" with the new search result\n')
+            else:
+                logger.debug(f'{OP[8]} caching "{input_word}", because it has been already cached before\n')
         else:
             logger.debug(f'{OP[8]} caching "{input_word}" - {error}\n')
     except sqlite3.InterfaceError as error:

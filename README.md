@@ -52,7 +52,7 @@ camb <word/phrase> -c              # look up a word/phrase in Cambridge with Chi
 camb <phrase with apostrophe "'">  # camb "a stone's throw" | camb a stone\'s throw
 camb <phrase with slash "\">       # camb "have your/its moments" | camb have your\/its moments
 
-camb <word/phrase> -v              # look up a word/phrase in verbose/debug mode
+camb <word/phrase> -d              # look up a word/phrase in debug mode
 camb <word/phrase> -f              # look up a word/phrase afresh without using cache
 camb <word/phrase> -n              # look up a word/phrase without showing spelling suggestions if not found
 ```

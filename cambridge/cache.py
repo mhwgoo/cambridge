@@ -15,9 +15,9 @@ def create_table(con, cur):
         "input_word" TEXT NOT NULL,
         "response_word" TEXT NOT NULL,
         "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        "response_url" TEXT NOT NULL,
+        "response_url" TEXT UNIQUE NOT NULL,
         "response_text" TEXT NOT NULL,
-        UNIQUE(response_word,response_url))"""
+        UNIQUE(response_url))"""
     )
     con.commit()
 
@@ -37,11 +37,11 @@ def insert_into_table(con, cur, input_word, response_word, url, text):
     con.commit()
 
 
-def get_cache(con, cur, word, resquest_url):
+def get_cache(con, cur, word, request_url):
     try:
         cur.execute(
-            "SELECT response_url, response_word, response_text FROM words WHERE response_url = ? OR response_word = ? OR input_word = ?",
-            (resquest_url, word, word),
+            "SELECT response_url, response_word, response_text FROM words WHERE (response_url = ?) AND (response_word = ? OR input_word = ?)",
+            (request_url, word, word),
         )
     except sqlite3.OperationalError:
         create_table(con, cur)
@@ -71,9 +71,9 @@ def delete_word(con, cur, word):
         "SELECT input_word, response_url FROM words WHERE input_word = ? OR response_word = ?",
         (word, word),
     )
-    data = cur.fetchone()
+    data = cur.fetchall()
 
-    if data is None:
+    if data == []:
         return (False, None)
     else:
         cur.execute(

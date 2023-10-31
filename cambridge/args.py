@@ -78,10 +78,10 @@ def parse_args():
 
     # Add an optional argument for s command
     parser_sw.add_argument(
-        "-v",
-        "--verbose",
+        "-d",
+        "--debug",
         action="store_true",
-        help="look up a word/phrase in verbose mode",
+        help="look up a word/phrase in debug mode",
     )
 
     # Add an optional argument for s command
@@ -158,10 +158,11 @@ def delete(word, con, cur):
     deleted, data = delete_word(con, cur, word)
 
     if deleted and data is not None:
-        if "cambridge" in data[1]:
-            print(f'{OP[9]} "{word}" from {DICTS[0]} in cache successfully')
-        else:
-            print(f'{OP[9]} "{word}" from {DICTS[1]} in cache successfully')
+        for i in data:
+            if "cambridge" in i[1]:
+                print(f'{OP[9]} "{word}" from {DICTS[0]} in cache successfully')
+            else:
+                print(f'{OP[9]} "{word}" from {DICTS[1]} in cache successfully')
     else:
         print(f'{OP[6]} "{word}" in cache')
 
@@ -247,7 +248,7 @@ def search_word(args, con, cur):
     Then it checks which dictionary is intended, and then calls respective dictionary function.
     """
 
-    if args.verbose:
+    if args.debug:
         logging.getLogger(__package__).setLevel(logging.DEBUG)
 
     

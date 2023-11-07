@@ -368,7 +368,6 @@ def related_phrases(node):
 # --- parse class "vg" --- #
 def dtText(node, ancestor_attr, count):
     texts = list(node.itertext())
-
     if count != 1:
         format_basedon_ancestor(ancestor_attr, prefix="\n")
 
@@ -388,11 +387,17 @@ def dtText(node, ancestor_attr, count):
             continue
 
         if "sense " in text:
+            tag = False
             for t in text:
                 if t.isnumeric():
-                    text_new = " " + text
-                    print_meaning_content(text_new, end="")
-                    break
+                    tag = True
+            if tag:
+                text_new = " " + text
+                print_meaning_content(text_new, end="")
+                break
+            else:
+                print_meaning_content(text, end="")
+                break
         else:
             print_meaning_content(text, end="")
 
@@ -668,6 +673,9 @@ def entry_uros(node):
         if elm.tag == "span" and elm.attrib["class"] == "fw-bold fl":
             console.print(f"[{webster_color.bold} {webster_color.wf_type}]{elm.text}", end = "\n")
 
+        if "prons-entries-list" in elm.attrib["class"]:
+            print_pron(elm, end=" ")
+
 
 # --- parse class "row headword-row header-ins" --- #
 def row_headword_row_header_ins(node):
@@ -748,7 +756,7 @@ def dictionary_entry(node):
                 if elm.attrib["class"] == "vg":
                     vg(elm)
 
-                if elm.attrib["class"] == "entry-uros ":
+                if "entry-uros" in elm.attrib["class"]:
                     entry_uros(elm)
 
                 if elm.attrib["class"] == "dxnls":

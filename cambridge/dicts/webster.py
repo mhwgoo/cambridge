@@ -584,17 +584,24 @@ def vg_sseq_entry_item(node):
             for c in child.iterchildren():
                 cc = c.getchildren()
                 if cc[0].get("class") == "sen has-num-only":
-                    ccc = cc[0]
-                    for i in ccc.iterchildren():
-                        i_attr = i.get("class")
-                        if i_attr is not None:
-                            if ("badge mw-badge" in i_attr) or ("il" in i_attr):
-                                print_meaning_badge(i.text.strip())
-                            if "if" in i_attr:
-                                console.print(f"{i.text}", end=" ")
-                            if i_attr == "et":
-                                et(i)
-                    print()
+                    cc_0 = cc[0][0]
+                    cc_1 = cc[0][1]
+                    if cc_0.tag != "span":
+                        for i in cc_0.iterchildren():
+                            i_attr = i.get("class")
+                            if i_attr is not None:
+                                if ("badge mw-badge" in i_attr) or ("il" in i_attr):
+                                    print_meaning_badge(i.text.strip())
+                                if "if" in i_attr:
+                                    console.print(f"{i.text}", end=" ")
+                                if i_attr == "et":
+                                    et(i)
+                        print()
+                    else:
+                        for t in cc_1.itertext():
+                            text = t.strip("\n").strip()
+                            if text:
+                                console.print(f"[{webster_color.bold}]{text}")
                     continue
 
                 # print class "sb-0 sb-entry", "sb-1 sb-entry" ...

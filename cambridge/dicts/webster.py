@@ -458,6 +458,11 @@ def dt(node, ancestor_attr, self_attr):
                             print_meaning_badge(text)
                     if elm.attrib["class"] == "sub-content-thread":
                         sub_content_thread(elm, ancestor_attr)
+                    if elm.attrib["class"] == "vi":
+                        es = elm.getchildren()
+                        for e in es:
+                            if e.attrib["class"] == "sub-content-thread":
+                                sub_content_thread(e, ancestor_attr)
             if child_attr == "sub-content-thread":
                 sub_content_thread(child, ancestor_attr)  # example under the meaning
 

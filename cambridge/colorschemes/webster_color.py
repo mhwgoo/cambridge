@@ -35,9 +35,9 @@ meaning_content = "#4A7D95"
 meaning_badge = badge
 meaning_sentence = "#757575"
 
-# --- see also --- #
-sa_title = "#2E8B57" #UNUSED
-sa_content = "#757575"
+# --- dxnls --- #
+dxnls_title = "#2E8B57"
+dxnls_content = "#757575"
 
 
 #####################

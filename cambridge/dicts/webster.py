@@ -371,33 +371,35 @@ def dtText(node, ancestor_attr, count):
     if count != 1:
         format_basedon_ancestor(ancestor_attr, prefix="\n")
 
+    l_words = []
+    u_words = []
+    for i in node.iterdescendants():
+        if "lowercase" in i.attrib["class"]:
+            l_words.append(i.text)
+        if "uppercase" in i.attrib["class"]:
+            u_words.append(i.text)
+
     for text in texts:
         if text == " ":
             continue
 
-        if text == ": ":
+        elif text == ": ":
             text = text.strip()
 
-        if text == " see also ":
+        elif text == " see also ":
             print_meaning_badge(text.strip())
             continue
 
-        if text == " see ":
+        elif text == " see ":
             print_meaning_badge("->" + text.strip())
             continue
 
-        if "sense " in text:
-            tag = False
-            for t in text:
-                if t.isnumeric():
-                    tag = True
-            if tag:
-                text_new = " " + text
-                print_meaning_content(text_new, end="")
-                break
-            else:
-                print_meaning_content(text, end="")
-                break
+        elif text in u_words:
+            text_new = text.upper()
+            print_meaning_content(text_new, end="")
+        elif text in l_words:
+            text_new = (" " + text)
+            print_meaning_content(text_new, end="")
         else:
             print_meaning_content(text, end="")
 
@@ -414,8 +416,9 @@ def ex_sent(node, ancestor_attr):
 
     hl_words = []
     for i in node.iterdescendants():
-        hl_word = i.text
-        hl_words.append(hl_word)
+        if "mw" in i.attrib["class"]:
+            hl_word = i.text
+            hl_words.append(hl_word)
 
     texts = list(node.itertext())
     for index, text in enumerate(texts):
@@ -618,6 +621,8 @@ def vg_sseq_entry_item(node):
                     elif cc_0.tag == "span" and cc_1.tag == "span" and cc_1.attrib["class"] == "sgram":
                         print_class_sgram(cc_1)
                         print()
+                    elif cc_0.tag == "span" and cc_1.tag == "span" and "sl badge mw-badge" in cc_1.attrib["class"]:
+                        print_meaning_badge(cc_1.text, end="\n")
                     continue
 
                 # print class "sb-0 sb-entry", "sb-1 sb-entry" ...
@@ -637,6 +642,11 @@ def vg(node):
         if child.attrib["class"] == "vd firstVd" or child.attrib["class"] == "vd":
             e = child.getchildren()[0]
             console.print(f"[{webster_color.bold}]{e.text}")
+
+        # print tags like "informal" and the tags at the same livel with transitives
+        if "sls" in child.attrib["class"]:
+             e = child.getchildren()[0]
+             console.print(f"[{webster_color.bold}]{e.text}")
 
 
 # --- parse class "row entry-header" --- #
@@ -734,8 +744,8 @@ def row_headword_row_header_vrs(node):
     print()
 
 # --- parse class "dxnls" --- #
-def see_also(node):
-    """Print seealso section."""
+def dxnls(node):
+    """Print dxnls section, such as 'see also', 'compare' etc."""
 
     texts = list(node.itertext())
     for text in texts:
@@ -743,11 +753,13 @@ def see_also(node):
         if not text:
             continue
         if text == "see also":
-            console.print(f"\n[{webster_color.bold}]{text}", end = "\n")
+            console.print(f"\n[{webster_color.bold} {webster_color.dxnls_content}]{text.upper()}", end = " ")
+        elif text == "compare":
+            console.print(f"\n[{webster_color.bold} {webster_color.dxnls_content}]{text.upper()}", end = " ")
         elif text == ",":
-            console.print(f"[{webster_color.sa_content}]{text}", end = " ")
+            console.print(f"[{webster_color.dxnls_content}]{text}", end = " ")
         else:
-            console.print(f"[{webster_color.sa_content}]{text}", end = "")
+            console.print(f"[{webster_color.dxnls_content}]{text}", end = "")
 
     print()
 
@@ -776,7 +788,7 @@ def dictionary_entry(node):
                     entry_uros(elm)
 
                 if elm.attrib["class"] == "dxnls":
-                    see_also(elm)
+                    dxnls(elm)
 
                 if elm.attrib["class"] == "mt-3":
                     badge = elm.getchildren()[0]  # class with "badge mw-badge"

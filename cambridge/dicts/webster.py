@@ -413,18 +413,21 @@ def ex_sent(node, ancestor_attr):
     console.print(f"[{webster_color.accessory} {webster_color.bold}]|", end="")
 
     hl_words = []
-    for i in node.iterchildren():
+    for i in node.iterdescendants():
         hl_word = i.text
         hl_words.append(hl_word)
 
     texts = list(node.itertext())
-    for text in texts:
+    for index, text in enumerate(texts):
         text = text.strip("\n").strip()
         if text:
             if text not in hl_words:
                 console.print(f"[{webster_color.meaning_sentence}]{text}", end = " ")
             else:
-                console.print(f"[{webster_color.italic}]{text}", end = " ")
+                if index != (len(texts) - 1) and texts[index + 1].strip() and not texts[index + 1].strip()[0].isalpha():
+                    console.print(f"[{webster_color.italic}]{text}", end = "")
+                else:
+                    console.print(f"[{webster_color.italic}]{text}", end = " ")
 
 def sub_content_thread(node, ancestor_attr):
     children = node.getchildren()
@@ -667,7 +670,7 @@ def entry_attr(node):
                     console.print(f"{syllables}", end=" ")
 
                 if i.tag == "span" and "prons-entries-list-inline" in i.attrib["class"]:
-                    print_pron(i, end="\n")
+                    print_pron(i)
 
 
 def row_entry_header(node):
@@ -700,7 +703,7 @@ def entry_uros(node):
                     sub_content_thread(i, "")
             print()
         if "prons-entries-list" in elm.attrib["class"]:
-            print_pron(elm, end=" ")
+            print_pron(elm)
 
 
 # --- parse class "row headword-row header-ins" --- #
@@ -806,23 +809,33 @@ def format_basedon_ancestor(ancestor_attr, prefix="", suffix=""):
     if ancestor_attr == "sense has-num-only has-subnum-only":
         console.print("    ", end=suffix)
 
-def print_pron(node, end=""):
+def print_pron(node):
+    sibling = node.getnext()
     prons = []
     for text in node.itertext():
         text = text.strip("\n").strip()
         if text:
             prons.append(text)
     count = len(prons)
-    for index, pron in enumerate(prons):
-        if index == 0:
-            console.print(f"|{pron}|", end="  ")
-        elif index == count -1:
-            console.print(f"[{webster_color.eh_word_syllables}]{pron}", end="\n")
-        elif pron == ",":
-            continue
+    if count == 1:
+        if sibling is not None:
+            console.print(f"|{prons[0]}|", end=" ")
         else:
-            text = pron + ", "
-            console.print(f"[{webster_color.eh_word_syllables}]{text}", end="")
+            console.print(f"|{prons[0]}|", end="\n")
+    if count > 1:
+        for index, pron in enumerate(prons):
+            if index == 0:
+                console.print(f"|{pron}|", end="  ")
+            elif index == count - 1:
+                if sibling is not None:
+                    console.print(f"[{webster_color.eh_word_syllables}]{pron}", end=" ")
+                else:
+                    console.print(f"[{webster_color.eh_word_syllables}]{pron}", end="\n")
+            elif pron == "," or pron == ";":
+                continue
+            else:
+                text = pron + ", "
+                console.print(f"[{webster_color.eh_word_syllables}]{text}", end="")
 
 def print_or_badge(text):
     console.print(f"[{webster_color.badge}]{text}", end = "")
@@ -841,14 +854,17 @@ def print_class_ins(node):
             if attr == "il  il-badge badge mw-badge-gray-100":
                 console.print(f"[{webster_color.bold} {webster_color.italic}]{child.text.strip()}", end=" ")
             elif attr == "prt-a":
-                print_pron(child, end="")
+                print_pron(child)
             elif attr == "il ":
                 print_or_badge(child.text)
+            elif attr == "sep-semicolon":
+                continue
+            elif attr == "if":
+                console.print(f"[{webster_color.bold}]{child.text}", end=" ")
+                global word_forms
+                word_forms.append(child.text)
             else:
                 console.print(f"{child.text}", end="")
-                if attr == "if":
-                    global word_forms
-                    word_forms.append(child.text)
 
 #####################################################
 # --- Entry point of all prints of a word found --- #

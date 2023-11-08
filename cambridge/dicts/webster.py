@@ -21,7 +21,7 @@ res_word = ""
 word_entries = [] # A page may have multiple word entries, e.g. "give away", "giveaway"
 word_forms = [] # A word may have multiple word forms, e.g. "ran", "running", "run", "flies"
 
-# TODO: run(with 2 digit item list), time on, flavor, rolling, entry, give someone up, bling, gravity, entrench, honeybun, wildcard, [on the toes, step on the toes, knock on the door]
+# TODO: run(with 2 digit item list), give someone up, gravity, entrench, honeybun, wildcard, [on the toes, step on the toes, knock on the door]
 
 # ----------Request Web Resouce----------
 def search_webster(con, cur, input_word, is_fresh=False, no_suggestions=False):
@@ -811,6 +811,15 @@ def dictionary_entry(node):
                 if elm.attrib["class"] == "mt-3":
                     badge = elm.getchildren()[0]  # class with "badge mw-badge"
                     print_meaning_badge(badge.text)
+                    print()
+
+                if elm.attrib["class"] == "cxl-ref":
+                    text = list(elm.itertext())
+                    print_meaning_content(":", end="")
+                    for t in text:
+                        t = t.strip()
+                        if t:
+                            print_meaning_content(t, end=" ")
                     print()
 
         except:

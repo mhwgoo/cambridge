@@ -14,7 +14,7 @@ eh_fg_entry_num = "#0A1B27"
 eh_bg_entry_num = "#F4F4F4"
 eh_entry_num = "{} on {}".format(eh_fg_entry_num, eh_bg_entry_num)
 eh_word_type = "#4A7D95"
-eh_word_syllables = "#757575" # UNUSED
+eh_word_syllables = "#757575"
 eh_pron = "#4A7D95" # UNUSED
 
 # --- verb tenses, noun plurals, adjective comparative forms --- #

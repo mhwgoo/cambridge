@@ -807,9 +807,22 @@ def format_basedon_ancestor(ancestor_attr, prefix="", suffix=""):
         console.print("    ", end=suffix)
 
 def print_pron(node, end=""):
-    pron = list(node.itertext())[1].strip()
-    console.print(f"|{pron}|", end=end)
-
+    prons = []
+    for text in node.itertext():
+        text = text.strip("\n").strip()
+        if text:
+            prons.append(text)
+    count = len(prons)
+    for index, pron in enumerate(prons):
+        if index == 0:
+            console.print(f"|{pron}|", end="  ")
+        elif index == count -1:
+            console.print(f"[{webster_color.eh_word_syllables}]{pron}", end="\n")
+        elif pron == ",":
+            continue
+        else:
+            text = pron + ", "
+            console.print(f"[{webster_color.eh_word_syllables}]{text}", end="")
 
 def print_or_badge(text):
     console.print(f"[{webster_color.badge}]{text}", end = "")

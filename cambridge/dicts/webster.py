@@ -405,14 +405,26 @@ def dtText(node, ancestor_attr, count):
 
 
 def ex_sent(node, ancestor_attr):
-    format_basedon_ancestor(ancestor_attr, prefix="\n")
+    if ancestor_attr:
+        format_basedon_ancestor(ancestor_attr, prefix="\n")
+    else:
+        print("")
 
     console.print(f"[{webster_color.accessory} {webster_color.bold}]|", end="")
 
-    for text in node.itertext():
-        if text.strip():
-            console.print(f"[{webster_color.meaning_sentence}]{text}", end = "")
+    hl_words = []
+    for i in node.iterchildren():
+        hl_word = i.text
+        hl_words.append(hl_word)
 
+    texts = list(node.itertext())
+    for text in texts:
+        text = text.strip("\n").strip()
+        if text:
+            if text not in hl_words:
+                console.print(f"[{webster_color.meaning_sentence}]{text}", end = " ")
+            else:
+                console.print(f"[{webster_color.italic}]{text}", end = " ")
 
 def sub_content_thread(node, ancestor_attr):
     children = node.getchildren()
@@ -501,7 +513,7 @@ def sense(node, attr, parent_attr, ancestor_attr):
         else:
             console.print(f"[{webster_color.bold} {webster_color.meaning_letter}]{sn}", end = " ")
 
-        sense_content = children[1]  # class "sense-content w-100"
+        sense_content = children[1] # class "sense-content w-100"
 
     # meaing with only "b" or "1" + "a" + "(1)", or "1" + "a"
     if attr == "sense has-sn" or attr == "sen has-sn":
@@ -512,16 +524,16 @@ def sense(node, attr, parent_attr, ancestor_attr):
         else:
             console.print(f"  [{webster_color.bold} {webster_color.meaning_letter}]{sn}", end = " ")
 
-        sense_content = children[1]  # class "sense-content w-100"
+        sense_content = children[1] # class "sense-content w-100"
 
     # meaning with only (2)
     if attr == "sense has-num-only has-subnum-only":
         console.print("    ", end = "")
-        sense_content = children[1]
+        sense_content = children[1] # class "sense-content w-100"
 
     # meaning with only number
     if attr == "sense has-sn has-num-only":
-        sense_content = children[1]
+        sense_content = children[1] # class "sense-content w-100"
 
     sense_content_attr = sense_content.get("class")
     if "sl badge mw-badge" in sense_content_attr:  # see "buck"
@@ -547,6 +559,9 @@ def sense(node, attr, parent_attr, ancestor_attr):
 
                 if elm_attr == "if":
                     console.print(f"{elm.text}", end=" ")
+
+                if elm_attr == "sgram":
+                    print_class_sgram(elm)
 
             else:
                 for i in elm.iterchildren():
@@ -597,11 +612,9 @@ def vg_sseq_entry_item(node):
                                 if i_attr == "et":
                                     et(i)
                         print()
-                    else:
-                        for t in cc_1.itertext():
-                            text = t.strip("\n").strip()
-                            if text:
-                                console.print(f"[{webster_color.bold}]{text}")
+                    elif cc_0.tag == "span" and cc_1.tag == "span" and cc_1.attrib["class"] == "sgram":
+                        print_class_sgram(cc_1)
+                        print()
                     continue
 
                 # print class "sb-0 sb-entry", "sb-1 sb-entry" ...
@@ -640,7 +653,7 @@ def entry_header_content(node):
 
         if elm.tag == "h2":
             type = " ".join(list(elm.itertext()))
-            console.print(f"[{webster_color.eh_word_type}]{type}", end="\n")
+            console.print(f"[{webster_color.bold} {webster_color.eh_word_type}]{type}", end="\n")
 
 
 def entry_attr(node):
@@ -676,10 +689,16 @@ def entry_uros(node):
     for elm in node.iterdescendants():
         if elm.tag == "span" and elm.attrib["class"] == "fw-bold ure":
             console.print(f"[{webster_color.bold} {webster_color.wf}]{elm.text}", end = " ")
-
         if elm.tag == "span" and elm.attrib["class"] == "fw-bold fl":
             console.print(f"[{webster_color.bold} {webster_color.wf_type}]{elm.text}", end = "\n")
-
+        if "ins" in elm.attrib["class"]:
+            print("", end="")
+            print_class_ins(elm)
+        if "utxt" in elm.attrib["class"]:
+            for i in elm.iterchildren():
+                if i.attrib["class"] == "sub-content-thread":
+                    sub_content_thread(i, "")
+            print()
         if "prons-entries-list" in elm.attrib["class"]:
             print_pron(elm, end=" ")
 
@@ -689,22 +708,9 @@ def row_headword_row_header_ins(node):
     """Print verb types. e.g. valued; valuing"""
 
     children = node.getchildren()[0].getchildren()[0]
-    for child in children:
-        attr = child.get("class")
-        if attr is not None:
-            if attr == "il  il-badge badge mw-badge-gray-100":
-                console.print(f"[{webster_color.bold} {webster_color.italic}]{child.text.strip()}", end=" ")
-            elif attr == "prt-a":
-                print_pron(child, end="")
-            elif attr == "il ":
-                print_or_badge(child.text)
-            else:
-                console.print(f"{child.text}", end="")
-                if attr == "if":
-                    global word_forms
-                    word_forms.append(child.text)
-
-    print()
+    if "ins" in children.attrib["class"]:
+        print_class_ins(children)
+        print()
 
 
 # --- parse class "row headword-row header-vrs" --- #
@@ -808,6 +814,28 @@ def print_pron(node, end=""):
 def print_or_badge(text):
     console.print(f"[{webster_color.badge}]{text}", end = "")
 
+def print_class_sgram(node):
+    for t in node.itertext():
+        text = t.strip("\n").strip()
+        if text and text.isalpha():
+            console.print(f"[{webster_color.bold}]{t}", end=" ")
+
+def print_class_ins(node):
+    """print node whose class name includes ins, such as 'ins', 'vg-ins'."""
+    for child in node:
+        attr = child.get("class")
+        if attr is not None:
+            if attr == "il  il-badge badge mw-badge-gray-100":
+                console.print(f"[{webster_color.bold} {webster_color.italic}]{child.text.strip()}", end=" ")
+            elif attr == "prt-a":
+                print_pron(child, end="")
+            elif attr == "il ":
+                print_or_badge(child.text)
+            else:
+                console.print(f"{child.text}", end="")
+                if attr == "if":
+                    global word_forms
+                    word_forms.append(child.text)
 
 #####################################################
 # --- Entry point of all prints of a word found --- #

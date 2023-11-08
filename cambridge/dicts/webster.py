@@ -382,18 +382,13 @@ def dtText(node, ancestor_attr, count):
     for text in texts:
         if text == " ":
             continue
-
-        elif text == ": ":
+        if text == ": ":
             text = text.strip()
-
+            print_meaning_content(text, end="")
         elif text == " see also ":
             print_meaning_badge(text.strip())
-            continue
-
         elif text == " see ":
             print_meaning_badge("->" + text.strip())
-            continue
-
         elif text in u_words:
             text_new = text.upper()
             print_meaning_content(text_new, end="")
@@ -564,7 +559,7 @@ def sense(node, attr, parent_attr, ancestor_attr):
                     print_meaning_badge(elm.text.strip(), end=" ")
 
                 if elm_attr == "if":
-                    console.print(f"{elm.text}", end=" ")
+                    print_class_if(elm.text)
 
                 if elm_attr == "sgram":
                     print_class_sgram(elm)
@@ -573,6 +568,11 @@ def sense(node, attr, parent_attr, ancestor_attr):
                 for i in elm.iterchildren():
                     if i.get("class") == "vl":
                         print_meaning_badge(i.text.strip())
+                    elif i.get("class") == "va":
+                        print_class_va(i.text.strip())
+                    elif "prons-entries-list" in i.get("class"):
+                        continue
+                        # print_pron(i)
                     else:
                         print_meaning_content(i.text, end=" ")
 
@@ -614,7 +614,7 @@ def vg_sseq_entry_item(node):
                                 if ("badge mw-badge" in i_attr) or ("il" in i_attr):
                                     print_meaning_badge(i.text.strip())
                                 if "if" in i_attr:
-                                    console.print(f"{i.text}", end=" ")
+                                    print_class_if(i.text)
                                 if i_attr == "et":
                                     et(i)
                         print()
@@ -730,18 +730,24 @@ def row_headword_row_header_ins(node):
 def row_headword_row_header_vrs(node):
     """Print word variants. e.g. premise variants or less commonly premiss"""
 
-    children = node.getchildren()[0].getchildren()[0]
+    children = node.getchildren()[0].getchildren()[0] # class "entry-attr vrs"
     for child in children.iterdescendants():
         attr = child.get("class")
         if attr is not None:
-            if "badge mw-badge" in attr:
-                console.print(f"[{webster_color.bold} {webster_color.italic}]{child.text.strip()}", end=" ")
+            if attr == "badge mw-badge-gray-100 text-start text-wrap d-inline":
+                console.print(f"[{webster_color.bold} {webster_color.italic}]{child.text.strip()}", end="")
             elif attr == "il " or attr == "vl":
                 print_or_badge(child.text)
+            elif attr == "va":
+                print_class_va(child.text)
+            elif "prons-entries-list" in attr:
+                print_pron(child)
             else:
-                console.print(f"{child.text}", end="")
+                continue
+                # console.print(f"{child.text}", end="")
 
     print()
+
 
 # --- parse class "dxnls" --- #
 def dxnls(node):
@@ -762,6 +768,7 @@ def dxnls(node):
             console.print(f"[{webster_color.dxnls_content}]{text}", end = "")
 
     print()
+
 
 # --- parse class "dictionary-entry-[number]" --- #
 def dictionary_entry(node):
@@ -810,6 +817,7 @@ def print_meaning_badge(text, end=" "):
 def print_meaning_content(text, end=""):
     console.print(f"[{webster_color.meaning_content}]{text}", end=end)
 
+
 def format_basedon_ancestor(ancestor_attr, prefix="", suffix=""):
     console.print(prefix, end="")
     if ancestor_attr == "sense has-sn has-num-only":
@@ -820,6 +828,7 @@ def format_basedon_ancestor(ancestor_attr, prefix="", suffix=""):
         console.print("", end=suffix)
     if ancestor_attr == "sense has-num-only has-subnum-only":
         console.print("    ", end=suffix)
+
 
 def print_pron(node):
     sibling = node.getnext()
@@ -849,14 +858,25 @@ def print_pron(node):
                 text = pron + ", "
                 console.print(f"[{webster_color.eh_word_syllables}]{text}", end="")
 
+
 def print_or_badge(text):
     console.print(f"[{webster_color.badge}]{text}", end = "")
+
+
+def print_class_if(text):
+    console.print(f"[{webster_color.bold}]{text}", end=" ")
+
+
+def print_class_va(text):
+    console.print(f"[{webster_color.bold}]{text}", end=" ")
+
 
 def print_class_sgram(node):
     for t in node.itertext():
         text = t.strip("\n").strip()
         if text and text.isalpha():
             console.print(f"[{webster_color.bold}]{t}", end=" ")
+
 
 def print_class_ins(node):
     """print node whose class name includes ins, such as 'ins', 'vg-ins'."""
@@ -872,7 +892,7 @@ def print_class_ins(node):
             elif attr == "sep-semicolon":
                 continue
             elif attr == "if":
-                console.print(f"[{webster_color.bold}]{child.text}", end=" ")
+                print_class_if(child.text)
                 global word_forms
                 word_forms.append(child.text)
             else:

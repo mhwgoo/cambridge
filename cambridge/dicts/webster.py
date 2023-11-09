@@ -21,7 +21,7 @@ res_word = ""
 word_entries = [] # A page may have multiple word entries, e.g. "give away", "giveaway"
 word_forms = [] # A word may have multiple word forms, e.g. "ran", "running", "run", "flies"
 
-# TODO: run(with 2 digit item list), give someone up, gravity, entrench, honeybun, wildcard, [on the toes, step on the toes, knock on the door]
+# TODO: run(with 2 digit item list), give someone up, honeybun, wildcard, [on the toes, step on the toes, knock on the door]
 
 # ----------Request Web Resouce----------
 def search_webster(con, cur, input_word, is_fresh=False, no_suggestions=False):
@@ -790,14 +790,18 @@ def row_headword_row_header_vrs(node):
             elif attr == "il " or attr == "vl":
                 print_or_badge(child.text)
             elif attr == "va":
-                print_class_va(child.text)
+                if child.text is None:
+                    for i in child:
+                        print_class_va(i.text)
+                else:
+                    print_class_va(child.text)
             elif "prons-entries-list" in attr:
                 print_pron(child)
             else:
                 continue
                 # console.print(f"{child.text}", end="")
-
-    print()
+    if not node.getnext().get("class") == "row headword-row header-ins":
+        print()
 
 
 # --- parse class "dxnls" --- #
@@ -928,8 +932,11 @@ def print_or_badge(text):
     console.print(f"[{webster_color.badge}]{text}", end = "")
 
 
-def print_class_if(text):
-    console.print(f"[{webster_color.bold}]{text}", end=" ")
+def print_class_if(text, before_semicolon=False, before_il=False):
+    if before_semicolon or before_il:
+        console.print(f"[{webster_color.bold}]{text}", end="")
+    else:
+        console.print(f"[{webster_color.bold}]{text}", end=" ")
 
 
 def print_class_va(text):
@@ -955,9 +962,19 @@ def print_class_ins(node):
             elif attr == "il ":
                 print_or_badge(child.text)
             elif attr == "sep-semicolon":
-                continue
+                console.print(f"{child.text}", end="")
             elif attr == "if":
-                print_class_if(child.text)
+                next_sibling = child.getnext()
+                if next_sibling is None:
+                    print_class_if(child.text, before_semicolon=False)
+                else:
+                    sub_attr = next_sibling.get("class")
+                    if sub_attr == "sep-semicolon":
+                        print_class_if(child.text, before_semicolon=True)
+                    elif sub_attr == "il ":
+                        print_class_if(child.text, before_il=True)
+                    else:
+                        print_class_if(child.text, before_semicolon=False)
                 global word_forms
                 word_forms.append(child.text)
             else:

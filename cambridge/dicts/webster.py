@@ -366,18 +366,25 @@ def related_phrases(node):
 ###########################################
 
 # --- parse class "vg" --- #
-def dtText(node, ancestor_attr, count):
-    texts = list(node.itertext())
-    if count != 1:
-        format_basedon_ancestor(ancestor_attr, prefix="\n")
-
+def get_word_cases(node):
     l_words = []
     u_words = []
     for i in node.iterdescendants():
-        if "lowercase" in i.attrib["class"]:
-            l_words.append(i.text)
-        if "uppercase" in i.attrib["class"]:
-            u_words.append(i.text)
+        attr = i.get("class")
+        if attr is not None:
+            if "lowercase" in attr:
+                l_words.append(i.text)
+            if "uppercase" in attr:
+                u_words.append(i.text)
+    return l_words, u_words
+
+def dtText(node, ancestor_attr, count, root_attr=""):
+    texts = list(node.itertext())
+    if count != 1:
+        format_basedon_ancestor(ancestor_attr, prefix="\n", root_attr=root_attr)
+
+    l_words = get_word_cases(node)[0]
+    u_words = get_word_cases(node)[1]
 
     for text in texts:
         if text == " ":
@@ -389,10 +396,10 @@ def dtText(node, ancestor_attr, count):
             print_meaning_badge(text.strip())
         elif text == " see ":
             print_meaning_badge("->" + text.strip())
-        elif text in u_words:
+        elif u_words and text in u_words:
             text_new = text.upper()
             print_meaning_content(text_new, end="")
-        elif text in l_words:
+        elif l_words and text in l_words:
             text_new = (" " + text)
             print_meaning_content(text_new, end="")
         else:
@@ -401,7 +408,7 @@ def dtText(node, ancestor_attr, count):
     console.print("", end = " ")
 
 
-def ex_sent(node, ancestor_attr, root_attr):
+def ex_sent(node, ancestor_attr, root_attr=""):
     if ancestor_attr:
         format_basedon_ancestor(ancestor_attr, prefix="\n", root_attr=root_attr)
     else:
@@ -411,7 +418,8 @@ def ex_sent(node, ancestor_attr, root_attr):
 
     hl_words = []
     for i in node.iterdescendants():
-        if "mw" in i.attrib["class"]:
+        attr = i.get("class")
+        if attr is not None and "mw" in attr:
             hl_word = i.text
             hl_words.append(hl_word)
 
@@ -427,7 +435,7 @@ def ex_sent(node, ancestor_attr, root_attr):
                 else:
                     console.print(f"[{webster_color.italic}]{text}", end = " ")
 
-def sub_content_thread(node, ancestor_attr, root_attr):
+def sub_content_thread(node, ancestor_attr, root_attr=""):
     children = node.getchildren()
     for child in children:
         attr = child.attrib["class"]
@@ -444,7 +452,7 @@ def sub_content_thread(node, ancestor_attr, root_attr):
                     ex_sent(elm, ancestor_attr, root_attr)
 
 
-def dt(node, ancestor_attr, self_attr, root_attr):
+def dt(node, ancestor_attr, self_attr, root_attr=""):
     children = node.getchildren()
     dtText_count = 1
 
@@ -458,7 +466,7 @@ def dt(node, ancestor_attr, self_attr, root_attr):
                 else:
                     print_meaning_badge(child.text)
             if child_attr == "dtText":
-                dtText(child, ancestor_attr, dtText_count)   # only meaning text
+                dtText(child, ancestor_attr, dtText_count, root_attr)   # only meaning text
                 dtText_count += 1
             if child_attr == "uns":
                 if child.getprevious() is not None and child.getprevious().attrib["class"] == "sub-content-thread":
@@ -484,7 +492,36 @@ def dt(node, ancestor_attr, self_attr, root_attr):
             if child_attr == "sub-content-thread":
                 sub_content_thread(child, ancestor_attr, root_attr)  # example under the meaning
 
+            if child_attr == "ca" or child_attr == "dx-jump":
+                extra(child, ancestor_attr, dtText_count, root_attr)
     print()
+
+
+def extra(node, ancestor_attr, count, root_attr=""):
+    texts = list(node.itertext())
+    if count != 1:
+        format_basedon_ancestor(ancestor_attr, prefix="\n", root_attr=root_attr)
+
+    l_words = get_word_cases(node)[0]
+    u_words = get_word_cases(node)[1]
+
+    for text in texts:
+        text_new = text.strip("\n").strip()
+        if text_new:
+            if text_new == "called also" or text_new == "compare":
+                print_meaning_badge("->" + text_new)
+            elif u_words and text in u_words:
+                text_new = text_new.upper()
+                print_meaning_content(text_new, end="")
+            elif l_words and text in l_words:
+                text_new = (" " + text_new)
+                print_meaning_content(text_new, end="")
+            elif text_new == ",":
+                print_meaning_content(text_new, end=" ")
+            else:
+                print_meaning_content(text_new, end="")
+
+    console.print("", end = " ")
 
 
 def et(node):
@@ -711,20 +748,23 @@ def entry_uros(node):
     """Print other word forms. e.g. valueless, valuelessness"""
 
     for elm in node.iterdescendants():
-        if elm.tag == "span" and elm.attrib["class"] == "fw-bold ure":
-            console.print(f"[{webster_color.bold} {webster_color.wf}]{elm.text}", end = " ")
-        if elm.tag == "span" and elm.attrib["class"] == "fw-bold fl":
-            console.print(f"[{webster_color.bold} {webster_color.wf_type}]{elm.text}", end = "\n")
-        if "ins" in elm.attrib["class"]:
-            print("", end="")
-            print_class_ins(elm)
-        if "utxt" in elm.attrib["class"]:
-            for i in elm.iterchildren():
-                if i.attrib["class"] == "sub-content-thread":
-                    sub_content_thread(i, "", "")
-            print()
-        if "prons-entries-list" in elm.attrib["class"]:
-            print_pron(elm)
+        attr = elm.get("class")
+        if attr is not None:
+            if elm.tag == "span" and "fw-bold ure" in attr:
+                console.print(f"[{webster_color.bold} {webster_color.wf}]{elm.text}", end = " ")
+            if elm.tag == "span" and "fw-bold fl" in attr:
+                console.print(f"[{webster_color.bold} {webster_color.wf_type}]{elm.text}", end = "\n")
+            if "ins" in attr:
+                print("", end="")
+                print_class_ins(elm)
+            if "utxt" in attr:
+                for i in elm.iterchildren():
+                    sub_attr = i.get("class")
+                    if sub_attr is not None and sub_attr == "sub-content-thread":
+                        sub_content_thread(i, "", "")
+                print()
+            if "prons-entries-list" in attr:
+                print_pron(elm)
 
 
 # --- parse class "row headword-row header-ins" --- #

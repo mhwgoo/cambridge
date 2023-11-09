@@ -452,53 +452,6 @@ def sub_content_thread(node, ancestor_attr, root_attr=""):
                     ex_sent(elm, ancestor_attr, root_attr)
 
 
-def dt(node, ancestor_attr, self_attr, root_attr=""):
-    children = node.getchildren()
-    dtText_count = 1
-
-    for child in children:
-        child_attr = child.get("class")
-        if child_attr is not None:
-            if child_attr == "sd": # label before meaning content
-                if self_attr == "sdsense":
-                    format_basedon_ancestor(ancestor_attr, prefix="")
-                    print_meaning_badge(child.text)
-                else:
-                    print_meaning_badge(child.text)
-            if child_attr == "dtText":
-                dtText(child, ancestor_attr, dtText_count, root_attr)   # only meaning text
-                dtText_count += 1
-            if child_attr == "uns":
-                uns(child, ancestor_attr, root_attr)
-            if child_attr == "sub-content-thread":
-                sub_content_thread(child, ancestor_attr, root_attr)  # example under the meaning
-            if child_attr == "ca" or child_attr == "dx-jump":
-                extra(child, ancestor_attr, dtText_count, root_attr)
-    print()
-
-def uns(node, ancestor_attr, root_attr):
-    if node.getprevious() is not None and node.getprevious().attrib["class"] == "sub-content-thread":
-        print()
-    elms = node.getchildren()[0].getchildren()
-    for elm in elms:
-        if elm.attrib["class"] == "unText":
-            text = "".join(list(elm.itertext())).strip()
-            if "mdash" in elm.getprevious().attrib["class"]:
-                if node.getprevious() is not None and node.getprevious().get("class") == "sub-content-thread": # see "beat"
-                    format_basedon_ancestor(ancestor_attr, prefix="")
-                print_meaning_badge("->" + text)
-            else:
-                format_basedon_ancestor(ancestor_attr, prefix="")
-                print_meaning_badge(text)
-        if elm.attrib["class"] == "sub-content-thread":
-            sub_content_thread(elm, ancestor_attr, root_attr)
-        if elm.attrib["class"] == "vi":
-            es = elm.getchildren()
-            for e in es:
-                if e.attrib["class"] == "sub-content-thread":
-                    sub_content_thread(e, ancestor_attr, root_attr)
-
-
 def extra(node, ancestor_attr, count, root_attr=""):
     texts = list(node.itertext())
     if count != 1:
@@ -524,6 +477,57 @@ def extra(node, ancestor_attr, count, root_attr=""):
                 print_meaning_content(text_new, end="")
 
     console.print("", end = " ")
+
+
+def dt(node, ancestor_attr, self_attr, root_attr=""):
+    children = node.getchildren()
+    dtText_count = 1
+
+    for child in children:
+        child_attr = child.get("class")
+        if child_attr is not None:
+            if child_attr == "sd": # label before meaning content
+                if self_attr == "sdsense":
+                    format_basedon_ancestor(ancestor_attr, prefix="")
+                    print_meaning_badge(child.text)
+                else:
+                    print_meaning_badge(child.text)
+            if child_attr == "dtText":
+                dtText(child, ancestor_attr, dtText_count, root_attr)   # only meaning text
+                dtText_count += 1
+            if child_attr == "uns":
+                uns(child, ancestor_attr, root_attr)
+            if child_attr == "sub-content-thread":
+                sub_content_thread(child, ancestor_attr, root_attr)  # example under the meaning
+            if child_attr == "ca" or child_attr == "dx-jump":
+                extra(child, ancestor_attr, dtText_count, root_attr)
+    print()
+
+
+def unText(node, ancestor_attr, root_attr):
+    text = "".join(list(node.itertext())).strip()
+    if "mdash" in node.getprevious().attrib["class"]:
+        if node.getprevious() is not None and node.getprevious().get("class") == "sub-content-thread": # see "beat"
+            format_basedon_ancestor(ancestor_attr, prefix="")
+        print_meaning_badge("->" + text)
+    else:
+        format_basedon_ancestor(ancestor_attr, prefix="")
+        print_meaning_badge(text)
+
+def uns(node, ancestor_attr, root_attr):
+    if node.getprevious() is not None and node.getprevious().attrib["class"] == "sub-content-thread":
+        print()
+    elms = node.getchildren()[0].getchildren()
+    for elm in elms:
+        if elm.attrib["class"] == "unText":
+            unText(elm, ancestor_attr, root_attr)
+        if elm.attrib["class"] == "sub-content-thread":
+            sub_content_thread(elm, ancestor_attr, root_attr)
+        if elm.attrib["class"] == "vi":
+            es = elm.getchildren()
+            for e in es:
+                if e.attrib["class"] == "sub-content-thread":
+                    sub_content_thread(e, ancestor_attr, root_attr)
 
 
 def et(node):

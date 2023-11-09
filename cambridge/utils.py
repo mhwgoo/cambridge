@@ -66,6 +66,10 @@ def get_request_url_spellcheck(url, input_word):
     return request_url
 
 
+def decode_url(url):
+    return parse.unquote(url)
+
+
 def profile(func):
     """A decorator that uses cProfile to profile a function"""
 

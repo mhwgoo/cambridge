@@ -7,7 +7,7 @@ from lxml import etree
 
 from ..console import console
 from ..settings import OP, DICTS
-from ..utils import get_request_url
+from ..utils import get_request_url, decode_url
 from ..log import logger
 from ..dicts import dict
 from ..colorschemes import webster_color
@@ -22,7 +22,7 @@ word_entries = [] # A page may have multiple word entries, e.g. "give away", "gi
 word_forms = [] # A word may have multiple word forms, e.g. "ran", "running", "run", "flies"
 word_types = [] # A word's word types, e.g. "preposition", "adjective"
 
-# TODO: run(with 2 digit item list), give someone up, [on the toes, step on the toes, knock on the door]
+# TODO: run/green(with 2 digit item list)
 
 # ----------Request Web Resouce----------
 def search_webster(con, cur, input_word, is_fresh=False, no_suggestions=False):
@@ -81,12 +81,13 @@ def fresh_run(con, cur, req_url, input_word, no_suggestions=False):
     nodes = parse_dict(res_text, found, res_url, True)
 
     if found:
-        parse_thread = threading.Thread(
-            target=parse_and_print, args=(nodes, res_url,)
-        )
-        parse_thread.start()
+        if res_word:
+            parse_thread = threading.Thread(
+                target=parse_and_print, args=(nodes, res_url,)
+            )
+            parse_thread.start()
 
-        dict.save(con, cur, input_word, res_word, res_url, sub_text)
+            dict.save(con, cur, input_word, res_word, res_url, sub_text)
 
     else:
         if no_suggestions:
@@ -105,6 +106,40 @@ def fresh_run(con, cur, req_url, input_word, no_suggestions=False):
                             suggestions.append(sug)
 
             dict.print_spellcheck(con, cur, input_word, suggestions, DICTS[1])
+
+
+def parse_redirect(nodes, res_url):
+    input_word = decode_url(res_url).split("/")[-1]
+    count = len(nodes)
+    print("No exact result found.")
+    console.print(f"The following [#4A7D95 bold italic]{count}[/#4A7D95 bold italic] entries include the term [#b22222 bold italic]{input_word}[/#b22222 bold italic].")
+
+    words = []
+    for node in nodes:
+        elms_in_order = {}
+
+        for elm in node.iterdescendants():
+            if elm.tag == "a" and elm.text == "See the full definition":
+                elms_in_order[elm.tag] = elm
+
+            elm_attr = elm.get("class")
+            if elm_attr and elm_attr == "dtText":
+                elms_in_order[elm.tag] = elm
+
+        # print the word
+        href = elms_in_order["a"].attrib["href"]
+        word = href.split("/")[-1]
+        words.append(word)
+        print()
+        print_word(word)
+        print()
+
+        # print the definition
+        dtText(elms_in_order["span"], "", 1, "")
+        print()
+
+    console.print(f'\nYou can try "camb -w {words[0]}" for example to get the full definition from the {DICTS[1]} dictionary', justify="left", style="#757575", end="")
+    print_dict_name()
 
 
 def parse_dict(res_text, found, res_url, is_fresh):
@@ -132,7 +167,7 @@ def parse_dict(res_text, found, res_url, is_fresh):
             sub_tree = tree.xpath('//*[@id="left-content"]')
             sub_text = etree.tostring(sub_tree[0]).decode('utf-8')
 
-        if len(nodes) < 2:
+        if len(nodes) == 0:
             print(NoResultError(DICTS[1]))
             sys.exit()
 
@@ -144,8 +179,7 @@ def parse_dict(res_text, found, res_url, is_fresh):
         else:
             result = tree.xpath("//*[@id='dictionary-entry-1']/div[1]/div/div/h1/span/text()")
             if not result:
-                print(NoResultError(DICTS[1]))
-                sys.exit()
+                parse_redirect(nodes, res_url)
             else:
                 res_word = result[0]
 
@@ -770,6 +804,10 @@ def vg(node):
 
 
 # --- parse class "row entry-header" --- #
+def print_word(text):
+    console.print(f"[{webster_color.eh_h1_word} {webster_color.bold}]{text}", end=" ")
+
+
 def entry_header_content(node):
     """Print entry header content. e.g. value 1 of 3 noun"""
 
@@ -778,7 +816,7 @@ def entry_header_content(node):
             word = "".join(list(elm.itertext()))
             global word_entries
             word_entries.append(word.strip().lower())
-            console.print(f"[{webster_color.eh_h1_word} {webster_color.bold}]{word}", end=" ")
+            print_word(word)
 
         if elm.tag == "span":
             num = " ".join(list(elm.itertext()))
@@ -789,6 +827,7 @@ def entry_header_content(node):
             console.print(f"[{webster_color.bold} {webster_color.eh_word_type}]{type}", end="\n")
             global word_types
             word_types.append(type.strip().lower())
+
 
 def entry_attr(node):
     """Print the pronounciation. e.g. val·​ue |ˈval-(ˌ)yü|"""
@@ -1057,6 +1096,11 @@ def print_class_ins(node):
 # --- Entry point of all prints of a word found --- #
 #####################################################
 
+def print_dict_name():
+    dict_name = "The Merriam-Webster Dictionary"
+    console.print(f"[{webster_color.dict_name}]{dict_name}", justify="right")
+
+
 def parse_and_print(nodes, res_url):
     """Parse and print different sections for the word."""
 
@@ -1086,5 +1130,4 @@ def parse_and_print(nodes, res_url):
         if attr == "related-phrases":
             related_phrases(node)
 
-    dict_name = "The Merriam-Webster Dictionary"
-    console.print(f"[{webster_color.dict_name}]{dict_name}", justify="right")
+    print_dict_name()

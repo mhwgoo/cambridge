@@ -269,11 +269,11 @@ def examples(node):
                             forms = set(word_forms)
                             text = t.strip().lower()
                             for w in words:
-                                if w in text:
+                                if w.lower() in text:
                                     hit = True
                                     break
                             for f in forms:
-                                if f == text:
+                                if f.lower() == text:
                                     hit = True
                                     break
 
@@ -408,6 +408,19 @@ def dtText(node, ancestor_attr, count, root_attr=""):
     console.print("", end = " ")
 
 
+def print_mw(text, has_tail, tag):
+    if tag == "hl":
+        if has_tail is True:
+            console.print(f"[{webster_color.meaning_sentence} {webster_color.bold}]{text}", end = "")
+        else:
+            console.print(f"[{webster_color.meaning_sentence} {webster_color.bold}]{text}", end = " ")
+    if tag == "normal":
+        if has_tail is True:
+            console.print(f"[{webster_color.meaning_sentence}]{text}", end = "")
+        else:
+            console.print(f"[{webster_color.meaning_sentence}]{text}", end = " ")
+
+
 def ex_sent(node, ancestor_attr, root_attr=""):
     if ancestor_attr:
         format_basedon_ancestor(ancestor_attr, prefix="\n", root_attr=root_attr)
@@ -417,23 +430,30 @@ def ex_sent(node, ancestor_attr, root_attr=""):
     console.print(f"[{webster_color.accessory} {webster_color.bold}]|", end="")
 
     hl_words = []
+    ems = []
     for i in node.iterdescendants():
         attr = i.get("class")
-        if attr is not None and "mw" in attr:
-            hl_word = i.text
-            hl_words.append(hl_word)
+        if attr is not None:
+            if i.tag == "em" and "mw" in attr:
+                ems.append(i.text)
+            if i.tag == "span" and "mw" in attr:
+                hl_words.append(i.text)
 
     texts = list(node.itertext())
-    for index, text in enumerate(texts):
-        text = text.strip("\n").strip()
+    count = len(texts)
+
+    for index, t in enumerate(texts):
+        text = t.strip("\n").strip()
         if text:
-            if text not in hl_words:
-                console.print(f"[{webster_color.meaning_sentence}]{text}", end = " ")
+            if t in hl_words:
+                hl_has_tail = ((index != (count - 1)) and (texts[index + 1].strip("\n").strip()) and (not texts[index + 1].strip("\n").strip()[0].isalpha()))
+                print_mw(text, hl_has_tail, "hl")
+            elif t in ems:
+                console.print(f"[{webster_color.meaning_sentence} {webster_color.bold}]{text}", end = "")
             else:
-                if index != (len(texts) - 1) and texts[index + 1].strip() and not texts[index + 1].strip()[0].isalpha():
-                    console.print(f"[{webster_color.italic}]{text}", end = "")
-                else:
-                    console.print(f"[{webster_color.italic}]{text}", end = " ")
+                normal_has_tail = (index != (count - 1) and (texts[index + 1] in ems))
+                print_mw(text, normal_has_tail, "normal")
+
 
 def sub_content_thread(node, ancestor_attr, root_attr=""):
     children = node.getchildren()
@@ -479,6 +499,61 @@ def extra(node, ancestor_attr, count, root_attr=""):
     console.print("", end = " ")
 
 
+def vi(node, ancestor_attr, root_attr):
+    children = node.getchildren()
+    for child in children:
+        child_attr = child.get("class")
+        if child_attr == "sub-content-thread":
+            sub_content_thread(child, ancestor_attr, root_attr)
+
+
+def uns(node, ancestor_attr, root_attr):
+    node_pre = node.getprevious()
+    if node_pre is not None and node_pre.get("class") == "sub-content-thread":
+        print()
+
+    # elms = node.getchildren()[0].getchildren()
+    for child in node.iterchildren():
+        child_attr = child.get("class")
+
+        if child_attr == "un":
+            elms = child.getchildren()
+            for elm in elms:
+                elm_attr = elm.get("class")
+                if elm_attr == "unText":
+                    text = "".join(list(elm.itertext())).strip()
+                    if "mdash" in elm.getprevious().attrib["class"]:
+                        if node_pre is not None and node_pre.get("class") == "sub-content-thread": # see "beat"
+                            format_basedon_ancestor(ancestor_attr, prefix="", root_attr=root_attr)
+                        print_meaning_badge("->" + text)
+                    else:
+                        format_basedon_ancestor(ancestor_attr, prefix="", root_attr=root_attr)
+                        print_meaning_badge(text)
+
+                if elm_attr == "sub-content-thread":
+                    sub_content_thread(elm, ancestor_attr, root_attr)
+
+                if elm_attr == "vi":
+                    vi(elm, ancestor_attr, root_attr)
+
+        if child_attr == "unText":
+            unText_simple(child, ancestor_attr, ancestor_attr)
+
+        if child_attr == "vi":
+            format_basedon_ancestor(ancestor_attr, prefix="", root_attr=root_attr)
+            vi(child, ancestor_attr, root_attr)
+
+
+def unText_simple(node, ancestor_attr, root_attr):
+    node_pre = node.getprevious()
+    if node_pre is not None and (node_pre.get("class") == "un" or node_pre.get("class") == "uns"):
+        print()
+    text = list(node.itertext())
+    format_basedon_ancestor(ancestor_attr, prefix="", root_attr=root_attr)
+    for t in text:
+        print_meaning_content(t, end="")
+
+
 def dt(node, ancestor_attr, self_attr, root_attr=""):
     children = node.getchildren()
     dtText_count = 1
@@ -501,33 +576,12 @@ def dt(node, ancestor_attr, self_attr, root_attr=""):
                 sub_content_thread(child, ancestor_attr, root_attr)  # example under the meaning
             if child_attr == "ca" or child_attr == "dx-jump":
                 extra(child, ancestor_attr, dtText_count, root_attr)
+            if child_attr == "unText":
+                unText_simple(child, ancestor_attr, root_attr)
+            if child_attr == "vi":
+                vi(child, ancestor_attr, root_attr)
+
     print()
-
-
-def unText(node, ancestor_attr, root_attr):
-    text = "".join(list(node.itertext())).strip()
-    if "mdash" in node.getprevious().attrib["class"]:
-        if node.getprevious() is not None and node.getprevious().get("class") == "sub-content-thread": # see "beat"
-            format_basedon_ancestor(ancestor_attr, prefix="")
-        print_meaning_badge("->" + text)
-    else:
-        format_basedon_ancestor(ancestor_attr, prefix="")
-        print_meaning_badge(text)
-
-def uns(node, ancestor_attr, root_attr):
-    if node.getprevious() is not None and node.getprevious().attrib["class"] == "sub-content-thread":
-        print()
-    elms = node.getchildren()[0].getchildren()
-    for elm in elms:
-        if elm.attrib["class"] == "unText":
-            unText(elm, ancestor_attr, root_attr)
-        if elm.attrib["class"] == "sub-content-thread":
-            sub_content_thread(elm, ancestor_attr, root_attr)
-        if elm.attrib["class"] == "vi":
-            es = elm.getchildren()
-            for e in es:
-                if e.attrib["class"] == "sub-content-thread":
-                    sub_content_thread(e, ancestor_attr, root_attr)
 
 
 def et(node):
@@ -617,6 +671,12 @@ def sense(node, attr, parent_attr, ancestor_attr):
 
                 if elm_attr == "sgram":
                     print_class_sgram(elm)
+
+                if elm_attr == "unText":
+                    unText_simple(elm, attr, ancestor_attr)
+
+                if elm_attr == "vi":
+                    vi(elm, attr, ancestor_attr)
 
             else:
                 for i in elm.iterchildren():

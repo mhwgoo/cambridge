@@ -20,8 +20,9 @@ sub_text = ""
 res_word = ""
 word_entries = [] # A page may have multiple word entries, e.g. "give away", "giveaway"
 word_forms = [] # A word may have multiple word forms, e.g. "ran", "running", "run", "flies"
+word_types = [] # A word's word types, e.g. "preposition", "adjective"
 
-# TODO: run(with 2 digit item list), give someone up, honeybun, wildcard, [on the toes, step on the toes, knock on the door]
+# TODO: run(with 2 digit item list), give someone up, [on the toes, step on the toes, knock on the door]
 
 # ----------Request Web Resouce----------
 def search_webster(con, cur, input_word, is_fresh=False, no_suggestions=False):
@@ -269,11 +270,16 @@ def examples(node):
                             forms = set(word_forms)
                             text = t.strip().lower()
                             for w in words:
-                                if w.lower() in text:
-                                    hit = True
-                                    break
+                                if "preposition" in word_types or "adverb" in word_types or "conjuction" in word_types:
+                                    if w == text:
+                                        hit = True
+                                        break
+                                else:
+                                    if w in text:
+                                        hit = True
+                                        break
                             for f in forms:
-                                if f.lower() == text:
+                                if f == text:
                                     hit = True
                                     break
 
@@ -771,7 +777,7 @@ def entry_header_content(node):
         if elm.tag == "h1" or elm.tag == "p":
             word = "".join(list(elm.itertext()))
             global word_entries
-            word_entries.append(word)
+            word_entries.append(word.strip().lower())
             console.print(f"[{webster_color.eh_h1_word} {webster_color.bold}]{word}", end=" ")
 
         if elm.tag == "span":
@@ -781,7 +787,8 @@ def entry_header_content(node):
         if elm.tag == "h2":
             type = " ".join(list(elm.itertext()))
             console.print(f"[{webster_color.bold} {webster_color.eh_word_type}]{type}", end="\n")
-
+            global word_types
+            word_types.append(type.strip().lower())
 
 def entry_attr(node):
     """Print the pronounciation. e.g. val·​ue |ˈval-(ˌ)yü|"""
@@ -1042,7 +1049,7 @@ def print_class_ins(node):
                     else:
                         print_class_if(child.text, before_semicolon=False)
                 global word_forms
-                word_forms.append(child.text)
+                word_forms.append(child.text.strip().lower())
             else:
                 console.print(f"{child.text}", end="")
 

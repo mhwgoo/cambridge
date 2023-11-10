@@ -1,6 +1,6 @@
 """Script to store static data."""
 
-VERSION = "3.6.4"
+VERSION = "3.7.0"
 
 OP = [
     "FETCHING",

@@ -1,7 +1,8 @@
 bold = "bold"
 italic = "italic"
 accessory = "#4A7D95"
-badge = "#b22222"
+badge = "#B00007"
+or_badge = "#0DCAF0"
 
 
 #####################
@@ -13,7 +14,7 @@ eh_h1_word = "#2E8B57"
 eh_fg_entry_num = "#0A1B27"
 eh_bg_entry_num = "#F4F4F4"
 eh_entry_num = "{} on {}".format(eh_fg_entry_num, eh_bg_entry_num)
-eh_word_type = "#4A7D95"
+eh_word_type = "#FD7E14"
 eh_word_syllables = "#757575"
 eh_pron = "#4A7D95" # UNUSED
 
@@ -33,6 +34,8 @@ meaning_letter = "#757575"
 meaning_link = "#4A7D95"
 meaning_content = "#4A7D95"
 meaning_badge = badge
+meaning_arrow = "#8B5742"
+meaning_keyword = "#0DCAF0"
 meaning_sentence = "#757575"
 
 # --- dxnls --- #

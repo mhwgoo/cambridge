@@ -22,7 +22,6 @@ word_entries = [] # A page may have multiple word entries, e.g. "give away", "gi
 word_forms = [] # A word may have multiple word forms, e.g. "ran", "running", "run", "flies"
 word_types = [] # A word's word types, e.g. "preposition", "adjective"
 
-# TODO: run/green(with 2 digit item list)
 
 # ----------Request Web Resouce----------
 def search_webster(con, cur, input_word, is_fresh=False, no_suggestions=False):
@@ -292,7 +291,9 @@ def examples(node):
             if is_title:
                 console.print(f"\n[{webster_color.eg_title} {webster_color.bold}]{elm.text}", end="")
             if has_aq:
-                for index, t in enumerate(list(elm.itertext())):
+                texts = list(elm.itertext())
+
+                for index, t in enumerate(texts):
                     if time in [0, 1, 8, 9, 16, 17, 24, 25]:
                         if index == 0:
                             console.print(f"\n[{webster_color.accessory} {webster_color.bold}]|", end="")
@@ -304,12 +305,12 @@ def examples(node):
                             forms = set(word_forms)
                             text = t.strip().lower()
                             for w in words:
-                                if "preposition" in word_types or "adverb" in word_types or "conjuction" in word_types:
+                                if "preposition" in word_types or "adverb" in word_types or "conjuction" in word_types and ("noun" in word_types and text[-1] !="s"):
                                     if w == text:
                                         hit = True
                                         break
                                 else:
-                                    if w in text:
+                                    if w in text and len(text) < 20:
                                         hit = True
                                         break
                             for f in forms:
@@ -433,9 +434,9 @@ def dtText(node, ancestor_attr, count, root_attr=""):
             text = text.strip()
             print_meaning_content(text, end="")
         elif text == " see also ":
-            print_meaning_badge(text.strip())
-        elif text == " see ":
-            print_meaning_badge("->" + text.strip())
+            print_meaning_keyword(text.strip())
+        elif text == " see " or text == " compare ":
+            print_meaning_keyword("->" + text.strip())
         elif u_words and text in u_words:
             text_new = text.upper()
             print_meaning_content(text_new, end="")
@@ -569,9 +570,9 @@ def uns(node, ancestor_attr, root_attr, num_label_count=1):
 
                     text = "".join(list(elm.itertext())).strip()
                     if "mdash" in elm.getprevious().attrib["class"]:
-                        if node_pre is not None and node_pre.get("class") == "sub-content-thread": # see "beat"
+                        if node_pre is not None and node_pre.get("class") == "sub-content-thread":
                             format_basedon_ancestor(ancestor_attr, prefix="", root_attr=root_attr)
-                        print_meaning_badge("->" + text)
+                        print_meaning_arrow("->" + text)
                     else:
                         format_basedon_ancestor(ancestor_attr, prefix="", root_attr=root_attr)
                         print_meaning_badge(text)
@@ -583,17 +584,21 @@ def uns(node, ancestor_attr, root_attr, num_label_count=1):
                     vi(elm, ancestor_attr, root_attr, num_label_count)
 
         if child_attr == "unText":
-            unText_simple(child, ancestor_attr, ancestor_attr)
+            unText_simple(child, ancestor_attr, ancestor_attr, num_label_count)
 
         if child_attr == "vi":
             format_basedon_ancestor(ancestor_attr, prefix="", root_attr=root_attr)
             vi(child, ancestor_attr, root_attr, num_label_count)
 
 
-def unText_simple(node, ancestor_attr, root_attr):
+def unText_simple(node, ancestor_attr, root_attr, num_label_count=1):
     node_pre = node.getprevious()
     if node_pre is not None and (node_pre.get("class") == "un" or node_pre.get("class") == "uns"):
         print()
+
+    if num_label_count == 2:
+        print(" ", end="")
+
     text = list(node.itertext())
     format_basedon_ancestor(ancestor_attr, prefix="", root_attr=root_attr)
     for t in text:
@@ -625,25 +630,14 @@ def dt(node, ancestor_attr, self_attr, root_attr="", num_label_count=1):
             if child_attr == "ca" or child_attr == "dx-jump":
                 extra(child, ancestor_attr, dtText_count, root_attr)
             if child_attr == "unText":
-                unText_simple(child, ancestor_attr, root_attr)
+                unText_simple(child, ancestor_attr, root_attr, num_label_count)
             if child_attr == "vi":
                 vi(child, ancestor_attr, root_attr, num_label_count)
 
     print()
 
 
-def et(node):
-    texts = list(node.itertext())
-    for index, text in enumerate(texts):
-        if index == 0:
-            text = text.replace("\n", "")
-            print(text, end="")  # print_meaning_content not work, not print anything
-        elif index == len(texts) - 1 and index != 0:
-            print_meaning_content(text, end=" ")
-        else:
-            print_meaning_content(text, end="")
-
-
+### sense(node, "sense has-sn", "sb-0 sb-entry, "sb has-num has-let ms-lg-4 ms-3 w-100", 1)
 def sense(node, attr, parent_attr, ancestor_attr, num_label_count=1):
     children = node.getchildren()
 
@@ -700,51 +694,47 @@ def sense(node, attr, parent_attr, ancestor_attr, num_label_count=1):
         if "badge mw-badge-gray-100" in c.attrib["class"]:
             print_meaning_badge(c.text.strip(), end="\n")
 
-    sense_content_attr = sense_content.get("class")
-    if "sl badge mw-badge" in sense_content_attr:  # see "buck"
-        print_meaning_badge(sense_content.text, end="\n")
+    # "sense-content w-100"
+    elms = sense_content.getchildren()
+    for elm in elms:
+        elm_attr = elm.get("class")
+        if elm_attr is not None:
+            if "badge" in elm_attr:
+                text = "".join(list(elm.itertext())).strip()
+                print_meaning_badge(text)
 
-    else: # "sense-content w-100"
-        elms = sense_content.getchildren()
-        for elm in elms:
-            elm_attr = elm.get("class")
-            if elm_attr is not None:
-                if "badge" in elm_attr:
-                    text = "".join(list(elm.itertext())).strip()
-                    print_meaning_badge(text)
+            if elm_attr == "dt " or elm_attr == "dt hasSdSense" or elm_attr == "sdsense":
+                dt(elm, attr, elm_attr, ancestor_attr, num_label_count)
 
-                if elm_attr == "dt " or elm_attr == "dt hasSdSense" or elm_attr == "sdsense":
-                    dt(elm, attr, elm_attr, ancestor_attr, num_label_count)
+            if elm_attr == "et":
+                et(elm)
 
-                if elm_attr == "et":
-                    et(elm)
+            if elm_attr == "il ":
+                print_meaning_badge(elm.text.strip(), end=" ")
 
-                if elm_attr == "il ":
-                    print_meaning_badge(elm.text.strip(), end=" ")
+            if elm_attr == "if":
+                print_class_if(elm.text)
 
-                if elm_attr == "if":
-                    print_class_if(elm.text)
+            if elm_attr == "sgram":
+                print_class_sgram(elm)
 
-                if elm_attr == "sgram":
-                    print_class_sgram(elm)
+            if elm_attr == "unText":
+                unText_simple(elm, attr, ancestor_attr, num_label_count)
 
-                if elm_attr == "unText":
-                    unText_simple(elm, attr, ancestor_attr)
+            if elm_attr == "vi":
+                vi(elm, attr, ancestor_attr, num_label_count)
 
-                if elm_attr == "vi":
-                    vi(elm, attr, ancestor_attr, num_label_count)
-
-            else:
-                for i in elm.iterchildren():
-                    if i.get("class") == "vl":
-                        print_meaning_badge(i.text.strip())
-                    elif i.get("class") == "va":
-                        print_class_va(i.text.strip())
-                    elif "prons-entries-list" in i.get("class"):
-                        continue
-                        # print_pron(i)
-                    else:
-                        print_meaning_content(i.text, end=" ")
+        else:
+            for i in elm.iterchildren():
+                if i.get("class") == "vl":
+                    print_meaning_badge(i.text.strip())
+                elif i.get("class") == "va":
+                    print_class_va(i.text.strip())
+                elif "prons-entries-list" in i.get("class"):
+                    continue
+                    # print_pron(i)
+                else:
+                    print_meaning_content(i.text, end=" ")
 
 
 def sb_entry(node, parent_attr, num_label_count=1):
@@ -755,9 +745,9 @@ def sb_entry(node, parent_attr, num_label_count=1):
         elms = child.getchildren()[0].getchildren()
         for e in elms:
             e_attr = e.attrib["class"]  # "sense has-sn"
-            sense(e, e_attr, attr, parent_attr, num_label_count)        # sense(child, "sense has-sn", "sb-0 sb-entry", "....")
+            sense(e, e_attr, attr, parent_attr, num_label_count)        # e.g. sense(child, "sense has-sn", "sb-0 sb-entry", "....", 1)
     else:
-        sense(child, child_attr, attr, parent_attr, num_label_count)    # sense(child, "sense has-sn", "sb-0 sb-entry, "sb has-num has-let ms-lg-4 ms-3 w-100")
+        sense(child, child_attr, attr, parent_attr, num_label_count)    # e.g. sense(child, "sense has-sn", "sb-0 sb-entry, "sb has-num has-let ms-lg-4 ms-3 w-100", 1)
 
 
 def vg_sseq_entry_item(node):
@@ -795,11 +785,21 @@ def vg_sseq_entry_item(node):
                         print()
                     elif cc_0.tag == "span" and cc_1.tag == "span" and "sl badge mw-badge" in cc_1.attrib["class"]:
                         print_meaning_badge(cc_1.text, end="\n")
+                    elif cc_0.tag == "span" and cc_1.tag == "span" and cc_1.attrib["class"] == "et":
+                        et(cc_1)
                     continue
 
                 # print class "sb-0 sb-entry", "sb-1 sb-entry" ...
                 sb_entry(c, attr, num_label_count)
 
+def et(node):
+    for t in node.itertext():
+        print(t.strip("\n"), end= "")
+
+    if node.getnext() is None:
+        print()
+    else:
+        print("", end=" ")
 
 def vg(node):
     """Print one entry(e.g. 1 of 3)'s all meanings. e.g. 1 :the monetary worth of somethng 2 :a fair return... 3 :..."""
@@ -983,9 +983,8 @@ def dictionary_entry(node):
                     dxnls(elm)
 
                 if elm.attrib["class"] == "mt-3":
-                    badge = elm.getchildren()[0]  # class with "badge mw-badge"
-                    print_meaning_badge(badge.text)
-                    print()
+                    badge = elm.getchildren()[0]  # class "lbs badge mw-badge-gray-100 text-start text-wrap d-inline"
+                    print_header_badge(badge.text, end="\n")
 
                 if elm.attrib["class"] == "cxl-ref":
                     text = list(elm.itertext())
@@ -1006,6 +1005,15 @@ def dictionary_entry(node):
 
 def print_meaning_badge(text, end=" "):
     console.print(f"[{webster_color.italic} {webster_color.meaning_badge}]{text}", end=end)
+
+def print_header_badge(text, end=" "):
+    console.print(f"[{webster_color.italic} {webster_color.meaning_badge}]{text}", end=end)
+
+def print_meaning_arrow(text, end=" "):
+    console.print(f"[{webster_color.meaning_arrow}]{text}", end=end)
+
+def print_meaning_keyword(text, end=" "):
+    console.print(f"[{webster_color.meaning_keyword} {webster_color.bold}]{text}", end=end)
 
 
 def print_meaning_content(text, end=""):
@@ -1031,21 +1039,31 @@ def format_basedon_ancestor(ancestor_attr, prefix="", suffix="", root_attr=""):
 
 def print_pron(node):
     sibling = node.getnext()
+    before_semicolon = ((sibling is not None) and (sibling.get("class") == "sep-semicolon"))
+    before_or = ((sibling is not None) and (sibling.get("class") == "il "))
+
     prons = []
     for text in node.itertext():
         text = text.strip("\n").strip()
         if text:
             prons.append(text)
+
     count = len(prons)
     if count == 1:
-        if sibling is not None:
-            console.print(f"|{prons[0]}|", end=" ")
-        else:
+        if sibling is None:
             console.print(f"|{prons[0]}|", end="\n")
+        else:
+            if before_semicolon or before_or:
+                console.print(f"|{prons[0]}|", end="")
+            else:
+                console.print(f"|{prons[0]}|", end=" ")
     if count > 1:
         for index, pron in enumerate(prons):
             if index == 0:
-                console.print(f"|{pron}|", end="  ")
+                if before_semicolon or before_or:
+                    console.print(f"|{pron}|", end="")
+                else:
+                    console.print(f"|{pron}|", end="  ")
             elif index == count - 1:
                 if sibling is not None:
                     console.print(f"[{webster_color.eh_word_syllables}]{pron}", end=" ")
@@ -1059,7 +1077,7 @@ def print_pron(node):
 
 
 def print_or_badge(text):
-    console.print(f"[{webster_color.badge}]{text}", end = "")
+    console.print(f"[{webster_color.or_badge} {webster_color.bold}]{text}", end = "")
 
 
 def print_class_if(text, before_semicolon=False, before_il=False):
@@ -1086,7 +1104,7 @@ def print_class_ins(node):
         attr = child.get("class")
         if attr is not None:
             if attr == "il  il-badge badge mw-badge-gray-100":
-                console.print(f"[{webster_color.bold} {webster_color.italic}]{child.text.strip()}", end=" ")
+                print_header_badge(child.text.strip(), end=" ")
             elif attr == "prt-a":
                 print_pron(child)
             elif attr == "il ":

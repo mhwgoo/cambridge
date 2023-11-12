@@ -1,4 +1,4 @@
-"""Contains various utility functions."""
+"""This script contains various utility functions."""
 
 import time
 import cProfile

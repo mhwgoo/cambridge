@@ -1,4 +1,4 @@
-"""Script to store static data."""
+"""This script contains static data."""
 
 VERSION = "3.7.0"
 

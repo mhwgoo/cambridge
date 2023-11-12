@@ -15,6 +15,7 @@ from ..errors import NoResultError
 
 WEBSTER_BASE_URL = "https://www.merriam-webster.com"
 WEBSTER_DICT_BASE_URL = WEBSTER_BASE_URL + "/dictionary/"
+WEBSTER_WORD_OF_THE_DAY_URL = WEBSTER_BASE_URL + "/word-of-the-day"
 
 sub_text = ""
 res_word = ""
@@ -150,6 +151,8 @@ def parse_dict(res_text, found, res_url, is_fresh):
     logger.debug(f"{OP[1]} {res_url}")
 
     if found:
+        sub_tree = tree.xpath('//*[@id="left-content"]')[0]
+
         s = """
         //*[@id="left-content"]/div[contains(@id, "dictionary-entry")] |
         //*[@id="left-content"]/div[@id="phrases"] |
@@ -159,12 +162,11 @@ def parse_dict(res_text, found, res_url, is_fresh):
         //*[@id="left-content"]/div[@id="nearby-entries"]
         """
 
-        nodes = tree.xpath(s)
+        nodes = sub_tree.xpath(s)
 
         if is_fresh:
             global sub_text
-            sub_tree = tree.xpath('//*[@id="left-content"]')
-            sub_text = etree.tostring(sub_tree[0]).decode('utf-8')
+            sub_text = etree.tostring(sub_tree).decode('utf-8')
 
         if len(nodes) == 0:
             print(NoResultError(DICTS[1]))
@@ -1128,9 +1130,9 @@ def print_class_ins(node):
             else:
                 console.print(f"{child.text}", end="")
 
-#####################################################
-# --- Entry point of all prints of a word found --- #
-#####################################################
+###########################################################
+# --- Entry point for printing all entries of  a word --- #
+###########################################################
 
 def print_dict_name():
     dict_name = "The Merriam-Webster Dictionary"
@@ -1167,3 +1169,7 @@ def parse_and_print(nodes, res_url):
             related_phrases(node)
 
     print_dict_name()
+
+######################################################
+# --- Entry point for printing 'Word of the Day' --- #
+######################################################

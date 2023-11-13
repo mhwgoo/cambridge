@@ -60,6 +60,7 @@ eg_word = "#2E8B57"
 
 # related phrases 
 rph_title = "#0F3850"
+rph_em = "#2E8B57"
 rph_item = "#4A7D95"
 
 

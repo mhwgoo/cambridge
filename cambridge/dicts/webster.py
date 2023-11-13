@@ -262,7 +262,7 @@ def synonyms(node):
                 console.print(f"[{w_col.bold} {w_col.syn_title}]{elm.text}", end=" ")
 
             if has_label:
-                console.print(f"\n[{w_col.syn_label} {w_col.bold}]{elm.text}")
+                console.print(f"\n[{w_col.syn_label}]{elm.text}")
 
             if has_syn:
                 children = elm.getchildren()
@@ -381,7 +381,7 @@ def related_phrases(node):
     for t in texts:
         if t.strip():
             if t.lower() in words:
-                console.print(f"[{w_col.rph_title} {w_col.bold} {w_col.italic}]{t}", end="\n")
+                console.print(f"[{w_col.rph_em} {w_col.bold} {w_col.italic}]{t}", end="\n")
             else:
                 console.print(f"[{w_col.rph_title} {w_col.bold}]{t}", end="")
 

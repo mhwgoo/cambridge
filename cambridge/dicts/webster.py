@@ -10,7 +10,7 @@ from ..settings import OP, DICTS
 from ..utils import get_request_url, decode_url
 from ..log import logger
 from ..dicts import dict
-from ..colorschemes import webster_color
+from ..colorschemes import webster_color as w_col
 from ..errors import NoResultError
 
 WEBSTER_BASE_URL = "https://www.merriam-webster.com"
@@ -24,10 +24,9 @@ word_forms = [] # A word may have multiple word forms, e.g. "ran", "running", "r
 word_types = [] # A word's word types, e.g. "preposition", "adjective"
 
 
-# ----------Request Web Resouce----------
 def search_webster(con, cur, input_word, is_fresh=False, no_suggestions=False):
     """
-    Entry point for dealing with Mirriam Webster Dictionary.
+    Entry point for searching a word in Webster.
     It first checks the cache, if the word has been cached,
     uses it and prints it; if not, go fetch the web.
     If the word is found, prints it to the terminal and caches it concurrently.
@@ -108,6 +107,14 @@ def fresh_run(con, cur, req_url, input_word, no_suggestions=False):
             dict.print_spellcheck(con, cur, input_word, suggestions, DICTS[1])
 
 
+def get_wod():
+    result = fetch_webster(WEBSTER_WORD_OF_THE_DAY_URL, "")
+    found = result[0]
+    if found:
+        res_url, res_text = result[1]
+        parse_and_print_wod(res_url, res_text)
+
+
 def parse_redirect(nodes, res_url):
     input_word = decode_url(res_url).split("/")[-1]
     count = len(nodes)
@@ -145,10 +152,10 @@ def parse_redirect(nodes, res_url):
 def parse_dict(res_text, found, res_url, is_fresh):
     """Parse the dict section of the page for the word."""
 
+    logger.debug(f"{OP[1]} {res_url}")
+
     parser = etree.HTMLParser(remove_comments=True)
     tree = etree.HTML(res_text, parser)
-
-    logger.debug(f"{OP[1]} {res_url}")
 
     if found:
         sub_tree = tree.xpath('//*[@id="left-content"]')[0]
@@ -222,17 +229,17 @@ def nearby_entries(node):
             continue
         else:
             if has_title:
-                console.print(f"[{webster_color.bold} {webster_color.nearby_title}]{elm.text}", end="")
+                console.print(f"[{w_col.bold} {w_col.nearby_title}]{elm.text}", end="")
 
             if has_em:
                 word = "".join(list(elm.itertext()))
-                console.print(f"[{webster_color.bold} {webster_color.italic} {webster_color.nearby_em}]{word}", end="\n")
+                console.print(f"[{w_col.bold} {w_col.italic} {w_col.nearby_em}]{word}", end="\n")
 
             if has_word:
-                console.print(f"[{webster_color.nearby_word}]{elm.text}", end="\n")
+                console.print(f"[{w_col.nearby_word}]{elm.text}", end="\n")
 
             if has_nearby:
-                console.print(f"[{webster_color.nearby_item}]{elm.text}", end="\n")
+                console.print(f"[{w_col.nearby_item}]{elm.text}", end="\n")
 
 
 ###########################################
@@ -253,10 +260,10 @@ def synonyms(node):
             continue
         else:
             if has_title:
-                console.print(f"[{webster_color.bold} {webster_color.syn_title}]{elm.text}", end=" ")
+                console.print(f"[{w_col.bold} {w_col.syn_title}]{elm.text}", end=" ")
 
             if has_label:
-                console.print(f"\n[{webster_color.syn_label} {webster_color.bold}]{elm.text}")
+                console.print(f"\n[{w_col.syn_label} {w_col.bold}]{elm.text}")
 
             if has_syn:
                 children = elm.getchildren()
@@ -265,9 +272,9 @@ def synonyms(node):
                 for index, child in enumerate(children):
                     syn = "".join(list(child.itertext())).strip()
                     if index != (total_num - 1):
-                        console.print(f"[{webster_color.syn_item}]{syn},", end=" ")
+                        console.print(f"[{w_col.syn_item}]{syn},", end=" ")
                     else:
-                        console.print(f"[{webster_color.syn_item}]{syn}", end=" ")
+                        console.print(f"[{w_col.syn_item}]{syn}", end=" ")
 
 
 ###########################################
@@ -291,15 +298,15 @@ def examples(node):
             continue
         else:
             if is_title:
-                console.print(f"\n[{webster_color.eg_title} {webster_color.bold}]{elm.text}", end="")
+                console.print(f"\n[{w_col.eg_title} {w_col.bold}]{elm.text}", end="")
             if has_aq:
                 texts = list(elm.itertext())
 
                 for index, t in enumerate(texts):
                     if time in [0, 1, 8, 9, 16, 17, 24, 25]:
                         if index == 0:
-                            console.print(f"\n[{webster_color.accessory} {webster_color.bold}]|", end="")
-                            console.print(f"[{webster_color.eg_sentence}]{t}", end="")
+                            console.print(f"\n[{w_col.accessory} {w_col.bold}]|", end="")
+                            console.print(f"[{w_col.eg_sentence}]{t}", end="")
                         else:
                             hit = False
                             global word_entries, word_forms
@@ -321,9 +328,9 @@ def examples(node):
                                     break
 
                             if hit:
-                                console.print(f"[{webster_color.eg_word}]{t}", end="")
+                                console.print(f"[{w_col.eg_word}]{t}", end="")
                             else:
-                                console.print(f"[{webster_color.eg_sentence}]{t}", end="")
+                                console.print(f"[{w_col.eg_sentence}]{t}", end="")
                     else:
                         continue
                 time = time + 1
@@ -342,9 +349,9 @@ def phrases(node):
         try:
             if child.attrib["class"] == "drp":
                 if child.getnext().tag == "span":
-                    console.print(f"[{webster_color.ph_item} {webster_color.bold}]{child.text}", end = "")
+                    console.print(f"[{w_col.ph_item} {w_col.bold}]{child.text}", end = "")
                 else:
-                    console.print(f"[{webster_color.ph_item} {webster_color.bold}]{child.text}", end = "\n")
+                    console.print(f"[{w_col.ph_item} {w_col.bold}]{child.text}", end = "\n")
 
             if child.attrib["class"] == "vg":
                 vg(child)
@@ -354,7 +361,7 @@ def phrases(node):
                 if i.attrib["class"] == "vl":
                     print_or_badge(i.text)
                 else:
-                    console.print(f"[{webster_color.ph_item} {webster_color.bold}]{i.text}", end = "\n")
+                    console.print(f"[{w_col.ph_item} {w_col.bold}]{i.text}", end = "\n")
 
 
 ###########################################
@@ -376,9 +383,9 @@ def related_phrases(node):
     for t in texts:
         if t.strip():
             if t.lower() in words:
-                console.print(f"[{webster_color.rph_title} {webster_color.bold} {webster_color.italic}]{t}", end="\n")
+                console.print(f"[{w_col.rph_title} {w_col.bold} {w_col.italic}]{t}", end="\n")
             else:
-                console.print(f"[{webster_color.rph_title} {webster_color.bold}]{t}", end="")
+                console.print(f"[{w_col.rph_title} {w_col.bold}]{t}", end="")
 
     pr_sec = children[2]
     sub_ps = pr_sec.getchildren()[1]  # divs: related-phrases-list-container-xs
@@ -396,12 +403,12 @@ def related_phrases(node):
         for t in ts:
             t = t.strip("\n").strip()
             if t != ts[-1]:
-                console.print(f"[{webster_color.rph_item}]{t}", end="")
+                console.print(f"[{w_col.rph_item}]{t}", end="")
             else:
                 if phrase != phrases[-1]:
-                    console.print(f"[{webster_color.rph_item}]{t},", end=" ")
+                    console.print(f"[{w_col.rph_item}]{t},", end=" ")
                 else:
-                    console.print(f"[{webster_color.rph_item}]{t}", end="\n")
+                    console.print(f"[{w_col.rph_item}]{t}", end="\n")
 
 
 ###########################################
@@ -454,14 +461,14 @@ def dtText(node, ancestor_attr, count, root_attr=""):
 def print_mw(text, has_tail, tag):
     if tag == "hl":
         if has_tail is True:
-            console.print(f"[{webster_color.meaning_sentence} {webster_color.bold}]{text}", end = "")
+            console.print(f"[{w_col.meaning_sentence} {w_col.bold}]{text}", end = "")
         else:
-            console.print(f"[{webster_color.meaning_sentence} {webster_color.bold}]{text}", end = " ")
+            console.print(f"[{w_col.meaning_sentence} {w_col.bold}]{text}", end = " ")
     if tag == "normal":
         if has_tail is True:
-            console.print(f"[{webster_color.meaning_sentence}]{text}", end = "")
+            console.print(f"[{w_col.meaning_sentence}]{text}", end = "")
         else:
-            console.print(f"[{webster_color.meaning_sentence}]{text}", end = " ")
+            console.print(f"[{w_col.meaning_sentence}]{text}", end = " ")
 
 
 def ex_sent(node, ancestor_attr, root_attr="", num_label_count=1):
@@ -473,7 +480,7 @@ def ex_sent(node, ancestor_attr, root_attr="", num_label_count=1):
     if num_label_count == 2:
         print(" ", end="")
 
-    console.print(f"[{webster_color.accessory} {webster_color.bold}]|", end="")
+    console.print(f"[{w_col.accessory} {w_col.bold}]|", end="")
 
     hl_words = []
     ems = []
@@ -495,7 +502,7 @@ def ex_sent(node, ancestor_attr, root_attr="", num_label_count=1):
                 hl_has_tail = ((index != (count - 1)) and (texts[index + 1].strip("\n").strip()) and (not texts[index + 1].strip("\n").strip()[0].isalpha()))
                 print_mw(text, hl_has_tail, "hl")
             elif t in ems:
-                console.print(f"[{webster_color.meaning_sentence} {webster_color.bold}]{text}", end = "")
+                console.print(f"[{w_col.meaning_sentence} {w_col.bold}]{text}", end = "")
             else:
                 normal_has_tail = (index != (count - 1) and (texts[index + 1] in ems))
                 print_mw(text, normal_has_tail, "normal")
@@ -654,9 +661,9 @@ def sense(node, attr, parent_attr, ancestor_attr, num_label_count=1):
         if "has-subnum" in ancestor_attr and "sb-0" not in parent_attr:
             if num_label_count == 2:
                 print(" ", end="")
-            console.print(f"  [{webster_color.bold} {webster_color.meaning_letter}]{sn}", end = " ")
+            console.print(f"  [{w_col.bold} {w_col.meaning_letter}]{sn}", end = " ")
         else:
-            console.print(f"[{webster_color.bold} {webster_color.meaning_letter}]{sn}", end = " ")
+            console.print(f"[{w_col.bold} {w_col.meaning_letter}]{sn}", end = " ")
 
         sense_content = children[1] # class "sense-content w-100"
 
@@ -668,11 +675,11 @@ def sense(node, attr, parent_attr, ancestor_attr, num_label_count=1):
         sn = children[0].getchildren()[0].text
 
         if "has-subnum" in ancestor_attr and "sb-0" in parent_attr:
-            console.print(f"[{webster_color.bold} {webster_color.meaning_letter}]{sn}", end = " ")
+            console.print(f"[{w_col.bold} {w_col.meaning_letter}]{sn}", end = " ")
         elif "letter-only" in ancestor_attr:
-            console.print(f"[{webster_color.bold} {webster_color.meaning_letter}]{sn}", end = " ")
+            console.print(f"[{w_col.bold} {w_col.meaning_letter}]{sn}", end = " ")
         else:
-            console.print(f"  [{webster_color.bold} {webster_color.meaning_letter}]{sn}", end = " ")
+            console.print(f"  [{w_col.bold} {w_col.meaning_letter}]{sn}", end = " ")
 
         sense_content = children[1] # class "sense-content w-100"
 
@@ -761,7 +768,7 @@ def vg_sseq_entry_item(node):
         attr = child.attrib["class"]
         # print number label if any
         if attr == "vg-sseq-entry-item-label":
-            console.print(f"[{webster_color.bold} {webster_color.meaning_num}]{child.text}", end=" ")
+            console.print(f"[{w_col.bold} {w_col.meaning_num}]{child.text}", end=" ")
             num_label_count = len(child.text)
 
         # print meaning content
@@ -815,17 +822,17 @@ def vg(node):
         # print transitive or intransitive
         if child.attrib["class"] == "vd firstVd" or child.attrib["class"] == "vd":
             e = child.getchildren()[0]
-            console.print(f"[{webster_color.bold}]{e.text}")
+            console.print(f"[{w_col.bold}]{e.text}")
 
         # print tags like "informal" and the tags at the same livel with transitives
         if "sls" in child.attrib["class"]:
              e = child.getchildren()[0]
-             console.print(f"[{webster_color.bold}]{e.text}")
+             console.print(f"[{w_col.bold}]{e.text}")
 
 
 # --- parse class "row entry-header" --- #
 def print_word(text):
-    console.print(f"[{webster_color.eh_h1_word} {webster_color.bold}]{text}", end=" ")
+    console.print(f"[{w_col.eh_h1_word} {w_col.bold}]{text}", end=" ")
 
 
 def entry_header_content(node):
@@ -840,11 +847,11 @@ def entry_header_content(node):
 
         if elm.tag == "span":
             num = " ".join(list(elm.itertext()))
-            console.print(f"[{webster_color.eh_entry_num}]{num}", end=" ")
+            console.print(f"[{w_col.eh_entry_num}]{num}", end=" ")
 
         if elm.tag == "h2":
             type = " ".join(list(elm.itertext()))
-            console.print(f"[{webster_color.bold} {webster_color.eh_word_type}]{type}", end="\n")
+            console.print(f"[{w_col.bold} {w_col.eh_word_type}]{type}", end="\n")
             global word_types
             word_types.append(type.strip().lower())
 
@@ -883,9 +890,13 @@ def entry_uros(node):
         attr = elm.get("class")
         if attr is not None:
             if elm.tag == "span" and "fw-bold ure" in attr:
-                console.print(f"[{webster_color.bold} {webster_color.wf}]{elm.text}", end = " ")
+                console.print(f"[{w_col.bold} {w_col.wf}]{elm.text}", end = " ")
             if elm.tag == "span" and "fw-bold fl" in attr:
-                console.print(f"[{webster_color.bold} {webster_color.wf_type}]{elm.text}", end = "\n")
+                next_sibling = elm.getnext()
+                if next_sibling is not None and next_sibling.get("class") == "utxt":
+                    console.print(f"[{w_col.bold} {w_col.wf_type}]{elm.text}", end = "")
+                else:
+                    console.print(f"[{w_col.bold} {w_col.wf_type}]{elm.text}", end = "\n")
             if "ins" in attr:
                 print("", end="")
                 print_class_ins(elm)
@@ -918,7 +929,7 @@ def row_headword_row_header_vrs(node):
         attr = child.get("class")
         if attr is not None:
             if "badge mw-badge-gray-100 text-start text-wrap d-inline" in attr:
-                console.print(f"[{webster_color.bold} {webster_color.italic}]{child.text.strip()}", end="")
+                console.print(f"[{w_col.bold} {w_col.italic}]{child.text.strip()}", end="")
             elif attr == "il " or attr == "vl":
                 print_or_badge(child.text)
             elif attr == "va":
@@ -946,13 +957,13 @@ def dxnls(node):
         if not text:
             continue
         if text == "see also":
-            console.print(f"\n[{webster_color.bold} {webster_color.dxnls_content}]{text.upper()}", end = " ")
+            console.print(f"\n[{w_col.bold} {w_col.dxnls_content}]{text.upper()}", end = " ")
         elif text == "compare":
-            console.print(f"\n[{webster_color.bold} {webster_color.dxnls_content}]{text.upper()}", end = " ")
+            console.print(f"\n[{w_col.bold} {w_col.dxnls_content}]{text.upper()}", end = " ")
         elif text == ",":
-            console.print(f"[{webster_color.dxnls_content}]{text}", end = " ")
+            console.print(f"[{w_col.dxnls_content}]{text}", end = " ")
         else:
-            console.print(f"[{webster_color.dxnls_content}]{text}", end = "")
+            console.print(f"[{w_col.dxnls_content}]{text}", end = "")
 
     print()
 
@@ -1006,20 +1017,20 @@ def dictionary_entry(node):
 ##############################
 
 def print_meaning_badge(text, end=" "):
-    console.print(f"[{webster_color.italic} {webster_color.meaning_badge}]{text}", end=end)
+    console.print(f"[{w_col.italic} {w_col.meaning_badge}]{text}", end=end)
 
 def print_header_badge(text, end=" "):
-    console.print(f"[{webster_color.italic} {webster_color.meaning_badge}]{text}", end=end)
+    console.print(f"[{w_col.italic} {w_col.meaning_badge}]{text}", end=end)
 
 def print_meaning_arrow(text, end=" "):
-    console.print(f"[{webster_color.meaning_arrow}]{text}", end=end)
+    console.print(f"[{w_col.meaning_arrow}]{text}", end=end)
 
 def print_meaning_keyword(text, end=" "):
-    console.print(f"[{webster_color.meaning_keyword} {webster_color.bold}]{text}", end=end)
+    console.print(f"[{w_col.meaning_keyword} {w_col.bold}]{text}", end=end)
 
 
 def print_meaning_content(text, end=""):
-    console.print(f"[{webster_color.meaning_content}]{text}", end=end)
+    console.print(f"[{w_col.meaning_content}]{text}", end=end)
 
 
 def format_basedon_ancestor(ancestor_attr, prefix="", suffix="", root_attr=""):
@@ -1068,36 +1079,36 @@ def print_pron(node):
                     console.print(f"|{pron}|", end="  ")
             elif index == count - 1:
                 if sibling is not None:
-                    console.print(f"[{webster_color.eh_word_syllables}]{pron}", end=" ")
+                    console.print(f"[{w_col.eh_word_syllables}]{pron}", end=" ")
                 else:
-                    console.print(f"[{webster_color.eh_word_syllables}]{pron}", end="\n")
+                    console.print(f"[{w_col.eh_word_syllables}]{pron}", end="\n")
             elif pron == "," or pron == ";":
                 continue
             else:
                 text = pron + ", "
-                console.print(f"[{webster_color.eh_word_syllables}]{text}", end="")
+                console.print(f"[{w_col.eh_word_syllables}]{text}", end="")
 
 
 def print_or_badge(text):
-    console.print(f"[{webster_color.or_badge} {webster_color.bold}]{text}", end = "")
+    console.print(f"[{w_col.or_badge} {w_col.bold}]{text}", end = "")
 
 
 def print_class_if(text, before_semicolon=False, before_il=False):
     if before_semicolon or before_il:
-        console.print(f"[{webster_color.bold}]{text}", end="")
+        console.print(f"[{w_col.bold}]{text}", end="")
     else:
-        console.print(f"[{webster_color.bold}]{text}", end=" ")
+        console.print(f"[{w_col.bold}]{text}", end=" ")
 
 
 def print_class_va(text):
-    console.print(f"[{webster_color.bold}]{text}", end=" ")
+    console.print(f"[{w_col.bold}]{text}", end=" ")
 
 
 def print_class_sgram(node):
     for t in node.itertext():
         text = t.strip("\n").strip()
         if text and text.isalpha():
-            console.print(f"[{webster_color.bold}]{t}", end=" ")
+            console.print(f"[{w_col.bold}]{t}", end=" ")
 
 
 def print_class_ins(node):
@@ -1130,14 +1141,15 @@ def print_class_ins(node):
             else:
                 console.print(f"{child.text}", end="")
 
-###########################################################
-# --- Entry point for printing all entries of  a word --- #
-###########################################################
 
 def print_dict_name():
     dict_name = "The Merriam-Webster Dictionary"
-    console.print(f"[{webster_color.dict_name}]{dict_name}", justify="right")
+    console.print(f"[{w_col.dict_name}]{dict_name}", justify="right")
 
+
+###########################################################
+# --- entry point for printing all entries of a word --- #
+###########################################################
 
 def parse_and_print(nodes, res_url):
     """Parse and print different sections for the word."""
@@ -1171,5 +1183,81 @@ def parse_and_print(nodes, res_url):
     print_dict_name()
 
 ######################################################
-# --- Entry point for printing 'Word of the Day' --- #
+# --- printing 'Word of the Day' --- #
 ######################################################
+
+def print_header(node):
+    for elm in node.iterdescendants():
+        attr = elm.get("class")
+        if attr == "w-a-title":
+            for c in elm.iterchildren():
+                console.print(f"[{w_col.wod_title} {w_col.bold}]{c.text}", end="")
+            print()
+        
+        if attr == "word-header-txt":
+            print(elm.text)
+
+        if attr == "main-attr":
+            console.print(f"[{w_col.wod_type}]{elm.text}", end="")
+            print(" | ", end="")
+
+        if attr == "word-syllables":
+            console.print(f"[{w_col.wod_syllables}]{elm.text}")
+
+            
+def print_p(node):
+    console.print(f"[{w_col.wod_sen}]{node.text}", end="")
+    for c in node.iterchildren():
+        if c.tag == "em":
+            console.print(f"[{w_col.bold} {w_col.wod_sen}]{c.text}", end="")
+            console.print(f"[{w_col.wod_sen}]{c.tail}", end="")
+    print()
+    
+
+def print_def(node):
+    p_nodes = []
+    
+    for elm in node.iterchildren():
+        tag = elm.tag
+        attr = elm.get("class")
+        if tag == "h2":
+            text = elm.text.strip("\n").strip()
+            if text:
+                console.print(f"\n[{w_col.wod_subtitle} {w_col.bold}]{text}", end="\n")
+                    
+        if tag == "p":
+            p_nodes.append(elm)
+        if attr == "wotd-examples":
+            p = elm.getchildren()[0].getchildren()[0]
+            print_p(p)
+
+    print(p_nodes[0].text)
+    
+    del p_nodes [-2]
+    del p_nodes [0]
+    for p in p_nodes:
+        print_p(p)
+
+def parse_and_print_wod(res_url, res_text):
+    logger.debug(f"{OP[1]} {res_url}")
+
+    parser = etree.HTMLParser(remove_comments=True)
+    tree = etree.HTML(res_text, parser)
+    s = """
+    //*[@class="article-header-container wod-article-header"] |
+    //*[@class="wod-definition-container"] |
+    //*[@class="did-you-know-wrapper"] |
+    //*[@class="podcast-container"]
+    """
+    nodes = tree.xpath(s)
+
+    logger.debug(f"{OP[4]} the parsed result of {res_url}")
+
+    for node in nodes:
+        attr = node.attrib["class"]
+
+        if "header" in attr:
+            print_header(node)
+
+        if "definition" in attr:
+            print_def(node)

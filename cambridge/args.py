@@ -30,6 +30,8 @@ def parse_args():
     # Add sub-command capability that can identify different sub-command name
     sub_parsers = parser.add_subparsers(dest="subparser_name")
 
+#############
+
     # Add sub-command l
     parser_lw = sub_parsers.add_parser(
         "l",
@@ -62,6 +64,8 @@ def parse_args():
         action="store_true",
         help="randomly list 20 words/phrases you've found before",
     )
+
+#############
 
     # Add sub-command s
     parser_sw = sub_parsers.add_parser("s", help="look up a word/phrase; hidden for convenience, no need to type")
@@ -116,6 +120,27 @@ def parse_args():
         help="look up a word/phrase without showing spelling suggestions if not found",
     )
 
+#############
+
+    # Add sub-command wod
+    parser_wod = sub_parsers.add_parser(
+        "wod",
+        help="list today's Word of the Day",
+    )
+
+    # Make sub-command wod run default funtion of "wod"
+    parser_wod.set_defaults(func=wod)
+
+    # Add an optional argument for wod command
+    parser_wod.add_argument(
+        "-l",
+        "--list",
+        action="store_true",
+        help="list all words of the day",
+    )
+
+#############
+
     if len(sys.argv) == 1:
         print_help(parser, parser_lw, parser_sw)
 
@@ -126,7 +151,7 @@ def parse_args():
     elif sys.argv[1] == "-h" or sys.argv[1] == "--help":
             print_help(parser, parser_lw, parser_sw)
 
-    elif sys.argv[1] != "l" and len(sys.argv) > 1:
+    elif sys.argv[1] != "l" and sys.argv[1] != "wod" and len(sys.argv) > 1:
         to_parse = []
         word = []
         for i in sys.argv[1:]:
@@ -201,32 +226,30 @@ def list_words(args, con, cur):
             for word in words:
                 delete(word, con, cur)
                 
+    elif args.random:
+        try:
+            # data is something like [('hello',), ('good',), ('world',)]
+            data = get_random_words(cur)
+        except sqlite3.OperationalError:
+            logger.error("You may haven't searched any word yet")
+        else:
+            print_table(data)
 
     else:
-        if args.random:
-            try:
-                # data is something like [('hello',), ('good',), ('world',)]
-                data = get_random_words(cur)
-            except sqlite3.OperationalError:
-                logger.error("You may haven't searched any word yet")
-            else:
-                print_table(data)
-
+        try:
+            # data is something like [('hello',), ('good',), ('world',)]
+            data = get_response_words(cur)
+        except sqlite3.OperationalError:
+            logger.error("You may haven't searched any word yet")
         else:
-            try:
-                # data is something like [('hello',), ('good',), ('world',)]
-                data = get_response_words(cur)
-            except sqlite3.OperationalError:
-                logger.error("You may haven't searched any word yet")
+            if args.time:
+                data.sort(reverse=False, key=lambda tup: tup[3])
+                print_table(data)
             else:
-                if args.time:
-                    data.sort(reverse=False, key=lambda tup: tup[3])
-                    print_table(data)
-                else:
-                    data.sort()
-                    # Not using print_table() is for fzf preview
-                    for entry in data:
-                        print(entry[1])
+                data.sort()
+                # Not using print_table() is for fzf preview
+                for entry in data:
+                    print(entry[1])
 
 
 def print_table(data):
@@ -268,3 +291,12 @@ def search_word(args, con, cur):
         webster.search_webster(con, cur, input_word, is_fresh, no_suggestions)
     else:
         cambridge.search_cambridge(con, cur, input_word, is_fresh, is_ch, no_suggestions)
+
+
+def wod(args, con, cur):
+    if args.list:
+        print("hello world")
+
+    # no args supplied
+    else:
+        webster.get_wod()

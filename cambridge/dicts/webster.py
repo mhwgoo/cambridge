@@ -164,7 +164,7 @@ def parse_dict(res_text, found, res_url, is_fresh):
         //*[@id="left-content"]/div[contains(@id, "dictionary-entry")] |
         //*[@id="left-content"]/div[@id="phrases"] |
         //*[@id="left-content"]/div[@id="synonyms"] |
-        //*[@id="left-content"]/div[@id="examples"]/div[@class="content-section-body"]/div[@class="on-web-container"]/div[@class="on-web read-more-content-hint-container"] |
+        //*[@id="left-content"]/div[@id="examples"]/div[@class="content-section-body"]/div[@class="on-web-container"]/div[contains(@class,"on-web")] |
         //*[@id="left-content"]/div[@id="related-phrases"] |
         //*[@id="left-content"]/div[@id="nearby-entries"]
         """
@@ -217,8 +217,7 @@ def parse_dict(res_text, found, res_url, is_fresh):
 def nearby_entries(node):
     """Print entries near value."""
 
-    print("")
-
+    print()
     for elm in node.iterdescendants():
         try:
             has_title = (elm.tag == "h2")
@@ -287,7 +286,6 @@ def synonyms(node):
 def examples(node):
     """Print recent examples on the web."""
 
-    print()
     time = 0
 
     for elm in node.iterdescendants():
@@ -371,7 +369,7 @@ def phrases(node):
 def related_phrases(node):
     """Print related phrases."""
 
-    print("\n")
+    print()
 
     children = node.getchildren()
 
@@ -495,6 +493,7 @@ def ex_sent(node, ancestor_attr, root_attr="", num_label_count=1):
     texts = list(node.itertext())
     count = len(texts)
 
+    # TODO: Here needs a better logic, compliant with both normal words and words as prefixs and suffixs like 'in'.
     for index, t in enumerate(texts):
         text = t.strip("\n").strip()
         if text:
@@ -502,7 +501,11 @@ def ex_sent(node, ancestor_attr, root_attr="", num_label_count=1):
                 hl_has_tail = ((index != (count - 1)) and (texts[index + 1].strip("\n").strip()) and (not texts[index + 1].strip("\n").strip()[0].isalpha()))
                 print_mw(text, hl_has_tail, "hl")
             elif t in ems:
+                if index != 0 and texts[index - 1].endswith(" "):
+                    print("", end = " ")
                 console.print(f"[{w_col.meaning_sentence} {w_col.bold}]{text}", end = "")
+                if index != (count - 1) and texts[index + 1].startswith(" "):
+                    print("", end = " ")
             else:
                 normal_has_tail = (index != (count - 1) and (texts[index + 1] in ems))
                 print_mw(text, normal_has_tail, "normal")
@@ -1174,7 +1177,7 @@ def parse_and_print(nodes, res_url):
         if attr == "synonyms":
             synonyms(node)
 
-        if attr == "on-web read-more-content-hint-container":
+        if "on-web" in attr:
             examples(node)
 
         if attr == "related-phrases":
@@ -1193,7 +1196,7 @@ def print_header(node):
             for c in elm.iterchildren():
                 console.print(f"[{w_col.wod_title} {w_col.bold}]{c.text}", end="")
             print()
-        
+
         if attr == "word-header-txt":
             print(elm.text)
 
@@ -1204,7 +1207,7 @@ def print_header(node):
         if attr == "word-syllables":
             console.print(f"[{w_col.wod_syllables}]{elm.text}")
 
-            
+
 def print_p(node):
     console.print(f"[{w_col.wod_sen}]{node.text}", end="")
     for c in node.iterchildren():
@@ -1212,11 +1215,11 @@ def print_p(node):
             console.print(f"[{w_col.bold} {w_col.wod_sen}]{c.text}", end="")
             console.print(f"[{w_col.wod_sen}]{c.tail}", end="")
     print()
-    
+
 
 def print_def(node):
     p_nodes = []
-    
+
     for elm in node.iterchildren():
         tag = elm.tag
         attr = elm.get("class")
@@ -1224,7 +1227,7 @@ def print_def(node):
             text = elm.text.strip("\n").strip()
             if text:
                 console.print(f"\n[{w_col.wod_subtitle} {w_col.bold}]{text}", end="\n")
-                    
+
         if tag == "p":
             p_nodes.append(elm)
         if attr == "wotd-examples":
@@ -1232,7 +1235,7 @@ def print_def(node):
             print_p(p)
 
     print(p_nodes[0].text)
-    
+
     del p_nodes [-2]
     del p_nodes [0]
     for p in p_nodes:

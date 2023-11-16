@@ -1189,7 +1189,7 @@ def parse_and_print(nodes, res_url):
 # --- printing 'Word of the Day' --- #
 ######################################################
 
-def print_header(node):
+def print_wod_header(node):
     for elm in node.iterdescendants():
         attr = elm.get("class")
         if attr == "w-a-title":
@@ -1198,7 +1198,7 @@ def print_header(node):
             print()
 
         if attr == "word-header-txt":
-            print(elm.text)
+            console.print(f"[{w_col.bold}]{elm.text}")
 
         if attr == "main-attr":
             console.print(f"[{w_col.wod_type}]{elm.text}", end="")
@@ -1208,38 +1208,64 @@ def print_header(node):
             console.print(f"[{w_col.wod_syllables}]{elm.text}")
 
 
-def print_p(node):
-    console.print(f"[{w_col.wod_sen}]{node.text}", end="")
-    for c in node.iterchildren():
-        if c.tag == "em":
-            console.print(f"[{w_col.bold} {w_col.wod_sen}]{c.text}", end="")
-            console.print(f"[{w_col.wod_sen}]{c.tail}", end="")
+def print_wod_p(node):
+    text = node.text
+    if text:
+        console.print(f"{text}", end="")
+    for child in node.iterchildren():
+        if child is not None and child.tag == "em":
+            console.print(f"[{w_col.bold}]{child.text}", end="")
+            console.print(f"{child.tail}", end="")
+        if child is not None and child.tag == "a":
+            child_text = child.text
+            child_tail = child.tail
+            if child_text == "See the entry >":
+                continue
+            else:
+                if child_text is not None:
+                    console.print(f"{child_text}", end="")
+                for c in child.iterchildren():
+                    if c is not None and c.tag == "em":
+                        console.print(f"[{w_col.bold}]{c.text}", end="")
+
+            if child_tail is not None:
+                console.print(f"{child_tail}", end="")
     print()
 
 
-def print_def(node):
-    p_nodes = []
-
+def print_wod_def(node):
     for elm in node.iterchildren():
         tag = elm.tag
-        attr = elm.get("class")
+
         if tag == "h2":
             text = elm.text.strip("\n").strip()
             if text:
-                console.print(f"\n[{w_col.wod_subtitle} {w_col.bold}]{text}", end="\n")
+                console.print(f"\n[{w_col.wod_subtitle} {w_col.bold}]{text}")
+            children = list(elm.iterchildren())
+            if children:
+                child = children[0]
+                tail = child.tail.strip("\n").strip()
+                console.print(f"[{w_col.wod_subtitle} {w_col.bold}]{child.text}", end=" ")
+                console.print(f"[{w_col.wod_subtitle} {w_col.bold}]{tail}", end="\n")
 
         if tag == "p":
-            p_nodes.append(elm)
-        if attr == "wotd-examples":
-            p = elm.getchildren()[0].getchildren()[0]
-            print_p(p)
+            print_wod_p(elm)
 
-    print(p_nodes[0].text)
+        if tag == "div" and elm.attrib["class"] == "wotd-examples":
+            child = elm.getchildren()[0].getchildren()[0]
+            print_wod_p(child)
 
-    del p_nodes [-2]
-    del p_nodes [0]
-    for p in p_nodes:
-        print_p(p)
+
+def print_wod_dyk(node):
+    for elm in node.iterchildren():
+        tag = elm.tag
+
+        if tag == "h2":
+            console.print(f"\n[{w_col.wod_subtitle} {w_col.bold}]{elm.text}")
+
+        if tag == "p":
+            print_wod_p(elm)
+
 
 def parse_and_print_wod(res_url, res_text):
     logger.debug(f"{OP[1]} {res_url}")
@@ -1249,9 +1275,9 @@ def parse_and_print_wod(res_url, res_text):
     s = """
     //*[@class="article-header-container wod-article-header"] |
     //*[@class="wod-definition-container"] |
-    //*[@class="did-you-know-wrapper"] |
-    //*[@class="podcast-container"]
+    //*[@class="did-you-know-wrapper"]
     """
+
     nodes = tree.xpath(s)
 
     logger.debug(f"{OP[4]} the parsed result of {res_url}")
@@ -1260,7 +1286,10 @@ def parse_and_print_wod(res_url, res_text):
         attr = node.attrib["class"]
 
         if "header" in attr:
-            print_header(node)
+            print_wod_header(node)
 
         if "definition" in attr:
-            print_def(node)
+            print_wod_def(node)
+
+        if "did-you-know" in attr:
+            print_wod_dyk(node)

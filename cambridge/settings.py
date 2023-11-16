@@ -1,6 +1,6 @@
 """This script contains static data."""
 
-VERSION = "3.7.0"
+VERSION = "3.8.0"
 
 OP = [
     "FETCHING",

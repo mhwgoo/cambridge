@@ -147,7 +147,7 @@ def parse_args():
     elif sys.argv[1] == "-v" or sys.argv[1] == "--version":
             print("cambridge " + VERSION)
             sys.exit()
-            
+
     elif sys.argv[1] == "-h" or sys.argv[1] == "--help":
             print_help(parser, parser_lw, parser_sw)
 
@@ -196,10 +196,10 @@ def list_words(args, con, cur):
     # The subparser i.e. the sub-command isn't in the namespace of args
     if args.delete:
         to_delete = args.delete
-    
+
         ids = []
         words = []
-        
+
         for index, item in enumerate(to_delete):
             # multiple words/phrases are seperated by ","
             if "," in item or ("," not in item and index == len(to_delete) - 1):
@@ -225,7 +225,7 @@ def list_words(args, con, cur):
 
             for word in words:
                 delete(word, con, cur)
-                
+
     elif args.random:
         try:
             # data is something like [('hello',), ('good',), ('world',)]
@@ -274,7 +274,7 @@ def search_word(args, con, cur):
     if args.debug:
         logging.getLogger(__package__).setLevel(logging.DEBUG)
 
-    
+
     input_word = args.word_or_phrase[0].strip(".").strip(",").strip()
 
     # boolean types
@@ -282,7 +282,7 @@ def search_word(args, con, cur):
     is_fresh = args.fresh
     is_ch = args.chinese
     no_suggestions = args.nosuggestions
-    
+
     if is_webster and is_ch:
         print("Webster Dictionary doesn't support English to other language. Try again without -c(--chinese) option")
         sys.exit()
@@ -295,7 +295,7 @@ def search_word(args, con, cur):
 
 def wod(args, con, cur):
     if args.list:
-        print("hello world")
+        print("Coming soon...")
 
     # no args supplied
     else:

@@ -5,7 +5,7 @@ badge = "#B00007"
 or_badge = "#0DCAF0"
 
 
-# dictionary-entry 
+# dictionary-entry
 # --- entry-header-content --- #
 eh_h1_word = "#2E8B57"
 eh_fg_entry_num = "#0A1B27"
@@ -16,7 +16,7 @@ eh_word_syllables = "#757575"
 eh_pron = "#4A7D95" # UNUSED
 
 # --- verb tenses, noun plurals, adjective comparative forms --- #
-wt = "#525A5B" # UNUSED  
+wt = "#525A5B" # UNUSED
 
 # --- other word forms --- #
 wf = "#4A7D95"
@@ -40,31 +40,31 @@ dxnls_title = "#2E8B57"
 dxnls_content = "#757575"
 
 
-# phrases 
+# phrases
 ph_title = "#2E8B57"
 ph_item = "#4A7D95"
 
 
-# synonyms 
+# synonyms
 syn_title = "#0F3850"
 syn_item = "#757575"
 syn_em = "#2E8B57"
 syn_label = "#0F3850"
 
 
-# examples on the web 
+# examples on the web
 eg_title = "#0F3850"
 eg_sentence = "#757575"
 eg_word = "#2E8B57"
 
 
-# related phrases 
+# related phrases
 rph_title = "#0F3850"
 rph_em = "#2E8B57"
 rph_item = "#4A7D95"
 
 
-# nearby entries 
+# nearby entries
 nearby_title = "#0F3850"
 nearby_em = "#2E8B57"
 nearby_word = "#757575"
@@ -79,5 +79,5 @@ dict_name = "#757575"
 wod_title = "#2E8B57"
 wod_type = eh_word_type
 wod_syllables = eh_word_syllables
-wod_subtitle = wod_title
-wod_sen = meaning_sentence
+wod_subtitle = "#0F3850"
+wod_sent = meaning_sentence

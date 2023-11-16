@@ -66,7 +66,7 @@ camb l -r                       # list 20 words/phrases from the word list rando
 camb l -d                       # delete one or multiple words/phrases(separated by ", ") from the list
 ```
 
-### Command wod
+#### Command wod
 For displaying 'Word of the Day' in the Merriam Webster Dictionary
 
 #### General options

@@ -66,6 +66,9 @@ camb l -r                       # list 20 words/phrases from the word list rando
 camb l -d                       # delete one or multiple words/phrases(separated by ", ") from the list
 ```
 
+### Command wod
+For displaying 'Word of the Day' in the Merriam Webster Dictionary
+
 #### General options
 ```bash
 camb -h, --help                 # show this help message and exit

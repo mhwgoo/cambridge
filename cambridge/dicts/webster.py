@@ -326,7 +326,7 @@ def examples(node):
                                     break
 
                             if hit:
-                                console.print(f"[{w_col.eg_word}]{t}", end="")
+                                console.print(f"[{w_col.eg_sentence} {w_col.bold}]{t}", end="")
                             else:
                                 console.print(f"[{w_col.eg_sentence}]{t}", end="")
                     else:
@@ -438,7 +438,7 @@ def dtText(node, ancestor_attr, count, root_attr=""):
         if text == " ":
             continue
         if text == ": ":
-            text = text.strip()
+            # text = text.strip()
             print_meaning_content(text, end="")
         elif text == " see also ":
             print_meaning_keyword(text.strip())
@@ -1033,7 +1033,10 @@ def print_meaning_keyword(text, end=" "):
 
 
 def print_meaning_content(text, end=""):
-    console.print(f"[{w_col.meaning_content}]{text}", end=end)
+    if text == ": ":
+        console.print(f"[{w_col.meaning_content} {w_col.bold}]{text}", end=end)
+    else:
+        console.print(f"[{w_col.meaning_content}]{text}", end=end)
 
 
 def format_basedon_ancestor(ancestor_attr, prefix="", suffix="", root_attr=""):

@@ -434,11 +434,10 @@ def dtText(node, ancestor_attr, count, root_attr=""):
     l_words = get_word_cases(node)[0]
     u_words = get_word_cases(node)[1]
 
-    for text in texts:
-        if text == " ":
+    for index, text in enumerate(texts):
+        if text == " " and index == 0:
             continue
         if text == ": ":
-            # text = text.strip()
             print_meaning_content(text, end="")
         elif text == " see also ":
             print_meaning_keyword(text.strip())
@@ -1022,11 +1021,14 @@ def dictionary_entry(node):
 def print_meaning_badge(text, end=" "):
     console.print(f"[{w_col.italic} {w_col.meaning_badge}]{text}", end=end)
 
+
 def print_header_badge(text, end=" "):
     console.print(f"[{w_col.italic} {w_col.meaning_badge}]{text}", end=end)
 
+
 def print_meaning_arrow(text, end=" "):
     console.print(f"[{w_col.meaning_arrow}]{text}", end=end)
+
 
 def print_meaning_keyword(text, end=" "):
     console.print(f"[{w_col.meaning_keyword} {w_col.bold}]{text}", end=end)

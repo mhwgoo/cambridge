@@ -910,6 +910,24 @@ def entry_uros(node):
                 print()
             if "prons-entries-list" in attr:
                 print_pron(elm)
+            if "vrs" in attr:
+                # can't get css element ::before.content like "variants" in the word "duel"
+                child = elm.getchildren()[0]
+                for c in child.iterchildren():
+                    attr_c = c.get("class")
+                    if attr_c == "il " or attr_c == "vl":
+                        print_or_badge(c.text)
+                    if attr_c == "va":
+                        if c.text is None:
+                            for i in child:
+                                print_class_va(i.text)
+                        else:
+                            print_class_va(c.text)
+
+                        if c.getnext() is None:
+                            print()
+                    if "prons-entries-list" in attr_c:
+                        continue
 
 
 # --- parse class "row headword-row header-ins" --- #
@@ -923,11 +941,8 @@ def row_headword_row_header_ins(node):
 
 
 # --- parse class "row headword-row header-vrs" --- #
-def row_headword_row_header_vrs(node):
-    """Print word variants. e.g. premise variants or less commonly premiss"""
-
-    children = node.getchildren()[0].getchildren()[0] # class "entry-attr vrs"
-    for child in children.iterdescendants():
+def print_vrs(node):
+    for child in node.iterdescendants():
         attr = child.get("class")
         if attr is not None:
             if "badge mw-badge-gray-100 text-start text-wrap d-inline" in attr:
@@ -945,6 +960,13 @@ def row_headword_row_header_vrs(node):
             else:
                 continue
                 # console.print(f"{child.text}", end="")
+
+
+def row_headword_row_header_vrs(node):
+    """Print word variants. e.g. premise variants or less commonly premiss"""
+
+    children = node.getchildren()[0].getchildren()[0] # class "entry-attr vrs"
+    print_vrs(children)
     if not node.getnext().get("class") == "row headword-row header-ins":
         print()
 

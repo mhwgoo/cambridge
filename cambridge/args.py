@@ -162,11 +162,10 @@ def parse_args():
         to_search = " ".join(word)
         to_parse.append(to_search)
         args = parser_sw.parse_args(to_parse)
-
+        return args
     else:
         args = parser.parse_args()
-
-    return args
+        return args
 
 
 def print_help(parser, parser_lw, parser_sw):

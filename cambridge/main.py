@@ -14,7 +14,8 @@ def main():
         cur = con.cursor()
 
         args = parse_args()
-        args.func(args, con, cur)
+        if args is not None:
+            args.func(args, con, cur)
 
         cur.close()
         con.close()
@@ -37,4 +38,3 @@ if __name__ == "__main__":
 else:
     from .args import parse_args
     from .cache import DB
-

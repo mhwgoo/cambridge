@@ -66,9 +66,13 @@ def fetch_webster(request_url, input_word):
         #     new_url = WEBSTER_BASE_URL + loc
         #     new_res = dict.fetch(new_url, session)
 
-        if status == 404:
+        elif status == 404:
             logger.debug(f'{OP[6]} "{input_word}" in {DICTS[1]}')
             return False, (res_url, res_text)
+
+        else:
+            logger.error(f'Something went wrong when fetching {request_url} with STATUS: {status}')
+            sys.exit()
 
 
 def fresh_run(con, cur, req_url, input_word, no_suggestions=False):
@@ -657,7 +661,7 @@ def sense(node, attr, parent_attr, ancestor_attr, num_label_count=1):
         sense_content = children[0] # class "sense-content w-100"
 
     # meaning with "1" + "a"
-    if attr == "sense has-sn has-num":
+    elif attr == "sense has-sn has-num":
         sn = children[0].getchildren()[0].text
 
         if "has-subnum" in ancestor_attr and "sb-0" not in parent_attr:
@@ -670,7 +674,7 @@ def sense(node, attr, parent_attr, ancestor_attr, num_label_count=1):
         sense_content = children[1] # class "sense-content w-100"
 
     # meaing with only "b" or "1" + "a" + "(1)", or "1" + "a"
-    if attr == "sense has-sn" or attr == "sen has-sn":
+    elif attr == "sense has-sn" or attr == "sen has-sn":
         if num_label_count == 2:
             print(" ", end="")
 
@@ -686,7 +690,7 @@ def sense(node, attr, parent_attr, ancestor_attr, num_label_count=1):
         sense_content = children[1] # class "sense-content w-100"
 
     # meaning with only (2)
-    if attr == "sense has-num-only has-subnum-only":
+    elif attr == "sense has-num-only has-subnum-only":
         if num_label_count == 2:
             print(" ", end="")
         if "letter-only" in ancestor_attr:
@@ -696,8 +700,11 @@ def sense(node, attr, parent_attr, ancestor_attr, num_label_count=1):
         sense_content = children[1] # class "sense-content w-100"
 
     # meaning with only number
-    if attr == "sense has-sn has-num-only":
+    elif attr == "sense has-sn has-num-only":
         sense_content = children[1] # class "sense-content w-100"
+
+    else:
+        sense_content = children[1]
 
     for c in children:
         if c.attrib["class"] == "if":

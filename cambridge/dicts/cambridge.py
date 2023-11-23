@@ -329,8 +329,6 @@ def parse_ptitle(block):
 
 def parse_def_info(def_block):
     def_info = replace_all(def_block.find("span", "def-info ddef-info").text)
-    if def_info == " ":
-        def_into = ""
     if def_info:
         if "phrase-body" in def_block.parent.attrs["class"]:
             print("  " + "\033[1m" + def_info + " " + "\033[0m", end="")
@@ -440,15 +438,17 @@ def parse_example(def_block):
 def parse_synonym(def_block):
     if def_block.find("div", "xref synonym hax dxref-w lmt-25"):
         s_block = def_block.find("div", "xref synonym hax dxref-w lmt-25")
-    if def_block.find("div", "xref synonyms hax dxref-w lmt-25"):
+    else:
         s_block = def_block.find("div", "xref synonyms hax dxref-w lmt-25")
-    s_title = s_block.strong.text.upper()
-    console.print("[bold #757575]" + "\n  " + s_title)
-    for s in s_block.find_all(
-        "div", ["item lc lc1 lpb-10 lpr-10", "item lc lc1 lc-xs6-12 lpb-10 lpr-10"]
-    ):
-        s = s.text
-        console.print("[#757575]" + "  • " + s)
+
+    if s_block is not None:
+        s_title = s_block.strong.text.upper()
+        console.print("[bold #757575]" + "\n  " + s_title)
+        for s in s_block.find_all(
+                "div", ["item lc lc1 lpb-10 lpr-10", "item lc lc1 lc-xs6-12 lpb-10 lpr-10"]
+        ):
+            s = s.text
+            console.print("[#757575]" + "  • " + s)
 
 
 def parse_see_also(def_block):
@@ -473,20 +473,22 @@ def parse_see_also(def_block):
 def parse_compare(def_block):
     if def_block.find("div", "xref compare hax dxref-w lmt-25"):
         compare_block = def_block.find("div", "xref compare hax dxref-w lmt-25")
-    if def_block.find("div", "xref compare hax dxref-w"):
+    else:
         compare_block = def_block.find("div", "xref compare hax dxref-w")
-    compare = compare_block.strong.text.upper()
-    console.print("[bold #757575]" + "\n  " + compare)
-    for word in compare_block.find_all(
-        "div", ["item lc lc1 lpb-10 lpr-10", "item lc lc1 lc-xs6-12 lpb-10 lpr-10"]
-    ):
-        item = word.a.text
-        usage = word.find("span", "x-lab dx-lab")
-        if usage:
-            usage = usage.text
-            console.print("[#757575]" + "  • " + item + "[/#757575]" + usage)
-        else:
-            console.print("[#757575]" + "  • " + item)
+
+    if compare_block is not None:
+        compare = compare_block.strong.text.upper()
+        console.print("[bold #757575]" + "\n  " + compare)
+        for word in compare_block.find_all(
+            "div", ["item lc lc1 lpb-10 lpr-10", "item lc lc1 lc-xs6-12 lpb-10 lpr-10"]
+        ):
+            item = word.a.text
+            usage = word.find("span", "x-lab dx-lab")
+            if usage:
+                usage = usage.text
+                console.print("[#757575]" + "  • " + item + "[/#757575]" + usage)
+            else:
+                console.print("[#757575]" + "  • " + item)
 
 
 def parse_usage_note(def_block):
@@ -525,19 +527,21 @@ def parse_def(def_block):
 def parse_idiom(block):
     if block.find("div", "xref idiom hax dxref-w lmt-25 lmb-25"):
         idiom_block = block.find("div", "xref idiom hax dxref-w lmt-25 lmb-25")
-    if block.find("div", "xref idioms hax dxref-w lmt-25 lmb-25"):
+    else:
         idiom_block = block.find("div", "xref idioms hax dxref-w lmt-25 lmb-25")
-    idiom_title = idiom_block.h3.text.upper()
-    console.print("[bold #757575]" + "\n" + idiom_title)
-    for idiom in idiom_block.find_all(
-        "div",
-        [
-            "item lc lc1 lpb-10 lpr-10",
-            "item lc lc1 lc-xs6-12 lpb-10 lpr-10",
-        ],
-    ):
-        idiom = idiom.text
-        console.print("[#757575]" + "  • " + idiom)
+
+    if idiom_block is not None:
+        idiom_title = idiom_block.h3.text.upper()
+        console.print("[bold #757575]" + "\n" + idiom_title)
+        for idiom in idiom_block.find_all(
+            "div",
+            [
+                "item lc lc1 lpb-10 lpr-10",
+                "item lc lc1 lc-xs6-12 lpb-10 lpr-10",
+            ],
+        ):
+            idiom = idiom.text
+            console.print("[#757575]" + "  • " + idiom)
 
 
 def parse_sole_idiom(block):
@@ -551,16 +555,18 @@ def parse_sole_idiom(block):
 def parse_phrasal_verb(block):
     if block.find("div", "xref phrasal_verbs hax dxref-w lmt-25 lmb-25"):
         pv_block = block.find("div", "xref phrasal_verbs hax dxref-w lmt-25 lmb-25")
-    if block.find("div", "xref phrasal_verb hax dxref-w lmt-25 lmb-25"):
+    else:
         pv_block = block.find("div", "xref phrasal_verb hax dxref-w lmt-25 lmb-25")
-    pv_title = pv_block.h3.text.upper()
-    console.print("[bold #757575]" + "\n" + pv_title)
-    for pv in pv_block.find_all(
-        "div",
-        ["item lc lc1 lc-xs6-12 lpb-10 lpr-10", "item lc lc1 lpb-10 lpr-10"],
-    ):
-        pv = pv.text
-        console.print("[#757575]" + "  • " + pv)
+
+    if pv_block is not None:
+        pv_title = pv_block.h3.text.upper()
+        console.print("[bold #757575]" + "\n" + pv_title)
+        for pv in pv_block.find_all(
+            "div",
+            ["item lc lc1 lc-xs6-12 lpb-10 lpr-10", "item lc lc1 lpb-10 lpr-10"],
+        ):
+            pv = pv.text
+            console.print("[#757575]" + "  • " + pv)
 
 
 def parse_dict_body(block):

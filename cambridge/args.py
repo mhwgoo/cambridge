@@ -276,6 +276,10 @@ def search_word(args, con, cur):
 
     input_word = args.word_or_phrase[0].strip(".").strip(",").strip()
 
+    if not input_word:
+        print("You didn't input any word or phrase.")
+        sys.exit()
+
     # boolean types
     is_webster = args.webster
     is_fresh = args.fresh
@@ -292,7 +296,7 @@ def search_word(args, con, cur):
         cambridge.search_cambridge(con, cur, input_word, is_fresh, is_ch, no_suggestions)
 
 
-def wod(args):
+def wod(args, con, cur):
     if args.list:
         print("Coming soon...")
 

@@ -149,7 +149,8 @@ def parse_redirect(nodes, res_url):
         dtText(elms_in_order["span"], "", 1, "")
         print()
 
-    console.print(f'\nYou can try "camb -w {words[0]}" for example to get the full definition from the {DICTS.MERRIAM_WEBSTER.name} dictionary', justify="left", style="#757575", end="")
+    console.print(f'\nYou can try "camb -w {words[0]}" for example to get the full definition from the {DICTS.MERRIAM_WEBSTER.name} dictionary', \
+                  justify="left", style="#757575", end="")
     print_dict_name()
 
 

@@ -49,7 +49,7 @@ def parse_response_url(url):
 def get_request_url(url, input_word, dict):
     """Return the url formatted to request the web page."""
 
-    if dict == DICTS[0]:
+    if dict == DICTS.CAMBRIDGE.name:
         query_word = input_word.replace(" ", "-").replace("/", "-")
         request_url = url + query_word
         return request_url

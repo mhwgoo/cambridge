@@ -33,10 +33,10 @@ def search_webster(con, cur, input_word, is_fresh=False, no_suggestions=False):
     if not found, prints word suggestions and exit.
     """
 
-    req_url = get_request_url(WEBSTER_DICT_BASE_URL, input_word, DICTS[1])
+    req_url = get_request_url(WEBSTER_DICT_BASE_URL, input_word, DICTS.MERRIAM_WEBSTER.name)
 
     if not is_fresh:
-        cached = dict.cache_run(con, cur, input_word, req_url, DICTS[1])
+        cached = dict.cache_run(con, cur, input_word, req_url, DICTS.MERRIAM_WEBSTER.name)
         if not cached:
             fresh_run(con, cur, req_url, input_word, no_suggestions)
     else:
@@ -55,7 +55,7 @@ def fetch_webster(request_url, input_word):
         status = res.status_code
 
         if status == 200:
-            logger.debug(f'{OP[5]} "{input_word}" in {DICTS[1]} at {res_url}')
+            logger.debug(f'{OP.FOUND.name} "{input_word}" in {DICTS.MERRIAM_WEBSTER.name} at {res_url}')
             return True, (res_url, res_text)
 
         # By default Requests will perform location redirection for all verbs except HEAD.
@@ -67,7 +67,7 @@ def fetch_webster(request_url, input_word):
         #     new_res = dict.fetch(new_url, session)
 
         elif status == 404:
-            logger.debug(f'{OP[6]} "{input_word}" in {DICTS[1]}')
+            logger.debug(f'{OP.NOT_FOUND.name} "{input_word}" in {DICTS.MERRIAM_WEBSTER.name}')
             return False, (res_url, res_text)
 
         else:
@@ -96,7 +96,7 @@ def fresh_run(con, cur, req_url, input_word, no_suggestions=False):
         if no_suggestions:
             sys.exit(-1)
         else:
-            logger.debug(f"{OP[4]} the parsed result of {res_url}")
+            logger.debug(f"{OP.PRINTING.name} the parsed result of {res_url}")
             suggestions = []
             for node in nodes:
                 if node.tag != "h1":
@@ -108,7 +108,7 @@ def fresh_run(con, cur, req_url, input_word, no_suggestions=False):
                             sug = w.strip()
                             suggestions.append(sug)
 
-            dict.print_spellcheck(con, cur, input_word, suggestions, DICTS[1])
+            dict.print_spellcheck(con, cur, input_word, suggestions, DICTS.MERRIAM_WEBSTER.name)
 
 
 def get_wod():
@@ -149,14 +149,14 @@ def parse_redirect(nodes, res_url):
         dtText(elms_in_order["span"], "", 1, "")
         print()
 
-    console.print(f'\nYou can try "camb -w {words[0]}" for example to get the full definition from the {DICTS[1]} dictionary', justify="left", style="#757575", end="")
+    console.print(f'\nYou can try "camb -w {words[0]}" for example to get the full definition from the {DICTS.MERRIAM_WEBSTER.name} dictionary', justify="left", style="#757575", end="")
     print_dict_name()
 
 
 def parse_dict(res_text, found, res_url, is_fresh):
     """Parse the dict section of the page for the word."""
 
-    logger.debug(f"{OP[1]} {res_url}")
+    logger.debug(f"{OP.PARSING.name} {res_url}")
 
     parser = etree.HTMLParser(remove_comments=True)
     tree = etree.HTML(res_text, parser)
@@ -180,7 +180,7 @@ def parse_dict(res_text, found, res_url, is_fresh):
             sub_text = etree.tostring(sub_tree).decode('utf-8')
 
         if len(nodes) == 0:
-            print(NoResultError(DICTS[1]))
+            print(NoResultError(DICTS.MERRIAM_WEBSTER.name))
             sys.exit()
 
         global res_word
@@ -209,7 +209,7 @@ def parse_dict(res_text, found, res_url, is_fresh):
         if result:
             nodes = result[0]
         else:
-            print(NoResultError(DICTS[1]))
+            print(NoResultError(DICTS.MERRIAM_WEBSTER.name))
             sys.exit()
     return nodes
 
@@ -1191,7 +1191,7 @@ def print_dict_name():
 def parse_and_print(nodes, res_url):
     """Parse and print different sections for the word."""
 
-    logger.debug(f"{OP[4]} the parsed result of {res_url}")
+    logger.debug(f"{OP.PRINTING.name} the parsed result of {res_url}")
 
     for node in nodes:
         try:
@@ -1302,7 +1302,7 @@ def print_wod_dyk(node):
 
 
 def parse_and_print_wod(res_url, res_text):
-    logger.debug(f"{OP[1]} {res_url}")
+    logger.debug(f"{OP.PARSING.name} {res_url}")
 
     parser = etree.HTMLParser(remove_comments=True)
     tree = etree.HTML(res_text, parser)
@@ -1314,7 +1314,7 @@ def parse_and_print_wod(res_url, res_text):
 
     nodes = tree.xpath(s)
 
-    logger.debug(f"{OP[4]} the parsed result of {res_url}")
+    logger.debug(f"{OP.PRINTING.name} the parsed result of {res_url}")
 
     for node in nodes:
         attr = node.attrib["class"]

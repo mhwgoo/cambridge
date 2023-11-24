@@ -22,29 +22,30 @@ def fetch(url, session):
     session.headers.update(headers)
     attempt = 0
 
-    logger.debug(f"{OP[0]} {url}")
+    logger.debug(f"{OP.FETCHING.name} {url}")
     while True:
         try:
             r = session.get(url, timeout=9.05)
-            # Only when calling raise_for_status, will requests raise HTTPError if any. See: https://blog.csdn.net/Odaokai/article/details/100133503
+            # Only when calling raise_for_status, will requests raise HTTPError if any.
+            # See: https://blog.csdn.net/Odaokai/article/details/100133503
             # for webster, only when status code is 404, can we know to redirect to spellcheck page, so you can't exit on 404
             if r.status_code >= 500:
                 r.raise_for_status()
-            
+
         except requests.exceptions.HTTPError as e:
-            attempt = call_on_error(e, url, attempt, OP[2])
+            attempt = call_on_error(e, url, attempt, OP.RETRY_FETCHING.name)
             continue
         except requests.exceptions.ConnectTimeout as e:
-            attempt = call_on_error(e, url, attempt, OP[2])
+            attempt = call_on_error(e, url, attempt, OP.RETRY_FETCHING.name)
             continue
         except requests.exceptions.ConnectionError as e:
-            attempt = call_on_error(e, url, attempt, OP[2])
+            attempt = call_on_error(e, url, attempt, OP.RETRY_FETCHING.name)
             continue
         except requests.exceptions.ReadTimeout as e:
-            attempt = call_on_error(e, url, attempt, OP[2])
+            attempt = call_on_error(e, url, attempt, OP.RETRY_FETCHING.name)
             continue
         except Exception as e:
-            attempt = call_on_error(e, url, attempt, OP[2])
+            attempt = call_on_error(e, url, attempt, OP.RETRY_FETCHING.name)
             continue
         else:
             return r
@@ -71,15 +72,15 @@ def cache_run(con, cur, input_word, req_url, dict):
 
     res_url, res_word, res_text = data
 
-    if DICTS[0].lower() in res_url:
-        logger.debug(f"{OP[1]} {res_url}")
+    if DICTS.CAMBRIDGE.name.lower() in res_url:
+        logger.debug(f"{OP.PARSING.name} {res_url}")
         soup = make_a_soup(res_text)
         cambridge.parse_and_print(soup, res_url)
-        console.print(f'{OP[5]} "{res_word}" from {dict} in cache. You can add "-f -w" to fetch the {DICTS[1]} dictionary', justify="left", style="#757575")
+        console.print(f'{OP.FOUND.name} "{res_word}" from {dict} in cache. You can add "-f -w" to fetch the {DICTS.MERRIAM_WEBSTER.name} dictionary', justify="left", style="#757575")
     else:
         nodes = webster.parse_dict(res_text, True, res_url, False)
         webster.parse_and_print(nodes, res_url)
-        console.print(f'{OP[5]} "{res_word}" from {dict} in cache. You can add "-f" to fetch the {DICTS[0]} dictionary', justify="left", style="#757575")
+        console.print(f'{OP.FOUND.name} "{res_word}" from {dict} in cache. You can add "-f" to fetch the {DICTS.CAMBRIDGE.name} dictionary', justify="left", style="#757575")
     return True
 
 
@@ -96,29 +97,29 @@ def save(con, cur, input_word, response_word, response_url, response_text):
             if "response_word" in error_str:
                 delete_word(con, cur, response_word)
                 insert_into_table(con, cur, input_word, response_word, response_url, response_text)
-                logger.debug(f'{OP[10]} cache for "{input_word}" with the new search result\n')
+                logger.debug(f'{OP.UPDATED.name} cache for "{input_word}" with the new search result\n')
             else:
-                logger.debug(f'{OP[8]} caching "{input_word}", because it has been already cached before\n')
+                logger.debug(f'{OP.CANCELLED.name} caching "{input_word}", because it has been already cached before\n')
         else:
-            logger.debug(f'{OP[8]} caching "{input_word}" - {error}\n')
+            logger.debug(f'{OP.CANCELLED.name} caching "{input_word}" - {error}\n')
     except sqlite3.InterfaceError as error:
-        logger.debug(f'{OP[8]} caching "{input_word}" - {error}\n')
+        logger.debug(f'{OP.CANCELLED.name} caching "{input_word}" - {error}\n')
 
     else:
-        logger.debug(f'{OP[7]} the search result of "{input_word}"')
+        logger.debug(f'{OP.CACHED.name} the search result of "{input_word}"')
 
 
 def print_spellcheck(con, cur, input_word, suggestions, dict, is_ch=False):
     """Parse and print spellcheck info."""
 
-    if dict == DICTS[1]:
+    if dict == DICTS.MERRIAM_WEBSTER.name:
         console.print("[red bold]" + input_word.upper() + "[/red bold]" + " you've entered isn't in the " + "[#4A7D95]" + dict + "[/#4A7D95]" + " dictionary.\n")
     else:
         console.print("[red bold]" + input_word.upper() + "[/red bold]" + " you've entered isn't in the " + "\033[34m" + dict + "\033[0m" + " dictionary.\n")
 
     for count, sug in enumerate(suggestions):
         console.print("[bold]%2d" % (count+1), end="")
-        if dict == DICTS[1]:
+        if dict == DICTS.MERRIAM_WEBSTER.name:
             console.print("[#4A7D95] %s" % sug)
         else:
             console.print("\033[34m" + " " + sug + "\033[0m")
@@ -130,14 +131,14 @@ def print_spellcheck(con, cur, input_word, suggestions, dict, is_ch=False):
     print()
 
     if key.isnumeric() and (1 <= int(key) <= len(suggestions)):
-        if dict == DICTS[1]:
+        if dict == DICTS.MERRIAM_WEBSTER.name:
             webster.search_webster(con, cur, suggestions[int(key) - 1])
-        if dict == DICTS[0]:
+        if dict == DICTS.CAMBRIDGE.name:
            cambridge.search_cambridge(con, cur, suggestions[int(key) - 1], False, is_ch)
     elif key == "":
-        if dict == DICTS[0]:
+        if dict == DICTS.CAMBRIDGE.name:
             webster.search_webster(con, cur, input_word)
-        if dict == DICTS[1]:
+        if dict == DICTS.MERRIAM_WEBSTER.name:
             cambridge.search_cambridge(con, cur, input_word, False, is_ch)
     else:
         sys.exit()

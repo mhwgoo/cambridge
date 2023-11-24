@@ -29,12 +29,12 @@ CAMBRIDGE_SPELLCHECK_URL_CN = CAMBRIDGE_URL + "/spellcheck/english-chinese-simpl
 # ----------Request Web Resource----------
 def search_cambridge(con, cur, input_word, is_fresh=False, is_ch=False, no_suggestions=False):
     if is_ch:
-        req_url = get_request_url(CAMBRIDGE_DICT_BASE_URL_CN, input_word, DICTS[0])
+        req_url = get_request_url(CAMBRIDGE_DICT_BASE_URL_CN, input_word, DICTS.CAMBRIDGE.name)
     else:
-        req_url = get_request_url(CAMBRIDGE_DICT_BASE_URL, input_word, DICTS[0])
+        req_url = get_request_url(CAMBRIDGE_DICT_BASE_URL, input_word, DICTS.CAMBRIDGE.name)
 
     if not is_fresh:
-        cached = dict.cache_run(con, cur, input_word, req_url, DICTS[0])
+        cached = dict.cache_run(con, cur, input_word, req_url, DICTS.CAMBRIDGE.name)
         if not cached:
             fresh_run(con, cur, req_url, input_word, is_ch, no_suggestions)
     else:
@@ -49,7 +49,7 @@ def fetch_cambridge(req_url, input_word, is_ch):
         res = dict.fetch(req_url, session)
 
         if res.url == CAMBRIDGE_DICT_BASE_URL or res.url == CAMBRIDGE_DICT_BASE_URL_CN:
-            logger.debug(f'{OP[6]} "{input_word}" in {DICTS[0]}')
+            logger.debug(f'{OP.NOT_FOUND.name} "{input_word}" in {DICTS.CAMBRIDGE.name}')
             if is_ch:
                 spell_req_url = get_request_url_spellcheck(CAMBRIDGE_SPELLCHECK_URL_CN, input_word)
             else:
@@ -64,7 +64,7 @@ def fetch_cambridge(req_url, input_word, is_ch):
             res_url = parse_response_url(res.url)
             res_text = res.text
 
-            logger.debug(f'{OP[5]} "{input_word}" in {DICTS[0]} at {res_url}')
+            logger.debug(f'{OP.FOUND.name} "{input_word}" in {DICTS.CAMBRIDGE.name} at {res_url}')
             return True, (res_url, res_text)
 
 
@@ -93,13 +93,13 @@ def fresh_run(con, cur, req_url, input_word, is_ch, no_suggestions=False):
         else:
             spell_res_url, spell_res_text = result[1]
 
-            logger.debug(f"{OP[1]} {spell_res_url}")
+            logger.debug(f"{OP.PARSING.name} {spell_res_url}")
             soup = make_a_soup(spell_res_text)
             nodes = soup.find("div", "hfl-s lt2b lmt-10 lmb-25 lp-s_r-20")
             suggestions = []
 
             if not nodes:
-                print(NoResultError(DICTS[0]))
+                print(NoResultError(DICTS.CAMBRIDGE.name))
                 sys.exit()
 
             for ul in nodes.find_all("ul", "hul-u"):
@@ -108,8 +108,8 @@ def fresh_run(con, cur, req_url, input_word, is_ch, no_suggestions=False):
                         sug = replace_all(i.text)
                         suggestions.append(sug)
 
-            logger.debug(f"{OP[4]} the parsed result of {spell_res_url}")
-            dict.print_spellcheck(con, cur, input_word, suggestions, DICTS[0], is_ch)
+            logger.debug(f"{OP.PRINTING.name} the parsed result of {spell_res_url}")
+            dict.print_spellcheck(con, cur, input_word, suggestions, DICTS.CAMBRIDGE.name, is_ch)
 
 
 # ----------The Entry Point For Parse And Print----------
@@ -117,7 +117,7 @@ def fresh_run(con, cur, req_url, input_word, is_ch, no_suggestions=False):
 def parse_and_print(first_dict, res_url):
     """Parse and print different sections for the word."""
 
-    logger.debug(f"{OP[4]} the parsed result of {res_url}")
+    logger.debug(f"{OP.PRINTING.name} the parsed result of {res_url}")
 
     attempt = 0
     while True:
@@ -126,7 +126,7 @@ def parse_and_print(first_dict, res_url):
                 "div", ["pr entry-body__el", "entry-body__el clrd js-share-holder", "pr idiom-block"]
             )
         except AttributeError as e:
-            attempt = call_on_error(e, res_url, attempt, OP[3])
+            attempt = call_on_error(e, res_url, attempt, OP.RETRY_PARSING.name)
             continue
         else:
             if blocks:
@@ -136,20 +136,20 @@ def parse_and_print(first_dict, res_url):
                 parse_dict_name(first_dict)
                 return
             else:
-                print(NoResultError(DICTS[0]))
+                print(NoResultError(DICTS.CAMBRIDGE.name))
                 sys.exit()
 
 def parse_first_dict(res_url, soup):
     """Parse the dict section of the page for the word."""
 
     attempt = 0
-    logger.debug(f"{OP[1]} {res_url}")
+    logger.debug(f"{OP.PARSING.name} {res_url}")
 
     while True:
         # first_dict = soup.find("div", "pr dictionary")
         first_dict = soup.find("div", "pr di superentry")
         if first_dict is None:
-            attempt = call_on_error(ParsedNoneError(DICTS[0], res_url), res_url, attempt, OP[3])
+            attempt = call_on_error(ParsedNoneError(DICTS.CAMBRIDGE.name, res_url), res_url, attempt, OP.RETRY_PARSING.name)
             continue
         else:
             break

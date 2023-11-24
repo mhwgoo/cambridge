@@ -184,11 +184,11 @@ def delete(word, con, cur):
     if deleted and data is not None:
         for i in data:
             if "cambridge" in i[1]:
-                print(f'{OP[9]} "{word}" from {DICTS[0]} in cache successfully')
+                print(f'{OP.DELETED.name} "{word}" from {DICTS.CAMBRIDGE.name} in cache successfully')
             else:
-                print(f'{OP[9]} "{word}" from {DICTS[1]} in cache successfully')
+                print(f'{OP.DELETED.name} "{word}" from {DICTS.MERRIAM_WEBSTER.name} in cache successfully')
     else:
-        print(f'{OP[6]} "{word}" in cache')
+        print(f'{OP.NOT_FOUND.name} "{word}" in cache')
 
 
 def list_words(args, con, cur):
@@ -256,9 +256,9 @@ def print_table(data):
         num = str(index + 1)
         input_word, response_word = entry[0], entry[1]
         if "cambridge" in entry[2]:
-            dict_name = DICTS[0]
+            dict_name = DICTS.CAMBRIDGE.name
         else:
-            dict_name = DICTS[1]
+            dict_name = DICTS.MERRIAM_WEBSTER.name
         table.add_row(num, input_word, response_word, dict_name)
     console.print(table)
 
@@ -292,7 +292,7 @@ def search_word(args, con, cur):
         cambridge.search_cambridge(con, cur, input_word, is_fresh, is_ch, no_suggestions)
 
 
-def wod(args, con, cur):
+def wod(args):
     if args.list:
         print("Coming soon...")
 

@@ -79,4 +79,4 @@ camb -v, --version      # print the current version of the program
 * [ ] input a new word/phrase when spelling suggestions are not satisfactory without restarting a new command line
 * [ ] check a particular expression against all cached sentence examples, if found, we can confidently use it like that in our speaking or writing
 * [ ] split and accumulate all sentences from a whole bulk of cache as independent Corpus, then we can use this Corpus outside this program
-* [ ] further strengthening 'Word of the Day' functionality from Webster
+* [ ] strengthen 'Word of the Day' functionality from Webster

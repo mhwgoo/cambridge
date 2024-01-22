@@ -30,8 +30,6 @@ def parse_args():
     # Add sub-command capability that can identify different sub-command name
     sub_parsers = parser.add_subparsers(dest="subparser_name")
 
-#############
-
     # Add sub-command l
     parser_lw = sub_parsers.add_parser(
         "l",
@@ -64,8 +62,6 @@ def parse_args():
         action="store_true",
         help="randomly list 20 words/phrases you've found before",
     )
-
-#############
 
     # Add sub-command s
     parser_sw = sub_parsers.add_parser("s", help="look up a word/phrase; hidden for convenience, no need to type")
@@ -120,8 +116,6 @@ def parse_args():
         help="look up a word/phrase without showing spelling suggestions if not found",
     )
 
-#############
-
     # Add sub-command wod
     parser_wod = sub_parsers.add_parser(
         "wod",
@@ -138,8 +132,6 @@ def parse_args():
         action="store_true",
         help="list all words of the day",
     )
-
-#############
 
     if len(sys.argv) == 1:
         print_help(parser, parser_lw, parser_sw)

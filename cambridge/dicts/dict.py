@@ -108,7 +108,7 @@ def save(con, cur, input_word, response_word, response_url, response_text):
     else:
         logger.debug(f'{OP.CACHED.name} the search result of "{input_word}"')
 
-
+#TODO add an option for inputing a new word
 def print_spellcheck(con, cur, input_word, suggestions, dict, is_ch=False):
     """Parse and print spellcheck info."""
 

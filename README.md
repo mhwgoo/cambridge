@@ -54,7 +54,7 @@ camb <phrase with \ >   # camb "have your/its moments" | camb have your\/its mom
 
 camb <word/phrase> -d   # look up a word/phrase in debug mode
 camb <word/phrase> -f   # look up a word/phrase afresh without using cache
-camb <word/phrase> -n   # look up a word/phrase without showing spelling suggestions if not found
+camb <word/phrase> -n   # look up a word/phrase without showing suggestions if not found
 ```
 
 #### Command l
@@ -63,7 +63,7 @@ For listing and deletinng items in the cache.
 camb l                  # list words/phrases found before in alphabetical order
 camb l -t               # list words/phrases found before in reverse chronological order
 camb l -r               # list 20 words/phrases from the word list randomly
-camb l -d               # delete one or multiple words/phrases(separated by ", ") from the list
+camb l -d               # delete one or more words/phrases(separated by ", ") from the list
 ```
 
 #### Command wod
@@ -76,7 +76,7 @@ camb -v, --version      # print the current version of the program
 ```
 
 ## TO-DOS
-[ ] directly input a new word/phrase when spelling suggestions are not satisfactory without restarting a new command line
-[ ] check a particular expression against all cached sentence examples, if found, we can confidently use it like that in our speaking or writing
-[ ] split and accumulate all sentences from a whole bulk of cache as independent Corpus, then we can use this Corpus outside this program
-[ ] further strengthening 'Word of the Day' functionality from Webster
+* [ ] input a new word/phrase when spelling suggestions are not satisfactory without restarting a new command line
+* [ ] check a particular expression against all cached sentence examples, if found, we can confidently use it like that in our speaking or writing
+* [ ] split and accumulate all sentences from a whole bulk of cache as independent Corpus, then we can use this Corpus outside this program
+* [ ] further strengthening 'Word of the Day' functionality from Webster

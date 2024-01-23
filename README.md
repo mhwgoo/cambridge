@@ -50,7 +50,7 @@ camb <word/phrase> -w   # look up a word/phrase in Merriam-Webster Dictionary
 camb <word/phrase> -c   # look up a word/phrase in Cambridge with Chinese translation
 
 camb <phrase with "'" > # camb "a stone's throw" | camb a stone\'s throw
-camb <phrase with \ >   # camb "have your/its moments" | camb have your\/its moments
+camb <phrase with "/" > # camb "have your/its moments" | camb have your\/its moments
 
 camb <word/phrase> -d   # look up a word/phrase in debug mode
 camb <word/phrase> -f   # look up a word/phrase afresh without using cache

@@ -76,7 +76,7 @@ camb -v, --version      # print the current version of the program
 ```
 
 ## Latest version v3.8.2
-Fixed incorrect line wrapping for some long lines of "Webster's examples on the web" caused by third party library rich's console.print() default behavior soft_wrapping. For a very long time, I thought it was terminal's wrapping kinks independent of this program, but after deep digging into terminfo, I found the devil is actually not in terminal, but in the rich's insensible default setting, which is very hard to find and took me a lot of time.
+Fixed incorrect line wrapping on terminal for some long lines of "Webster's examples on the web" section caused by third party library `rich`'s `console.print()` default behavior `soft_wrapping`. For a very long time, I thought it was terminal's wrapping kinks independent of this program, but after deep digging into `terminfo`, I found the devil is actually not in terminal, but in the `rich`'s insensible default setting, which is very hard to find and took me a lot of time.
 
 If you use Webster dictionary a lot, I strongly recommend you make an upgrade.
 

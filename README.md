@@ -75,6 +75,11 @@ camb -h, --help         # show this help message and exit
 camb -v, --version      # print the current version of the program
 ```
 
+## Latest version v3.8.2
+Fixed incorrect line wrapping for some long lines of "Webster's examples on the web" caused by third party library rich's console.print() default behavior soft_wrapping. For a very long time, I thought it was terminal's wrapping kinks independent of this program, but after deep digging into terminfo, I found the devil is actually not in terminal, but in the rich's insensible default setting, which is very hard to find and took me a lot of time.
+
+If you use Webster dictionary a lot, I strongly recommend you make an upgrade.
+
 ## TO-DOS
 * [ ] input a new word/phrase when spelling suggestions are not satisfactory without restarting a new command line
 * [ ] check a particular expression against all cached sentence examples, if found, we can confidently use it like that in our speaking or writing

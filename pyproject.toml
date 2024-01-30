@@ -1,5 +1,5 @@
 [build-system]
-requires = ["flit_core >=2,<4"]
+requires = ["flit_core >=3.4"]
 build-backend = "flit_core.buildapi"
 
 [tool.flit.metadata]
@@ -7,7 +7,7 @@ module = "cambridge"
 description-file = "README.md"
 author = "Kate Wang"
 author-email = "kate.wang2018@gmail.com"
-home-page = "https://github.com/KateWang2016/cambridge" 
+home-page = "https://github.com/KateWang2016/cambridge"
 
 requires-python = ">=3.5"
 

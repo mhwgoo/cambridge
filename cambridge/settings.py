@@ -2,7 +2,7 @@
 
 from enum import Enum
 
-VERSION = "3.8.0"
+VERSION = "3.8.1"
 
 class OP(Enum):
     FETCHING = 1,

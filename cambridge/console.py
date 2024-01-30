@@ -6,7 +6,7 @@ This script constructs rich console object.
 from rich.console import Console
 from rich.table import Table
 
-console = Console(color_system="truecolor", highlight=False)
+console = Console(color_system="truecolor", highlight=False, soft_wrap=True)
 
 table = Table()
 table.add_column("No.", style = "white")

@@ -146,8 +146,8 @@ def parse_first_dict(res_url, soup):
     logger.debug(f"{OP.PARSING.name} {res_url}")
 
     while True:
-        # first_dict = soup.find("div", "pr dictionary")
-        first_dict = soup.find("div", "pr di superentry")
+        first_dict = soup.find("div", "pr dictionary")
+        # first_dict = soup.find("div", "pr di superentry")
         if first_dict is None:
             attempt = call_on_error(ParsedNoneError(DICTS.CAMBRIDGE.name, res_url), res_url, attempt, OP.RETRY_PARSING.name)
             continue
@@ -621,7 +621,10 @@ def parse_dict_body(block):
 
 # ----------Parse Dict Name----------
 def parse_dict_name(first_dict):
-    dict_info = replace_all(first_dict.small.text).strip("(").strip(")")
-    dict_name = dict_info.split("©")[0]
-    dict_name = dict_name.split("the")[-1]
+    if first_dict.small is not None:
+        dict_info = replace_all(first_dict.small.text).strip("(").strip(")")
+        dict_name = dict_info.split("©")[0]
+        dict_name = dict_name.split("the")[-1]
+    else:
+        dict_name="Cambridge Advanced Learner's Dictionary & Thesaurus"
     console.print(f"[#757575]{dict_name}", justify="right")

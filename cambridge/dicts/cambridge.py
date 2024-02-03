@@ -146,8 +146,7 @@ def parse_first_dict(res_url, soup):
     logger.debug(f"{OP.PARSING.name} {res_url}")
 
     while True:
-        first_dict = soup.find("div", "pr dictionary")
-        # first_dict = soup.find("div", "pr di superentry")
+        first_dict = soup.find("div", "pr dictionary") or soup.find("div", "pr di superentry")
         if first_dict is None:
             attempt = call_on_error(ParsedNoneError(DICTS.CAMBRIDGE.name, res_url), res_url, attempt, OP.RETRY_PARSING.name)
             continue

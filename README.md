@@ -21,17 +21,17 @@ I'm a terminal person tired of pulling out a GUI app or browser, inputting words
 2. `-w` flag to fetch Merriam-Webster Dictionary
 3. less than 2s taken to do all the work for the word, including fetching, parsing, printing, and writing cache
 4. less than 0.1s for the same word's later search
-5. only the first dictionary from Cambridge, avoiding confuses by multiple dictionaries
+5. only the first dictionary from Cambridge (assuming the optimal) to avoid being confused by multiple dictionaries
 6. a list of word/phrase suggestions will be given, if not found
 7. `camb l` to list words and phrases you've found before
-8. colorscheme well customized to dark, light, blue, grey, gruvbox terminal backgrounds
+8. colorscheme well customized to dark, light, blueish, grayish, gruvbox terminal backgrounds
 
 ## `fzf`
 With [fzf](https://github.com/junegunn/fzf) installed, `camb l | fzf --preview 'camb {}'` will get you a taste of the `fzf` magic:
 1. display the whole word list
 2. fuzzy find a word from the word list & preview its meaning instantly
 3. preview each word definition instantly as you scroll through the list
-4. `alias cambl="camb l | fzf --preview 'camb {}'"` can be added in your bashrc for convenience
+4. `alias cambl="camb l | fzf --preview 'camb {}'"` can be added in your `.bashrc` for convenience
 
 ![list words](/screenshots/fzf.png)
 
@@ -42,7 +42,7 @@ pip uninstall cambridge && rm -rf $HOME/.cache/cambridge # uninstall and remove 
 ```
 
 ## Usages
-#### Command s (hidden)
+#### Command `s` (hidden)
 For looking up a dictionary. Flags can be put before or after `<word/phrase>`.
 ```bash
 camb <word/phrase>      # look up a word/phrase in Cambridge Dictionary
@@ -57,8 +57,8 @@ camb <word/phrase> -f   # look up a word/phrase afresh without using cache
 camb <word/phrase> -n   # look up a word/phrase without showing suggestions if not found
 ```
 
-#### Command l
-For listing and deletinng items in the cache.
+#### Command `l`
+For listing and deleting items in the cache.
 ```bash
 camb l                  # list words/phrases found before in alphabetical order
 camb l -t               # list words/phrases found before in reverse chronological order
@@ -66,7 +66,7 @@ camb l -r               # list 20 words/phrases from the word list randomly
 camb l -d               # delete one or more words/phrases(separated by ", ") from the list
 ```
 
-#### Command wod
+#### Command `wod`
 For displaying 'Word of the Day' in the Merriam Webster Dictionary
 
 #### General options

@@ -75,10 +75,12 @@ camb -h, --help         # show this help message and exit
 camb -v, --version      # print the current version of the program
 ```
 
-## Latest version v3.8.2
-Fixed incorrect line wrapping on terminal for some long lines of "Webster's recent examples on the web" section caused by third party library `rich`'s `console.print()` default behavior `soft_wrap`. For a very long time, I thought it was terminal's wrapping kinks independent of this program, but after deep digging into `terminfo`, I found the devil is actually not in terminal, but in the `rich`'s insensible default setting, which is very hard to find and took me a lot of time.
+## Recent change logs
+**Version v3.8.4**
+Updated according to recent Cambridge Website HTML structure update
 
-If you use Webster dictionary a lot, I strongly recommend you make an upgrade.
+**Version v3.8.2**
+Fixed weird line wrapping for some long lines of "Webster's recent examples on the web" section caused by the library `rich`'s `console.print()` default behavior `soft_wrap`. For a very long time, I thought it was terminal's wrapping kinks independent of this program, because the weirdness disappeared after you downsized the font or made the window wider. However, after deep digging into `terminfo` recently, I found the devil was not in terminal, but in `rich`, which is very hard to detect and took me a lot of time. If you use Webster a lot, I strongly recommend you make an upgrade.
 
 ## TO-DOS
 * [ ] input a new word/phrase when spelling suggestions are not satisfactory without restarting a new command line

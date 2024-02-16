@@ -119,7 +119,7 @@ def parse_args():
     # Add sub-command wod
     parser_wod = sub_parsers.add_parser(
         "wod",
-        help="list today's Word of the Day",
+        help="list today's Word of the Day from Merriam-Webster Dictionary",
     )
 
     # Make sub-command wod run default funtion of "wod"
@@ -134,14 +134,14 @@ def parse_args():
     )
 
     if len(sys.argv) == 1:
-        print_help(parser, parser_lw, parser_sw)
+        print_help(parser, parser_lw, parser_sw, parser_wod)
 
     elif sys.argv[1] == "-v" or sys.argv[1] == "--version":
             print("cambridge " + VERSION)
             sys.exit()
 
     elif sys.argv[1] == "-h" or sys.argv[1] == "--help":
-            print_help(parser, parser_lw, parser_sw)
+            print_help(parser, parser_lw, parser_sw, parser_wod)
 
     elif sys.argv[1] != "l" and sys.argv[1] != "wod" and len(sys.argv) > 1:
         to_parse = []
@@ -160,12 +160,16 @@ def parse_args():
         return args
 
 
-def print_help(parser, parser_lw, parser_sw):
+def print_help(parser, parser_lw, parser_sw, parser_wod):
     parser.print_help()
     console.print("[blue]\nCommand l")
     parser_lw.print_help()
+
     console.print("[blue]\nCommand s (hidden for convinience)")
     parser_sw.print_help()
+
+    console.print("[blue]\nCommand wod")
+    parser_wod.print_help()
 
     sys.exit()
 

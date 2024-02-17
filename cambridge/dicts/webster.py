@@ -877,7 +877,7 @@ def entry_attr(node):
                     console.print(f"{syllables}", end=" ")
 
                 if i.tag == "span" and "prons-entries-list-inline" in i.attrib["class"]:
-                    print_pron(i)
+                    print_pron(i, True)
 
 
 def row_entry_header(node):
@@ -1088,7 +1088,7 @@ def format_basedon_ancestor(ancestor_attr, prefix="", suffix="", root_attr=""):
         console.print("    ", end=suffix)
 
 
-def print_pron(node):
+def print_pron(node, header=False):
     sibling = node.getnext()
     before_semicolon = ((sibling is not None) and (sibling.get("class") == "sep-semicolon"))
     before_or = ((sibling is not None) and (sibling.get("class") == "il "))
@@ -1102,7 +1102,10 @@ def print_pron(node):
     count = len(prons)
     if count == 1:
         if sibling is None:
-            console.print(f"|{prons[0]}|", end="\n")
+            if header == True:
+                console.print(f"|{prons[0]}|", end="\n") # e.g. fortissimo 1 of 2
+            else:
+                console.print(f"|{prons[0]}|", end="")   # e.g. fortissimo 2 of 2
         else:
             if before_semicolon or before_or:
                 console.print(f"|{prons[0]}|", end="")
@@ -1119,7 +1122,10 @@ def print_pron(node):
                 if sibling is not None:
                     console.print(f"[{w_col.eh_word_syllables}]{pron}", end=" ")
                 else:
-                    console.print(f"[{w_col.eh_word_syllables}]{pron}", end="\n")
+                    if header == True:
+                        console.print(f"[{w_col.eh_word_syllables}]{pron}", end="\n")
+                    else:
+                        console.print(f"[{w_col.eh_word_syllables}]{pron}", end="")
             elif pron == "," or pron == ";":
                 continue
             else:
@@ -1158,6 +1164,7 @@ def print_class_ins(node):
                 print_header_badge(child.text.strip(), end=" ")
             elif attr == "prt-a":
                 print_pron(child)
+
             elif attr == "il ":
                 print_or_badge(child.text)
             elif attr == "sep-semicolon":

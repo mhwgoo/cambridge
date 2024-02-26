@@ -76,11 +76,11 @@ def cache_run(con, cur, input_word, req_url, dict):
         logger.debug(f"{OP.PARSING.name} {res_url}")
         soup = make_a_soup(res_text)
         cambridge.parse_and_print(soup, res_url)
-        console.print(f'{OP.FOUND.name} "{res_word}" from {dict} in cache. You can add "-f -w" to fetch the {DICTS.MERRIAM_WEBSTER.name} dictionary', justify="left", style="#757575")
+        console.print(f'\n{OP.FOUND.name} "{res_word}" from {dict} in cache. You can add "-f -w" to fetch the {DICTS.MERRIAM_WEBSTER.name} dictionary', justify="left", style="#757575")
     else:
         nodes = webster.parse_dict(res_text, True, res_url, False)
         webster.parse_and_print(nodes, res_url)
-        console.print(f'{OP.FOUND.name} "{res_word}" from {dict} in cache. You can add "-f" to fetch the {DICTS.CAMBRIDGE.name} dictionary', justify="left", style="#757575")
+        console.print(f'\n{OP.FOUND.name} "{res_word}" from {dict} in cache. You can add "-f" to fetch the {DICTS.CAMBRIDGE.name} dictionary', justify="left", style="#757575")
     return True
 
 
@@ -113,9 +113,9 @@ def print_spellcheck(con, cur, input_word, suggestions, dict, is_ch=False):
     """Parse and print spellcheck info."""
 
     if dict == DICTS.MERRIAM_WEBSTER.name:
-        console.print("[red bold]" + input_word.upper() + "[/red bold]" + " you've entered isn't in the " + "[#4A7D95]" + dict + "[/#4A7D95]" + " dictionary.\n")
+        console.print("[red bold]" + input_word.upper() + "[/red bold]" + " you've entered isn't in the " + "[#4A7D95]" + dict + "[/#4A7D95]" + " dictionary.")
     else:
-        console.print("[red bold]" + input_word.upper() + "[/red bold]" + " you've entered isn't in the " + "\033[34m" + dict + "\033[0m" + " dictionary.\n")
+        console.print("[red bold]" + input_word.upper() + "[/red bold]" + " you've entered isn't in the " + "\033[34m" + dict + "\033[0m" + " dictionary.")
 
     for count, sug in enumerate(suggestions):
         console.print("[bold]%2d" % (count+1), end="")
@@ -125,11 +125,8 @@ def print_spellcheck(con, cur, input_word, suggestions, dict, is_ch=False):
             console.print("\033[34m" + " " + sug + "\033[0m")
 
 
-    console.print("\nEnter [bold][NUMBER][/bold] above to look up the word suggestion, press [bold][ENTER][/bold] to toggle dictionary, or [bold][ANY OTHER KEY][/bold] to exit:")
-
-    key = input("You typed: ")
-    print()
-
+    console.print("Enter [bold][NUMBER][/bold] above to look up the word suggestion, press [bold][ENTER][/bold] to toggle dictionary, or [bold][ANY OTHER KEY][/bold] to exit: ", end="")
+    key = input("\033[1m")
     if key.isnumeric() and (1 <= int(key) <= len(suggestions)):
         if dict == DICTS.MERRIAM_WEBSTER.name:
             webster.search_webster(con, cur, suggestions[int(key) - 1])

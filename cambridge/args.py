@@ -13,7 +13,7 @@ from .cache import (
 from .log import logger
 from .settings import OP, DICTS, VERSION
 from .dicts import webster, cambridge
-from .console import console, table
+from .console import console
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -186,9 +186,24 @@ def delete(word, con, cur):
     else:
         print(f'{OP.NOT_FOUND.name} "{word}" in cache')
 
+def print_word(entry, cols=40, print_dict_name=True):
+    if (not isinstance(entry, tuple)) or len(entry) < 2:
+        print("not valid")
+
+    if "cambridge" in entry[1]:
+        dict_name = DICTS.CAMBRIDGE.name
+    else:
+        dict_name = DICTS.MERRIAM_WEBSTER.name
+
+    if print_dict_name:
+        print(f"{entry[0]:<{cols}}", dict_name)
+    else:
+        print(f"{entry[0]}")
+
 
 def list_words(args, con, cur):
     # The subparser i.e. the sub-command isn't in the namespace of args
+
     if args.delete:
         to_delete = args.delete
 
@@ -223,41 +238,27 @@ def list_words(args, con, cur):
 
     elif args.random:
         try:
-            # data is something like [('hello',), ('good',), ('world',)]
             data = get_random_words(cur)
         except sqlite3.OperationalError:
             logger.error("You may haven't searched any word yet")
         else:
-            print_table(data)
+            for entry in data:
+                print_word(entry)
 
     else:
         try:
-            # data is something like [('hello',), ('good',), ('world',)]
             data = get_response_words(cur)
         except sqlite3.OperationalError:
             logger.error("You may haven't searched any word yet")
         else:
             if args.time:
-                data.sort(reverse=False, key=lambda tup: tup[3])
-                print_table(data)
+                data.sort(reverse=False, key=lambda tup: tup[2])
+                for entry in data:
+                    print_word(entry)
             else:
                 data.sort()
-                # Not using print_table() is for fzf preview
                 for entry in data:
-                    print(entry[1])
-
-
-def print_table(data):
-    for index, entry in enumerate(data):
-        num = str(index + 1)
-        input_word, response_word = entry[0], entry[1]
-        if "cambridge" in entry[2]:
-            dict_name = DICTS.CAMBRIDGE.name
-        else:
-            dict_name = DICTS.MERRIAM_WEBSTER.name
-        table.add_row(num, input_word, response_word, dict_name)
-    console.print(table)
-
+                    print_word(entry, print_dict_name=False)
 
 def search_word(args, con, cur):
     """

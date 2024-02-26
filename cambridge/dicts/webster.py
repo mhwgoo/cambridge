@@ -5,7 +5,7 @@ import threading
 import sys
 from lxml import etree
 
-from ..console import console
+from ..console import console, my_console
 from ..settings import OP, DICTS
 from ..utils import get_request_url, decode_url
 from ..log import logger
@@ -149,9 +149,9 @@ def parse_redirect(nodes, res_url):
         dtText(elms_in_order["span"], "", 1, "")
         print()
 
-    console.print(f'\nYou can try "camb -w {words[0]}" for example to get the full definition from the {DICTS.MERRIAM_WEBSTER.name} dictionary', \
+    console.print(f'\nYou can try "camb -w {words[0]}" to get the full definition from the {DICTS.MERRIAM_WEBSTER.name} dictionary', \
                   justify="left", style="#757575", end="")
-    print_dict_name()
+    # FIXME print_dict_name()
 
 
 def parse_dict(res_text, found, res_url, is_fresh):
@@ -309,7 +309,8 @@ def examples(node):
                     if time in [0, 1, 8, 9, 16, 17, 24, 25]:
                         if index == 0:
                             console.print(f"\n[{w_col.accessory} {w_col.bold}]|", end="")
-                            console.print(f"[{w_col.eg_sentence}]{t}", end="")
+                            my_console.print(f"{t}", end="")
+                            # console.print(f"[{w_col.eg_sentence}]{t}", end="")
                         else:
                             hit = False
                             global word_entries, word_forms
@@ -331,9 +332,11 @@ def examples(node):
                                     break
 
                             if hit:
-                                console.print(f"[{w_col.eg_sentence} {w_col.bold}]{t}", end="")
+                                my_console.print(f"\033[1m{t}\033[0m", end="")
+                                # console.print(f"[{w_col.eg_sentence}{w_col.bold}]{t}", end="")
                             else:
-                                console.print(f"[{w_col.eg_sentence}]{t}", end="")
+                                my_console.print(f"{t}", end="")
+                                #console.print(f"[{w_col.eg_sentence}]{t}", end="")
                     else:
                         continue
                 time = time + 1
@@ -1189,8 +1192,8 @@ def print_class_ins(node):
 
 def print_dict_name():
     dict_name = "The Merriam-Webster Dictionary"
-    console.print(f"[{w_col.dict_name}]{dict_name}", justify="right")
-
+    # console.print(f"[{w_col.dict_name}]{dict_name}", justify="right")
+    my_console.print(f"{dict_name}", justify="right")
 
 ###########################################################
 # --- entry point for printing all entries of a word --- #
@@ -1225,7 +1228,7 @@ def parse_and_print(nodes, res_url):
         if attr == "related-phrases":
             related_phrases(node)
 
-    print_dict_name()
+    # FIXME print_dict_name()
 
 ######################################################
 # --- printing 'Word of the Day' --- #

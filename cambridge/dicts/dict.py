@@ -112,11 +112,6 @@ def save(con, cur, input_word, response_word, response_url, response_text):
 def print_spellcheck(con, cur, input_word, suggestions, dict, is_ch=False):
     """Parse and print spellcheck info."""
 
-    if dict == DICTS.MERRIAM_WEBSTER.name:
-        console.print("[red bold]" + input_word.upper() + "[/red bold]" + " you've entered isn't in the " + "[#4A7D95]" + dict + "[/#4A7D95]" + " dictionary.")
-    else:
-        console.print("[red bold]" + input_word.upper() + "[/red bold]" + " you've entered isn't in the " + "\033[34m" + dict + "\033[0m" + " dictionary.")
-
     for count, sug in enumerate(suggestions):
         console.print("[bold]%2d" % (count+1), end="")
         if dict == DICTS.MERRIAM_WEBSTER.name:
@@ -124,8 +119,7 @@ def print_spellcheck(con, cur, input_word, suggestions, dict, is_ch=False):
         else:
             console.print("\033[34m" + " " + sug + "\033[0m")
 
-
-    console.print("Enter [bold][NUMBER][/bold] above to look up the word suggestion, press [bold][ENTER][/bold] to toggle dictionary, or [bold][ANY OTHER KEY][/bold] to exit: ", end="")
+    console.print("NOT FOUND. Type NUMBER to look up the suggestion, ENTER to toggle dictionary, or ANY OTHER KEY to exit: ", end="")
     key = input("\033[1m")
     if key.isnumeric() and (1 <= int(key) <= len(suggestions)):
         if dict == DICTS.MERRIAM_WEBSTER.name:

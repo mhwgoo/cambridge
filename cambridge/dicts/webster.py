@@ -24,6 +24,9 @@ word_forms = [] # A word may have multiple word forms, e.g. "ran", "running", "r
 word_types = [] # A word's word types, e.g. "preposition", "adjective"
 
 
+# TODO examples and definiations word wrap
+# TODO fzf integration
+
 def search_webster(con, cur, input_word, is_fresh=False, no_suggestions=False):
     """
     Entry point for searching a word in Webster.

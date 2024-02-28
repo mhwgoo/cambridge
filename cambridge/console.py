@@ -26,9 +26,6 @@ my_console.print(f"[{w_col.dict_name} {w_col.bold}] {dict_name}", justify="right
 bold = "bold"
 italic = "italic"
 accessory = "#4A7D95"
-console.print(f"[{w_col.eh_entry_num}]{num}", end=" ")
-eh_entry_num = "{} on {}".format(eh_fg_entry_num, eh_bg_entry_num) # on 前后必须有空格
-objects: ('[#0A1B27 on #F4F4F4]1 of 2',)
 """
 
 class CONSOLE:

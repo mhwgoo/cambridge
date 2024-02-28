@@ -119,7 +119,7 @@ def print_spellcheck(con, cur, input_word, suggestions, dict, is_ch=False):
         else:
             console.print("\033[34m" + " " + sug + "\033[0m")
 
-    console.print("NOT FOUND. Type NUMBER to look up the suggestion, ENTER to toggle dictionary, or ANY OTHER KEY to exit: ", end="")
+    console.print(f"Input [NUMBER] to look up the suggestion inferred from the unfound [red]{input_word}[/red], [ENTER] to toggle dictionary, or [ANY OTHER KEY] to exit: ", end="")
     key = input("\033[1m")
     if key.isnumeric() and (1 <= int(key) <= len(suggestions)):
         if dict == DICTS.MERRIAM_WEBSTER.name:

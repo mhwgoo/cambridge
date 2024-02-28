@@ -285,7 +285,7 @@ def parse_dict_head(block):
             word = parse_head_title(head)
         if w_type:
             console.print(
-                f"\n[bold #0A1B27 on #F4f4f4]{word}[/bold #0A1B27 on #F4f4f4]  {w_type} {usage}"
+                f"\n[bold blue]{word}[/bold blue] [bold yellow]{w_type}[/bold yellow] {usage}"
             )
         if head.find("span", "uk dpron-i"):
             if head.find("span", "uk dpron-i").find("span", "pron dpron"):
@@ -304,7 +304,7 @@ def parse_dict_head(block):
 
         print()
     else:
-        console.print("[bold #0A1B27 on #F4F4F4]" + word)
+        console.print("[bold blue]" + word)
         if info:
             console.print(f"{info[0]} {info[1]}")
 

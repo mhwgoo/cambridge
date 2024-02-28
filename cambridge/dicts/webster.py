@@ -863,7 +863,7 @@ def entry_header_content(node):
 
         if elm.tag == "span":
             num = " ".join(list(elm.itertext()))
-            console.print(f"[{w_col.eh_entry_num}]{num}", end=" ")
+            print(num, end=" ")
 
         if elm.tag == "h2":
             type = " ".join(list(elm.itertext()))

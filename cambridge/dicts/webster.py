@@ -9,9 +9,8 @@ from ..console import console, my_console
 from ..settings import OP, DICTS
 from ..utils import get_request_url, decode_url
 from ..log import logger
-from ..dicts import dict
+from ..dicts import dict, webster_color as w_col
 from ..errors import NoResultError
-import w_col
 
 WEBSTER_BASE_URL = "https://www.merriam-webster.com"
 WEBSTER_DICT_BASE_URL = WEBSTER_BASE_URL + "/dictionary/"
@@ -1231,7 +1230,7 @@ def parse_and_print(nodes, res_url):
         if attr == "related-phrases":
             related_phrases(node)
 
-    # FIXME print_dict_name()
+    # print_dict_name()
 
 ######################################################
 # --- printing 'Word of the Day' --- #

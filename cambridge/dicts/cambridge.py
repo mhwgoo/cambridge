@@ -1,4 +1,3 @@
-
 import requests
 import threading
 import sys
@@ -137,6 +136,7 @@ def parse_and_print(first_dict, res_url):
             else:
                 print(NoResultError(DICTS.CAMBRIDGE.name))
                 sys.exit()
+
 
 def parse_first_dict(res_url, soup):
     """Parse the dict section of the page for the word."""
@@ -325,26 +325,34 @@ def parse_ptitle(block):
 
 
 def parse_def_info(def_block):
-    """ tags like 'B1 [ C or U ]' """
+    """ def info tags like 'B1 [ C or U ]' """
 
     def_info = replace_all(def_block.find("span", "def-info ddef-info").text).replace(" or ", "/")
+    return def_info
+
+    """ Comment out to defer def_info
     if def_info:
         if "phrase-body" in def_block.parent.attrs["class"]:
             print("  " + "\033[33m" + def_info + " " + "\033[0m", end="")
         else:
             print("\033[33m" + def_info + " " + "\033[0m", end="")
 
+    """
 
 def parse_meaning(def_block):
     meaning_b = def_block.find("div", "def ddef_d db")
     if meaning_b.find("span", "lab dlab"):
         usage_b = meaning_b.find("span", "lab dlab")
         usage = replace_all(usage_b.text)
-        meaning_words = replace_all(meaning_b.text).split(usage)[-1]
-        print(usage + "\033[34m" + meaning_words + "\033[0m", end="")
+        meaning_words = replace_all(meaning_b.text).split(usage)[-1].replace(":", "")
+        print(usage + "\033[34m:" + meaning_words + "\033[0m", end="")
     else:
-        meaning_words = replace_all(meaning_b.text)
-        print("\033[34m" + meaning_words + "\033[0m", end="")
+        meaning_words = replace_all(meaning_b.text).replace(":", "")
+        print("\033[34m:" + meaning_words + "\033[0m", end="")
+
+    def_info = parse_def_info(def_block)
+    if def_info:
+        print("\033[33m " + def_info + "\033[0m", end="")
 
     # Print the meaning's specific language translation if any
     meaning_lan = def_block.find("span", "trans dtrans dtrans-se break-cj")
@@ -360,11 +368,15 @@ def parse_pmeaning(def_block):
     if meaning_b.find("span", "lab dlab"):
         usage_b = meaning_b.find("span", "lab dlab")
         usage = replace_all(usage_b.text)
-        meaning_words = replace_all(meaning_b.text).split(usage)[-1]
-        print("  " + usage + "\033[34m" + meaning_words + "\033[0m", end="")
+        meaning_words = replace_all(meaning_b.text).split(usage)[-1].replace(":", "")
+        print("  " + usage + "\033[34m:" + meaning_words + "\033[0m", end="")
     else:
-        meaning_words = replace_all(meaning_b.text)
-        print("  " + "\033[34m" + meaning_words + "\033[0m", end="")
+        meaning_words = replace_all(meaning_b.text).replace(":", "")
+        print("  " + "\033[34m:" + meaning_words + "\033[0m", end="")
+
+    def_info = parse_def_info(def_block)
+    if def_info:
+        print("\033[33m " + def_info + "\033[0m", end="")
 
     # Print the meaning's specific language translation if any
     meaning_lan = def_block.find("span", "trans dtrans dtrans-se break-cj")
@@ -391,51 +403,48 @@ def parse_example(def_block):
             # Print the exmaple's specific language translation if any
             example_lan = e.find("span", "trans dtrans dtrans-se hdb break-cj")
             if example_lan is not None:
-                example_lan_sent = example_lan.text
+                example_lan_sent = " " + example_lan.text
             else:
                 example_lan_sent = ""
 
             if e.find("span", "lab dlab"):
                 lab = replace_all(e.find("span", "lab dlab").text)
                 console.print(
-                    "[#757575]"
-                    + "  • "
-                    + "[/#757575]"
+                    "[blue]"
+                    + "|"
+                    + "[/blue]"
                     + lab
                     + " "
                     + "[#757575]"
                     + example
-                    + " "
                     + example_lan_sent
                 )
             elif e.find("span", "gram dgram"):
                 gram = replace_all(e.find("span", "gram dgram").text)
                 console.print(
-                    "[#757575]"
-                    + "  • "
-                    + "[/#757575]"
+                    "[blue]"
+                    + "|"
+                    + "[/blue]"
                     + gram
                     + " "
                     + "[#757575]"
                     + example
-                    + " "
                     + example_lan_sent
                 )
             elif e.find("span", "lu dlu"):
                 lu = replace_all(e.find("span", "lu dlu").text)
                 console.print(
-                    "[#757575]"
-                    + "  • "
-                    + "[/#757575]"
+                    "[blue]"
+                    + "|"
+                    + "[/blue]"
                     + lu
                     + " "
                     + "[#757575]"
                     + example
-                    + " "
                     + example_lan_sent
                 )
             else:
-                console.print("[#757575]" + "  • " + example + " " + example_lan_sent)
+                console.print("[blue]" + "|" + "[/blue]" + "[#757575]" + example + example_lan_sent)
 
 
 def parse_synonym(def_block):
@@ -504,12 +513,13 @@ def parse_usage_note(def_block):
 
 
 def parse_def(def_block):
-    parse_def_info(def_block)
     if "phrase-body" in def_block.parent.attrs["class"]:
         parse_pmeaning(def_block)
+        print("  ", end="")
+        parse_example(def_block)
     else:
         parse_meaning(def_block)
-    parse_example(def_block)
+        parse_example(def_block)
 
     if def_block.find(
         "div", ["xref synonym hax dxref-w lmt-25", "xref synonyms hax dxref-w lmt-25"]

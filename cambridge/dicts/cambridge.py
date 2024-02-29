@@ -1,4 +1,3 @@
-"""Parse and print cambridge dictionary."""
 
 import requests
 import threading
@@ -133,7 +132,7 @@ def parse_and_print(first_dict, res_url):
                 for block in blocks:
                     parse_dict_head(block)
                     parse_dict_body(block)
-                # FIXME parse_dict_name(first_dict)
+                # parse_dict_name(first_dict)
                 return
             else:
                 print(NoResultError(DICTS.CAMBRIDGE.name))
@@ -224,10 +223,10 @@ def parse_head_pron(head):
         if w_pron_us:
             w_pron_us = replace_all(w_pron_us.text)
             console.print(
-                "UK " + w_pron_uk + " US " + w_pron_us, end="  "
+                "[#757575]" + "[bold]UK [/bold]" + w_pron_uk + "[bold] US [/bold]" + w_pron_us, end="  "
             )
         else:
-            console.print("UK " + w_pron_uk, end="  ")
+            console.print("[#757575]" + "[bold]UK [/bold]" + w_pron_uk, end="  ")
 
 
 def parse_head_tense(head):
@@ -312,8 +311,7 @@ def parse_dict_head(block):
 # ----------Parse Dict Body----------
 def parse_def_title(block):
     d_title = replace_all(block.find("h3", "dsense_h").text)
-    console.print("[#ff8c00]" + "\n" + d_title)
-
+    console.print("[red]" + "\n" + d_title.upper())
 
 def parse_ptitle(block):
     p_title = block.find("span", "phrase-title dphrase-title").text
@@ -321,18 +319,20 @@ def parse_ptitle(block):
         phrase_info = replace_all(
             block.find("span", "phrase-info dphrase-info").text
         )
-        print(f"\n\033[1m  {p_title}\33[0m {phrase_info}")
+        print(f"\n\033[34;1m  {p_title}\033[0m \033[33;1m{phrase_info}\033[0m")
     else:
-        print(f"\n\033[1m  {p_title}\033[0m")
+        print(f"\n\033[34;1m  {p_title}\033[0m")
 
 
 def parse_def_info(def_block):
-    def_info = replace_all(def_block.find("span", "def-info ddef-info").text)
+    """ tags like 'B1 [ C or U ]' """
+
+    def_info = replace_all(def_block.find("span", "def-info ddef-info").text).replace(" or ", "/")
     if def_info:
         if "phrase-body" in def_block.parent.attrs["class"]:
-            print("  " + "\033[1m" + def_info + " " + "\033[0m", end="")
+            print("  " + "\033[33m" + def_info + " " + "\033[0m", end="")
         else:
-            print(def_info + " ", end="")
+            print("\033[33m" + def_info + " " + "\033[0m", end="")
 
 
 def parse_meaning(def_block):
@@ -341,16 +341,18 @@ def parse_meaning(def_block):
         usage_b = meaning_b.find("span", "lab dlab")
         usage = replace_all(usage_b.text)
         meaning_words = replace_all(meaning_b.text).split(usage)[-1]
-        print(usage + "\033[34m" + meaning_words + "\033[0m")
+        print(usage + "\033[34m" + meaning_words + "\033[0m", end="")
     else:
         meaning_words = replace_all(meaning_b.text)
-        print("\033[34m" + meaning_words + "\033[0m")
+        print("\033[34m" + meaning_words + "\033[0m", end="")
 
     # Print the meaning's specific language translation if any
     meaning_lan = def_block.find("span", "trans dtrans dtrans-se break-cj")
     if meaning_lan:
-        meaning_lan_words = meaning_lan.text
-        print(meaning_lan_words)
+        meaning_lan_words = meaning_lan.text.replace(";", "；").replace(",", "，")
+        print(" \033[34m" + meaning_lan_words + "\033[0m")
+    else:
+        print()
 
 
 def parse_pmeaning(def_block):
@@ -359,16 +361,18 @@ def parse_pmeaning(def_block):
         usage_b = meaning_b.find("span", "lab dlab")
         usage = replace_all(usage_b.text)
         meaning_words = replace_all(meaning_b.text).split(usage)[-1]
-        print("  " + usage + "\033[34m" + meaning_words + "\033[0m")
+        print("  " + usage + "\033[34m" + meaning_words + "\033[0m", end="")
     else:
         meaning_words = replace_all(meaning_b.text)
-        print("  " + "\033[34m" + meaning_words + "\033[0m")
+        print("  " + "\033[34m" + meaning_words + "\033[0m", end="")
 
     # Print the meaning's specific language translation if any
     meaning_lan = def_block.find("span", "trans dtrans dtrans-se break-cj")
     if meaning_lan:
-        meaning_lan_words = meaning_lan.text
-        print("  " + meaning_lan_words)
+        meaning_lan_words = meaning_lan.text.replace(";", "；").replace(",", "，")
+        print(" \033[34m" + meaning_lan_words + "\033[0m")
+    else:
+        print()
 
 
 def parse_example(def_block):
@@ -573,8 +577,9 @@ def parse_dict_body(block):
 
     if subblocks:
         for subblock in subblocks:
-            if subblock.find("h3", "dsense_h"):
-                parse_def_title(subblock)
+            # Comment out because it looks superfluous.
+            # if subblock.find("h3", "dsense_h"):
+            #     parse_def_title(subblock)
 
             for child in subblock.find("div", "sense-body dsense_b").children:
                 try:

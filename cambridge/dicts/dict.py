@@ -7,7 +7,7 @@ from fake_user_agent import user_agent
 
 from ..cache import insert_into_table, get_cache, delete_word
 from ..log import logger
-from ..settings import OP, DICTS
+from ..settings import OP, DICT
 from ..errors import call_on_error
 from ..dicts import cambridge, webster
 from ..utils import make_a_soup
@@ -72,15 +72,15 @@ def cache_run(con, cur, input_word, req_url, dict):
 
     res_url, res_word, res_text = data
 
-    if DICTS.CAMBRIDGE.name.lower() in res_url:
+    if DICT.CAMBRIDGE.name.lower() in res_url:
         logger.debug(f"{OP.PARSING.name} {res_url}")
         soup = make_a_soup(res_text)
         cambridge.parse_and_print(soup, res_url)
-        console.print(f'\n{OP.FOUND.name} "{res_word}" from {dict} in cache. You can add "-f -w" to fetch the {DICTS.MERRIAM_WEBSTER.name} dictionary', justify="left", style="#757575")
+        console.print(f'\n{OP.FOUND.name} "{res_word}" from {dict} in cache. You can add "-f -w" to fetch the {DICT.MERRIAM_WEBSTER.name} dictionary', justify="left", style="#757575")
     else:
         nodes = webster.parse_dict(res_text, True, res_url, False)
         webster.parse_and_print(nodes, res_url)
-        console.print(f'\n{OP.FOUND.name} "{res_word}" from {dict} in cache. You can add "-f" to fetch the {DICTS.CAMBRIDGE.name} dictionary', justify="left", style="#757575")
+        console.print(f'\n{OP.FOUND.name} "{res_word}" from {dict} in cache. You can add "-f" to fetch the {DICT.CAMBRIDGE.name} dictionary', justify="left", style="#757575")
     return True
 
 
@@ -104,7 +104,6 @@ def save(con, cur, input_word, response_word, response_url, response_text):
             logger.debug(f'{OP.CANCELLED.name} caching "{input_word}" - {error}\n')
     except sqlite3.InterfaceError as error:
         logger.debug(f'{OP.CANCELLED.name} caching "{input_word}" - {error}\n')
-
     else:
         logger.debug(f'{OP.CACHED.name} the search result of "{input_word}"')
 
@@ -114,7 +113,7 @@ def print_spellcheck(con, cur, input_word, suggestions, dict, is_ch=False):
 
     for count, sug in enumerate(suggestions):
         console.print("[bold]%2d" % (count+1), end="")
-        if dict == DICTS.MERRIAM_WEBSTER.name:
+        if dict == DICT.MERRIAM_WEBSTER.name:
             console.print("[#4A7D95] %s" % sug)
         else:
             console.print("\033[34m" + " " + sug + "\033[0m")
@@ -122,14 +121,14 @@ def print_spellcheck(con, cur, input_word, suggestions, dict, is_ch=False):
     console.print(f"Input [NUMBER] to look up the suggestion inferred from the unfound [red]{input_word}[/red], [ENTER] to toggle dictionary, or [ANY OTHER KEY] to exit: ", end="")
     key = input("\033[1m")
     if key.isnumeric() and (1 <= int(key) <= len(suggestions)):
-        if dict == DICTS.MERRIAM_WEBSTER.name:
+        if dict == DICT.MERRIAM_WEBSTER.name:
             webster.search_webster(con, cur, suggestions[int(key) - 1])
-        if dict == DICTS.CAMBRIDGE.name:
+        if dict == DICT.CAMBRIDGE.name:
            cambridge.search_cambridge(con, cur, suggestions[int(key) - 1], False, is_ch)
     elif key == "":
-        if dict == DICTS.CAMBRIDGE.name:
+        if dict == DICT.CAMBRIDGE.name:
             webster.search_webster(con, cur, input_word)
-        if dict == DICTS.MERRIAM_WEBSTER.name:
+        if dict == DICT.MERRIAM_WEBSTER.name:
             cambridge.search_cambridge(con, cur, input_word, False, is_ch)
     else:
         sys.exit()

@@ -11,7 +11,7 @@ from .cache import (
     delete_word,
 )
 from .log import logger
-from .settings import OP, DICTS, VERSION
+from .settings import OP, DICT, VERSION
 from .dicts import webster, cambridge
 from .console import console
 
@@ -180,9 +180,9 @@ def delete(word, con, cur):
     if deleted and data is not None:
         for i in data:
             if "cambridge" in i[1]:
-                print(f'{OP.DELETED.name} "{word}" from {DICTS.CAMBRIDGE.name} in cache successfully')
+                print(f'{OP.DELETED.name} "{word}" from {DICT.CAMBRIDGE.name} in cache successfully')
             else:
-                print(f'{OP.DELETED.name} "{word}" from {DICTS.MERRIAM_WEBSTER.name} in cache successfully')
+                print(f'{OP.DELETED.name} "{word}" from {DICT.MERRIAM_WEBSTER.name} in cache successfully')
     else:
         print(f'{OP.NOT_FOUND.name} "{word}" in cache')
 
@@ -191,9 +191,9 @@ def print_word(entry, cols=40, print_dict_name=True):
         print("not valid")
 
     if "cambridge" in entry[1]:
-        dict_name = DICTS.CAMBRIDGE.name
+        dict_name = DICT.CAMBRIDGE.name
     else:
-        dict_name = DICTS.MERRIAM_WEBSTER.name
+        dict_name = DICT.MERRIAM_WEBSTER.name
 
     if print_dict_name:
         print(f"{entry[0]:<{cols}}", dict_name)

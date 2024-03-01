@@ -3,7 +3,7 @@ import threading
 import sys
 from ..console import console
 from ..errors import ParsedNoneError, NoResultError, call_on_error
-from ..settings import OP, DICTS
+from ..settings import OP, DICT
 from ..log import logger
 from ..utils import (
     make_a_soup,
@@ -27,12 +27,12 @@ CAMBRIDGE_SPELLCHECK_URL_CN = CAMBRIDGE_URL + "/spellcheck/english-chinese-simpl
 # ----------Request Web Resource----------
 def search_cambridge(con, cur, input_word, is_fresh=False, is_ch=False, no_suggestions=False):
     if is_ch:
-        req_url = get_request_url(CAMBRIDGE_DICT_BASE_URL_CN, input_word, DICTS.CAMBRIDGE.name)
+        req_url = get_request_url(CAMBRIDGE_DICT_BASE_URL_CN, input_word, DICT.CAMBRIDGE.name)
     else:
-        req_url = get_request_url(CAMBRIDGE_DICT_BASE_URL, input_word, DICTS.CAMBRIDGE.name)
+        req_url = get_request_url(CAMBRIDGE_DICT_BASE_URL, input_word, DICT.CAMBRIDGE.name)
 
     if not is_fresh:
-        cached = dict.cache_run(con, cur, input_word, req_url, DICTS.CAMBRIDGE.name)
+        cached = dict.cache_run(con, cur, input_word, req_url, DICT.CAMBRIDGE.name)
         if not cached:
             fresh_run(con, cur, req_url, input_word, is_ch, no_suggestions)
     else:
@@ -47,7 +47,7 @@ def fetch_cambridge(req_url, input_word, is_ch):
         res = dict.fetch(req_url, session)
 
         if res.url == CAMBRIDGE_DICT_BASE_URL or res.url == CAMBRIDGE_DICT_BASE_URL_CN:
-            logger.debug(f'{OP.NOT_FOUND.name} "{input_word}" in {DICTS.CAMBRIDGE.name}')
+            logger.debug(f'{OP.NOT_FOUND.name} "{input_word}" in {DICT.CAMBRIDGE.name}')
             if is_ch:
                 spell_req_url = get_request_url_spellcheck(CAMBRIDGE_SPELLCHECK_URL_CN, input_word)
             else:
@@ -62,7 +62,7 @@ def fetch_cambridge(req_url, input_word, is_ch):
             res_url = parse_response_url(res.url)
             res_text = res.text
 
-            logger.debug(f'{OP.FOUND.name} "{input_word}" in {DICTS.CAMBRIDGE.name} at {res_url}')
+            logger.debug(f'{OP.FOUND.name} "{input_word}" in {DICT.CAMBRIDGE.name} at {res_url}')
             return True, (res_url, res_text)
 
 
@@ -79,12 +79,11 @@ def fresh_run(con, cur, req_url, input_word, is_ch, no_suggestions=False):
 
         first_dict = parse_first_dict(res_url, soup)
 
-        parse_thread = threading.Thread(target=parse_and_print, args=(first_dict, res_url))
+        parse_thread = threading.Thread(target=parse_and_print, args=(first_dict, res_url, True))
         parse_thread.start()
         # parse_thread.join()
 
         dict.save(con, cur, input_word, response_word, res_url, str(first_dict))
-
     else:
         if no_suggestions:
             sys.exit(-1)
@@ -97,7 +96,7 @@ def fresh_run(con, cur, req_url, input_word, is_ch, no_suggestions=False):
             suggestions = []
 
             if not nodes:
-                print(NoResultError(DICTS.CAMBRIDGE.name))
+                print(NoResultError(DICT.CAMBRIDGE.name))
                 sys.exit()
 
             for ul in nodes.find_all("ul", "hul-u"):
@@ -107,12 +106,12 @@ def fresh_run(con, cur, req_url, input_word, is_ch, no_suggestions=False):
                         suggestions.append(sug)
 
             logger.debug(f"{OP.PRINTING.name} the parsed result of {spell_res_url}")
-            dict.print_spellcheck(con, cur, input_word, suggestions, DICTS.CAMBRIDGE.name, is_ch)
+            dict.print_spellcheck(con, cur, input_word, suggestions, DICT.CAMBRIDGE.name, is_ch)
 
 
 # ----------The Entry Point For Parse And Print----------
 
-def parse_and_print(first_dict, res_url):
+def parse_and_print(first_dict, res_url, new_line=False):
     """Parse and print different sections for the word."""
 
     logger.debug(f"{OP.PRINTING.name} the parsed result of {res_url}")
@@ -132,9 +131,11 @@ def parse_and_print(first_dict, res_url):
                     parse_dict_head(block)
                     parse_dict_body(block)
                 # parse_dict_name(first_dict)
+                if new_line:
+                    print()
                 return
             else:
-                print(NoResultError(DICTS.CAMBRIDGE.name))
+                print(NoResultError(DICT.CAMBRIDGE.name))
                 sys.exit()
 
 
@@ -147,7 +148,7 @@ def parse_first_dict(res_url, soup):
     while True:
         first_dict = soup.find("div", "pr dictionary") or soup.find("div", "pr di superentry")
         if first_dict is None:
-            attempt = call_on_error(ParsedNoneError(DICTS.CAMBRIDGE.name, res_url), res_url, attempt, OP.RETRY_PARSING.name)
+            attempt = call_on_error(ParsedNoneError(DICT.CAMBRIDGE.name, res_url), res_url, attempt, OP.RETRY_PARSING.name)
             continue
         else:
             break
@@ -223,20 +224,20 @@ def parse_head_pron(head):
         if w_pron_us:
             w_pron_us = replace_all(w_pron_us.text)
             console.print(
-                "[#757575]" + "[bold]UK [/bold]" + w_pron_uk + "[bold] US [/bold]" + w_pron_us, end="  "
+                "[bold]UK [/bold]" + w_pron_uk + "[bold] US [/bold]" + w_pron_us, end="  "
             )
         else:
-            console.print("[#757575]" + "[bold]UK [/bold]" + w_pron_uk, end="  ")
+            console.print("[bold]UK [/bold]" + w_pron_uk, end="  ")
 
 
 def parse_head_tense(head):
     w_tense = replace_all(head.find("span", "irreg-infls dinfls").text)
-    console.print(w_tense, end="  ")
+    print(w_tense, end="  ")
 
 
 def parse_head_domain(head):
     domain = replace_all(head.find("span", "domain ddomain").text)
-    console.print(domain, end="  ")
+    print(domain, end="  ")
 
 
 def parse_head_usage(head):
@@ -258,16 +259,16 @@ def parse_head_usage(head):
 def parse_head_var(head):
     if head.find("span", "var dvar"):
         w_var = replace_all(head.find("span", "var dvar").text)
-        console.print(w_var, end="  ")
+        print(w_var, end="  ")
     if head.find_next_sibling("span", "var dvar"):
         w_var = replace_all(head.find_next_sibling("span", "var dvar").text)
-        console.print(w_var, end="  ")
+        print(w_var, end="  ")
 
 
 def parse_head_spellvar(head):
     for i in head.find_all("span", "spellvar dspellvar"):
         spell_var = replace_all(i.text)
-        console.print(spell_var, end="  ")
+        print(spell_var, end="  ")
 
 
 def parse_dict_head(block):
@@ -305,7 +306,7 @@ def parse_dict_head(block):
     else:
         console.print("[bold blue]" + word)
         if info:
-            console.print(f"{info[0]} {info[1]}")
+            print(f"{info[0]} {info[1]}")
 
 
 # ----------Parse Dict Body----------
@@ -319,9 +320,9 @@ def parse_ptitle(block):
         phrase_info = replace_all(
             block.find("span", "phrase-info dphrase-info").text
         )
-        print(f"\n\033[34;1m  {p_title}\033[0m \033[33;1m{phrase_info}\033[0m")
+        print(f"\033[34;1m  {p_title}\033[0m \033[33;1m{phrase_info}\033[0m")
     else:
-        print(f"\n\033[34;1m  {p_title}\033[0m")
+        print(f"\033[34;1m  {p_title}\033[0m")
 
 
 def parse_def_info(def_block):
@@ -345,14 +346,14 @@ def parse_meaning(def_block):
         usage_b = meaning_b.find("span", "lab dlab")
         usage = replace_all(usage_b.text)
         meaning_words = replace_all(meaning_b.text).split(usage)[-1].replace(":", "")
-        print(usage + "\033[34m:" + meaning_words + "\033[0m", end="")
+        print(usage + "\033[34m" + meaning_words + "\033[0m", end="")
     else:
         meaning_words = replace_all(meaning_b.text).replace(":", "")
-        print("\033[34m:" + meaning_words + "\033[0m", end="")
+        print("\033[34m" + meaning_words + "\033[0m", end="")
 
     def_info = parse_def_info(def_block)
     if def_info:
-        print("\033[33m " + def_info + "\033[0m", end="")
+        print("\033[1m " + def_info + "\033[0m", end="")
 
     # Print the meaning's specific language translation if any
     meaning_lan = def_block.find("span", "trans dtrans dtrans-se break-cj")
@@ -369,14 +370,14 @@ def parse_pmeaning(def_block):
         usage_b = meaning_b.find("span", "lab dlab")
         usage = replace_all(usage_b.text)
         meaning_words = replace_all(meaning_b.text).split(usage)[-1].replace(":", "")
-        print("  " + usage + "\033[34m:" + meaning_words + "\033[0m", end="")
+        print("  " + usage + "\033[34m" + meaning_words + "\033[0m", end="")
     else:
         meaning_words = replace_all(meaning_b.text).replace(":", "")
-        print("  " + "\033[34m:" + meaning_words + "\033[0m", end="")
+        print("  " + "\033[34m" + meaning_words + "\033[0m", end="")
 
     def_info = parse_def_info(def_block)
     if def_info:
-        print("\033[33m " + def_info + "\033[0m", end="")
+        print("\033[1m " + def_info + "\033[0m", end="")
 
     # Print the meaning's specific language translation if any
     meaning_lan = def_block.find("span", "trans dtrans dtrans-se break-cj")
@@ -387,7 +388,7 @@ def parse_pmeaning(def_block):
         print()
 
 
-def parse_example(def_block):
+def parse_example(def_block, in_phrase=False):
     # NOTE:
     # suppose the first "if" has already run
     # and, the second is also "if", rather than "elif"
@@ -400,10 +401,13 @@ def parse_example(def_block):
         if e is not None:
             example = replace_all(e.find("span", "eg deg").text)
 
+            if in_phrase:
+                print("  ", end="")
+
             # Print the exmaple's specific language translation if any
             example_lan = e.find("span", "trans dtrans dtrans-se hdb break-cj")
             if example_lan is not None:
-                example_lan_sent = " " + example_lan.text
+                example_lan_sent = " " + example_lan.text.replace("。", "")
             else:
                 example_lan_sent = ""
 
@@ -515,8 +519,7 @@ def parse_usage_note(def_block):
 def parse_def(def_block):
     if "phrase-body" in def_block.parent.attrs["class"]:
         parse_pmeaning(def_block)
-        print("  ", end="")
-        parse_example(def_block)
+        parse_example(def_block, in_phrase=True)
     else:
         parse_meaning(def_block)
         parse_example(def_block)

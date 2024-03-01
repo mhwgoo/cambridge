@@ -6,7 +6,7 @@ import sys
 from lxml import etree
 
 from ..console import console, my_console
-from ..settings import OP, DICTS
+from ..settings import OP, DICT
 from ..utils import get_request_url, decode_url
 from ..log import logger
 from ..dicts import dict, webster_color as w_col
@@ -35,10 +35,10 @@ def search_webster(con, cur, input_word, is_fresh=False, no_suggestions=False):
     if not found, prints word suggestions and exit.
     """
 
-    req_url = get_request_url(WEBSTER_DICT_BASE_URL, input_word, DICTS.MERRIAM_WEBSTER.name)
+    req_url = get_request_url(WEBSTER_DICT_BASE_URL, input_word, DICT.MERRIAM_WEBSTER.name)
 
     if not is_fresh:
-        cached = dict.cache_run(con, cur, input_word, req_url, DICTS.MERRIAM_WEBSTER.name)
+        cached = dict.cache_run(con, cur, input_word, req_url, DICT.MERRIAM_WEBSTER.name)
         if not cached:
             fresh_run(con, cur, req_url, input_word, no_suggestions)
     else:
@@ -57,7 +57,7 @@ def fetch_webster(request_url, input_word):
         status = res.status_code
 
         if status == 200:
-            logger.debug(f'{OP.FOUND.name} "{input_word}" in {DICTS.MERRIAM_WEBSTER.name} at {res_url}')
+            logger.debug(f'{OP.FOUND.name} "{input_word}" in {DICT.MERRIAM_WEBSTER.name} at {res_url}')
             return True, (res_url, res_text)
 
         # By default Requests will perform location redirection for all verbs except HEAD.
@@ -69,7 +69,7 @@ def fetch_webster(request_url, input_word):
         #     new_res = dict.fetch(new_url, session)
 
         elif status == 404:
-            logger.debug(f'{OP.NOT_FOUND.name} "{input_word}" in {DICTS.MERRIAM_WEBSTER.name}')
+            logger.debug(f'{OP.NOT_FOUND.name} "{input_word}" in {DICT.MERRIAM_WEBSTER.name}')
             return False, (res_url, res_text)
 
         else:
@@ -88,12 +88,15 @@ def fresh_run(con, cur, req_url, input_word, no_suggestions=False):
     if found:
         if res_word:
             parse_thread = threading.Thread(
-                target=parse_and_print, args=(nodes, res_url,)
+                target=parse_and_print, args=(nodes, res_url, True)
             )
             parse_thread.start()
 
+            # sqlite must be in the main thread.
+            # sqlite3.ProgrammingError:
+            # SQLite objects created in a thread can only be used in that same thread.
+            # The object was created in thread id 140704708548544 and this is thread id 123145383600128.
             dict.save(con, cur, input_word, res_word, res_url, sub_text)
-
     else:
         if no_suggestions:
             sys.exit(-1)
@@ -110,7 +113,7 @@ def fresh_run(con, cur, req_url, input_word, no_suggestions=False):
                             sug = w.strip()
                             suggestions.append(sug)
 
-            dict.print_spellcheck(con, cur, input_word, suggestions, DICTS.MERRIAM_WEBSTER.name)
+            dict.print_spellcheck(con, cur, input_word, suggestions, DICT.MERRIAM_WEBSTER.name)
 
 
 def get_wod():
@@ -125,7 +128,7 @@ def parse_redirect(nodes, res_url):
     input_word = decode_url(res_url).split("/")[-1]
     count = len(nodes)
     print("No exact result found.")
-    console.print(f"The following [#4A7D95 bold italic]{count}[/#4A7D95 bold italic] entries include the term [#b22222 bold italic]{input_word}[/#b22222 bold italic].")
+    console.print(f"The following [#4A7D95 bold]{count}[/#4A7D95 bold] entries include the term [#b22222 bold]{input_word}[/#b22222 bold].")
 
     words = []
     for node in nodes:
@@ -151,9 +154,9 @@ def parse_redirect(nodes, res_url):
         dtText(elms_in_order["span"], "", 1, "")
         print()
 
-    console.print(f'\nYou can try "camb -w {words[0]}" to get the full definition from the {DICTS.MERRIAM_WEBSTER.name} dictionary', \
+    console.print(f'\nYou can try "camb -w {words[0]}" to get the full definition from the {DICT.MERRIAM_WEBSTER.name} dictionary', \
                   justify="left", style="#757575", end="")
-    # FIXME print_dict_name()
+    # print_dict_name()
 
 
 def parse_dict(res_text, found, res_url, is_fresh):
@@ -183,7 +186,7 @@ def parse_dict(res_text, found, res_url, is_fresh):
             sub_text = etree.tostring(sub_tree).decode('utf-8')
 
         if len(nodes) == 0:
-            print(NoResultError(DICTS.MERRIAM_WEBSTER.name))
+            print(NoResultError(DICT.MERRIAM_WEBSTER.name))
             sys.exit()
 
         global res_word
@@ -212,7 +215,7 @@ def parse_dict(res_text, found, res_url, is_fresh):
         if result:
             nodes = result[0]
         else:
-            print(NoResultError(DICTS.MERRIAM_WEBSTER.name))
+            print(NoResultError(DICT.MERRIAM_WEBSTER.name))
             sys.exit()
     return nodes
 
@@ -235,17 +238,17 @@ def nearby_entries(node):
             continue
         else:
             if has_title:
-                console.print(f"[bold {w_col.nearby_title}]{elm.text}", end="")
+                my_console.print(f"[bold {w_col.nearby_title}]{elm.text}", end="")
 
             if has_em:
                 word = "".join(list(elm.itertext()))
-                console.print(f"[bold italic {w_col.nearby_em}]{word}", end="\n")
+                my_console.print(f"[bold {w_col.nearby_em}]{word}", end="\n")
 
             if has_word:
-                console.print(f"[{w_col.nearby_word}]{elm.text}", end="\n")
+                my_console.print(f"[{w_col.nearby_word}]{elm.text}", end="\n")
 
             if has_nearby:
-                console.print(f"[{w_col.nearby_item}]{elm.text}", end="\n")
+                my_console.print(f"[{w_col.nearby_item}]{elm.text}", end="\n")
 
 
 ###########################################
@@ -266,10 +269,10 @@ def synonyms(node):
             continue
         else:
             if has_title:
-                console.print(f"[bold {w_col.syn_title}]{elm.text}", end=" ")
+                my_console.print(f"[bold {w_col.syn_title}]{elm.text}", end=" ")
 
             if has_label:
-                console.print(f"\n[{w_col.syn_label}]{elm.text}")
+                my_console.print(f"\n[{w_col.syn_label}]{elm.text}")
 
             if has_syn:
                 children = elm.getchildren()
@@ -278,9 +281,9 @@ def synonyms(node):
                 for index, child in enumerate(children):
                     syn = "".join(list(child.itertext())).strip()
                     if index != (total_num - 1):
-                        console.print(f"[{w_col.syn_item}]{syn},", end=" ")
+                        my_console.print(f"[{w_col.syn_item}]{syn},", end=" ")
                     else:
-                        console.print(f"[{w_col.syn_item}]{syn}", end=" ")
+                        my_console.print(f"[{w_col.syn_item}]{syn}", end=" ")
 
 
 ###########################################
@@ -310,9 +313,8 @@ def examples(node):
                 for index, t in enumerate(texts):
                     if time in [0, 1, 8, 9, 16, 17, 24, 25]:
                         if index == 0:
-                            console.print(f"\n[{w_col.accessory} bold]|", end="")
-                            my_console.print(f"{t}", end="")
-                            # console.print(f"[{w_col.eg_sentence}]{t}", end="")
+                            my_console.print(f"\n[{w_col.accessory} bold]|", end="")
+                            my_console.print(f"[{w_col.eg_sentence}]{t}", end="")
                         else:
                             hit = False
                             global word_entries, word_forms
@@ -334,11 +336,9 @@ def examples(node):
                                     break
 
                             if hit:
-                                my_console.print(f"\033[1m{t}\033[0m", end="")
-                                # console.print(f"[{w_col.eg_sentence}bold]{t}", end="")
+                                my_console.print(f"[{w_col.eg_sentence} bold]{t}", end="")
                             else:
-                                my_console.print(f"{t}", end="")
-                                #console.print(f"[{w_col.eg_sentence}]{t}", end="")
+                                my_console.print(f"[{w_col.eg_sentence}]{t}", end="")
                     else:
                         continue
                 time = time + 1
@@ -357,9 +357,9 @@ def phrases(node):
         try:
             if child.attrib["class"] == "drp":
                 if child.getnext().tag == "span":
-                    console.print(f"[{w_col.ph_item} bold]{child.text}", end = "")
+                    my_console.print(f"[{w_col.ph_item} bold]{child.text}", end = "")
                 else:
-                    console.print(f"[{w_col.ph_item} bold]{child.text}", end = "\n")
+                    my_console.print(f"[{w_col.ph_item} bold]{child.text}", end = "\n")
 
             if child.attrib["class"] == "vg":
                 vg(child)
@@ -369,7 +369,7 @@ def phrases(node):
                 if i.attrib["class"] == "vl":
                     print_or_badge(i.text)
                 else:
-                    console.print(f"[{w_col.ph_item} bold]{i.text}", end = "\n")
+                    my_console.print(f"[{w_col.ph_item} bold]{i.text}", end = "\n")
 
 
 ###########################################
@@ -391,9 +391,9 @@ def related_phrases(node):
     for t in texts:
         if t.strip():
             if t.lower() in words:
-                console.print(f"[{w_col.rph_em} bold italic]{t}", end="\n")
+                my_console.print(f"[{w_col.rph_em} bold]{t}", end="\n")
             else:
-                console.print(f"[{w_col.rph_title} bold]{t}", end="")
+                my_console.print(f"[{w_col.rph_title} bold]{t}", end="")
 
     pr_sec = children[2]
     sub_ps = pr_sec.getchildren()[1]  # divs: related-phrases-list-container-xs
@@ -411,12 +411,12 @@ def related_phrases(node):
         for t in ts:
             t = t.strip("\n").strip()
             if t != ts[-1]:
-                console.print(f"[{w_col.rph_item}]{t}", end="")
+                my_console.print(f"[{w_col.rph_item}]{t}", end="")
             else:
                 if phrase != phrases[-1]:
-                    console.print(f"[{w_col.rph_item}]{t},", end=" ")
+                    my_console.print(f"[{w_col.rph_item}]{t},", end=" ")
                 else:
-                    console.print(f"[{w_col.rph_item}]{t}", end="\n")
+                    my_console.print(f"[{w_col.rph_item}]{t}", end="\n")
 
 
 ###########################################
@@ -462,20 +462,20 @@ def dtText(node, ancestor_attr, count, root_attr=""):
         else:
             print_meaning_content(text, end="")
 
-    console.print("", end = " ")
+    print("", end = " ")
 
 
 def print_mw(text, has_tail, tag):
     if tag == "hl":
         if has_tail is True:
-            console.print(f"[{w_col.meaning_sentence} bold]{text}", end = "")
+            my_console.print(f"[{w_col.meaning_sentence} bold]{text}", end = "")
         else:
-            console.print(f"[{w_col.meaning_sentence} bold]{text}", end = " ")
+            my_console.print(f"[{w_col.meaning_sentence} bold]{text}", end = " ")
     if tag == "normal":
         if has_tail is True:
-            console.print(f"[{w_col.meaning_sentence}]{text}", end = "")
+            my_console.print(f"[{w_col.meaning_sentence}]{text}", end = "")
         else:
-            console.print(f"[{w_col.meaning_sentence}]{text}", end = " ")
+            my_console.print(f"[{w_col.meaning_sentence}]{text}", end = " ")
 
 
 def ex_sent(node, ancestor_attr, root_attr="", num_label_count=1):
@@ -959,7 +959,7 @@ def print_vrs(node):
         attr = child.get("class")
         if attr is not None:
             if "badge mw-badge-gray-100 text-start text-wrap d-inline" in attr:
-                console.print(f"[bold italic]{child.text.strip()}", end="")
+                console.print(f"[bold]{child.text.strip()}", end="")
             elif attr == "il " or attr == "vl":
                 print_or_badge(child.text)
             elif attr == "va":
@@ -1054,11 +1054,11 @@ def dictionary_entry(node):
 ##############################
 
 def print_meaning_badge(text, end=" "):
-    console.print(f"[italic {w_col.meaning_badge}]{text}", end=end)
+    console.print(f"[{w_col.meaning_badge}]{text}", end=end)
 
 
 def print_header_badge(text, end=" "):
-    console.print(f"[italic {w_col.meaning_badge}]{text}", end=end)
+    console.print(f"[{w_col.meaning_badge}]{text}", end=end)
 
 
 def print_meaning_arrow(text, end=" "):
@@ -1066,7 +1066,7 @@ def print_meaning_arrow(text, end=" "):
 
 
 def print_meaning_keyword(text, end=" "):
-    console.print(f"[{w_col.meaning_keyword} bold]{text}", end=end)
+    console.print(f"[{w_col.meaning_keyword}]{text}", end=end)
 
 
 def print_meaning_content(text, end=""):
@@ -1139,7 +1139,7 @@ def print_pron(node, header=False):
 
 
 def print_or_badge(text):
-    console.print(f"[{w_col.or_badge} bold]{text}", end = "")
+    my_console.print(f"[{w_col.or_badge}]{text}", end = "")
 
 
 def print_class_if(text, before_semicolon=False, before_il=False):
@@ -1189,19 +1189,19 @@ def print_class_ins(node):
                 global word_forms
                 word_forms.append(child.text.strip().lower())
             else:
-                console.print(f"{child.text}", end="")
+                print(f"{child.text}", end="")
 
 
 def print_dict_name():
     dict_name = "The Merriam-Webster Dictionary"
     # console.print(f"[{w_col.dict_name}]{dict_name}", justify="right")
-    my_console.print(f"{dict_name}", justify="right")
+    my_console.print(f"[#3ab0ff]{dict_name}", justify="center")
 
 ###########################################################
 # --- entry point for printing all entries of a word --- #
 ###########################################################
 
-def parse_and_print(nodes, res_url):
+def parse_and_print(nodes, res_url, new_line=False):
     """Parse and print different sections for the word."""
 
     logger.debug(f"{OP.PRINTING.name} the parsed result of {res_url}")
@@ -1230,7 +1230,10 @@ def parse_and_print(nodes, res_url):
         if attr == "related-phrases":
             related_phrases(node)
 
-    # print_dict_name()
+    if new_line:
+        print()
+
+    print_dict_name()
 
 ######################################################
 # --- printing 'Word of the Day' --- #

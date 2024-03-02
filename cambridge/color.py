@@ -1,7 +1,24 @@
+"""This script contains color settings."""
+
+
+COLOR_EFFECT = {
+    "BLACK"         : "30",
+    "RED"           : "31",
+    "GREEN"         : "32",
+    "YELLOW"        : "33",
+    "BLUE"          : "34",
+    "MAGENTA"       : "35",
+    "CYAN"          : "36",
+    "WHITE"         : "37",
+    "RESET"         : "0",
+    "BOLD"          : "1",
+    "ITALIC"        : "3"
+}
+
 # Webster
 accessory = "#4A7D95"
-badge = "#B00007"
-or_badge = "#0DCAF0"
+badge = "#E06C75"
+or_badge = "#3AB0FF"
 
 # 1. Webster dictionary-entry
 # 1.1 entry-header-content
@@ -27,7 +44,7 @@ meaning_link = "#4A7D95"
 meaning_content = "#4A7D95"
 meaning_badge = badge
 meaning_arrow = "#8B5742"
-meaning_keyword = "#0DCAF0"
+meaning_keyword = "#3AB0FF"
 meaning_sentence = "#757575"
 
 ### 1.6 dxnls

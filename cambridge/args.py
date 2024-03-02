@@ -11,9 +11,11 @@ from .cache import (
     delete_word,
 )
 from .log import logger
-from .settings import OP, DICT, VERSION
+from .utils import OP, DICT
 from .dicts import webster, cambridge
 from .console import console
+from __init__ import __version__
+
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -137,7 +139,7 @@ def parse_args():
         print_help(parser, parser_lw, parser_sw, parser_wod)
 
     elif sys.argv[1] == "-v" or sys.argv[1] == "--version":
-            print("cambridge " + VERSION)
+            print("cambridge " + __version__)
             sys.exit()
 
     elif sys.argv[1] == "-h" or sys.argv[1] == "--help":
@@ -162,13 +164,13 @@ def parse_args():
 
 def print_help(parser, parser_lw, parser_sw, parser_wod):
     parser.print_help()
-    console.print("[blue]\nCommand l")
+    print("\n\n\033[1mCOMMAND l\033[0m")
     parser_lw.print_help()
 
-    console.print("[blue]\nCommand s (hidden for convinience)")
+    print("\n\n\033[1mCOMMAND s (hidden)\033[0m")
     parser_sw.print_help()
 
-    console.print("[blue]\nCommand wod")
+    print("\n\n\033[1mCOMMAND wod\033[0m")
     parser_wod.print_help()
 
     sys.exit()

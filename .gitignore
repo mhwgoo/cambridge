@@ -1,6 +1,5 @@
 cambridge/__pycache__/*
 cambridge/dicts/__pycache__/*
-cambridge/colorschemes/__pycache__/*
 dist/
 venv/
 bugs/

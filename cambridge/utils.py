@@ -7,8 +7,26 @@ import io
 from urllib import parse
 from functools import wraps
 from bs4 import BeautifulSoup
+from enum import Enum
 
-from .settings import DICT
+
+class OP(Enum):
+    FETCHING        = 1,
+    PARSING         = 2,
+    RETRY_FETCHING  = 3,
+    RETRY_PARSING   = 4,
+    PRINTING        = 5,
+    FOUND           = 6,
+    NOT_FOUND       = 7,
+    CACHED          = 8,
+    CANCELLED       = 9,
+    DELETED         = 10,
+    UPDATED         = 11
+
+
+class DICT(Enum):
+    CAMBRIDGE       = 1,
+    MERRIAM_WEBSTER = 2
 
 
 def make_a_soup(text):

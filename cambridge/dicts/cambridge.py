@@ -3,7 +3,6 @@ import threading
 import sys
 from ..console import console
 from ..errors import ParsedNoneError, NoResultError, call_on_error
-from ..settings import OP, DICT
 from ..log import logger
 from ..utils import (
     make_a_soup,
@@ -11,8 +10,11 @@ from ..utils import (
     get_request_url_spellcheck,
     parse_response_url,
     replace_all,
+    OP,
+    DICT
 )
 from ..dicts import dict
+
 
 CAMBRIDGE_URL = "https://dictionary.cambridge.org"
 CAMBRIDGE_DICT_BASE_URL = CAMBRIDGE_URL + "/dictionary/english/"
@@ -217,15 +219,13 @@ def parse_head_type(head):
 def parse_head_pron(head):
     w_pron_uk = head.find("span", "uk dpron-i").find("span", "pron dpron")
     if w_pron_uk:
-        w_pron_uk = replace_all(w_pron_uk.text)
+        w_pron_uk = replace_all(w_pron_uk.text).replace("/", "|")
     # In bs4, not found element returns None, not raise error
     if head.find("span", "us dpron-i"):
         w_pron_us = head.find("span", "us dpron-i").find("span", "pron dpron")
         if w_pron_us:
-            w_pron_us = replace_all(w_pron_us.text)
-            console.print(
-                "[bold]UK [/bold]" + w_pron_uk + "[bold] US [/bold]" + w_pron_us, end="  "
-            )
+            w_pron_us = replace_all(w_pron_us.text).replace("/", "|")
+            console.print("[bold]UK [/bold]" + w_pron_uk + "[bold] US [/bold]" + w_pron_us, end="  ")
         else:
             console.print("[bold]UK [/bold]" + w_pron_uk, end="  ")
 
@@ -284,9 +284,7 @@ def parse_dict_head(block):
         if not word:
             word = parse_head_title(head)
         if w_type:
-            console.print(
-                f"\n[bold blue]{word}[/bold blue] [bold yellow]{w_type}[/bold yellow] {usage}"
-            )
+            console.print(f"\n[bold blue]{word}[/bold blue] [bold yellow]{w_type}[/bold yellow] {usage}")
         if head.find("span", "uk dpron-i"):
             if head.find("span", "uk dpron-i").find("span", "pron dpron"):
                 parse_head_pron(head)
@@ -331,13 +329,12 @@ def parse_def_info(def_block):
     def_info = replace_all(def_block.find("span", "def-info ddef-info").text).replace(" or ", "/")
     return def_info
 
-    """ Comment out to defer def_info
+    """ Comment out to defer printing def_info
     if def_info:
         if "phrase-body" in def_block.parent.attrs["class"]:
             print("  " + "\033[33m" + def_info + " " + "\033[0m", end="")
         else:
             print("\033[33m" + def_info + " " + "\033[0m", end="")
-
     """
 
 def parse_meaning(def_block):
@@ -481,7 +478,7 @@ def parse_see_also(def_block):
         console.print("[#757575]  " + item.text, end = " ")
     modifiers = see_also_block.find_all("span", "x-pos dx-pos")
     for mod in modifiers:
-        console.print(mod.text, end = " ")
+        print(mod.text, end = " ")
 
     print()
 

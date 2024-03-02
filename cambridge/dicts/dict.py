@@ -7,10 +7,9 @@ from fake_user_agent import user_agent
 
 from ..cache import insert_into_table, get_cache, delete_word
 from ..log import logger
-from ..settings import OP, DICT
 from ..errors import call_on_error
 from ..dicts import cambridge, webster
-from ..utils import make_a_soup
+from ..utils import make_a_soup, OP, DICT
 from ..console import console
 
 
@@ -76,11 +75,11 @@ def cache_run(con, cur, input_word, req_url, dict):
         logger.debug(f"{OP.PARSING.name} {res_url}")
         soup = make_a_soup(res_text)
         cambridge.parse_and_print(soup, res_url)
-        console.print(f'\n{OP.FOUND.name} "{res_word}" from {dict} in cache. You can add "-f -w" to fetch the {DICT.MERRIAM_WEBSTER.name} dictionary', justify="left", style="#757575")
+        console.print(f'\n[#757575]{OP.FOUND.name} "{res_word}" from {dict} in cache. You can add "-f -w" to fetch the {DICT.MERRIAM_WEBSTER.name} dictionary', justify="left")
     else:
         nodes = webster.parse_dict(res_text, True, res_url, False)
         webster.parse_and_print(nodes, res_url)
-        console.print(f'\n{OP.FOUND.name} "{res_word}" from {dict} in cache. You can add "-f" to fetch the {DICT.CAMBRIDGE.name} dictionary', justify="left", style="#757575")
+        console.print(f'\n[#757575]{OP.FOUND.name} "{res_word}" from {dict} in cache. You can add "-f" to fetch the {DICT.CAMBRIDGE.name} dictionary', justify="left")
     return True
 
 

@@ -5,12 +5,12 @@ import threading
 import sys
 from lxml import etree
 
-from ..console import console, my_console
-from ..settings import OP, DICT
-from ..utils import get_request_url, decode_url
+from ..console import console
+from ..utils import get_request_url, decode_url, OP, DICT
 from ..log import logger
-from ..dicts import dict, webster_color as w_col
+from ..dicts import dict
 from ..errors import NoResultError
+import color as w_col
 
 WEBSTER_BASE_URL = "https://www.merriam-webster.com"
 WEBSTER_DICT_BASE_URL = WEBSTER_BASE_URL + "/dictionary/"
@@ -19,8 +19,8 @@ WEBSTER_WORD_OF_THE_DAY_URL = WEBSTER_BASE_URL + "/word-of-the-day"
 sub_text = ""
 res_word = ""
 word_entries = [] # A page may have multiple word entries, e.g. "give away", "giveaway"
-word_forms = [] # A word may have multiple word forms, e.g. "ran", "running", "run", "flies"
-word_types = [] # A word's word types, e.g. "preposition", "adjective"
+word_forms = []   # A word may have multiple word forms, e.g. "ran", "running", "run", "flies"
+word_types = []   # A word's word types, e.g. "preposition", "adjective"
 
 
 # TODO examples and definiations word wrap
@@ -154,8 +154,8 @@ def parse_redirect(nodes, res_url):
         dtText(elms_in_order["span"], "", 1, "")
         print()
 
-    console.print(f'\nYou can try "camb -w {words[0]}" to get the full definition from the {DICT.MERRIAM_WEBSTER.name} dictionary', \
-                  justify="left", style="#757575", end="")
+    console.print(f'\n[#757575]You can try "camb -w {words[0]}" to get the full definition from the {DICT.MERRIAM_WEBSTER.name} dictionary', \
+                  justify="left", end="")
     # print_dict_name()
 
 
@@ -238,17 +238,17 @@ def nearby_entries(node):
             continue
         else:
             if has_title:
-                my_console.print(f"[bold {w_col.nearby_title}]{elm.text}", end="")
+                console.print(f"[bold {w_col.nearby_title}]{elm.text}", end="")
 
             if has_em:
                 word = "".join(list(elm.itertext()))
-                my_console.print(f"[bold {w_col.nearby_em}]{word}", end="\n")
+                console.print(f"[bold {w_col.nearby_em}]{word}", end="\n")
 
             if has_word:
-                my_console.print(f"[{w_col.nearby_word}]{elm.text}", end="\n")
+                console.print(f"[{w_col.nearby_word}]{elm.text}", end="\n")
 
             if has_nearby:
-                my_console.print(f"[{w_col.nearby_item}]{elm.text}", end="\n")
+                console.print(f"[{w_col.nearby_item}]{elm.text}", end="\n")
 
 
 ###########################################
@@ -269,10 +269,10 @@ def synonyms(node):
             continue
         else:
             if has_title:
-                my_console.print(f"[bold {w_col.syn_title}]{elm.text}", end=" ")
+                console.print(f"[bold {w_col.syn_title}]{elm.text}", end=" ")
 
             if has_label:
-                my_console.print(f"\n[{w_col.syn_label}]{elm.text}")
+                console.print(f"\n[{w_col.syn_label}]{elm.text}")
 
             if has_syn:
                 children = elm.getchildren()
@@ -281,9 +281,9 @@ def synonyms(node):
                 for index, child in enumerate(children):
                     syn = "".join(list(child.itertext())).strip()
                     if index != (total_num - 1):
-                        my_console.print(f"[{w_col.syn_item}]{syn},", end=" ")
+                        console.print(f"[{w_col.syn_item}]{syn},", end=" ")
                     else:
-                        my_console.print(f"[{w_col.syn_item}]{syn}", end=" ")
+                        console.print(f"[{w_col.syn_item}]{syn}", end=" ")
 
 
 ###########################################
@@ -313,8 +313,8 @@ def examples(node):
                 for index, t in enumerate(texts):
                     if time in [0, 1, 8, 9, 16, 17, 24, 25]:
                         if index == 0:
-                            my_console.print(f"\n[{w_col.accessory} bold]|", end="")
-                            my_console.print(f"[{w_col.eg_sentence}]{t}", end="")
+                            console.print(f"\n[{w_col.accessory} bold]|", end="")
+                            console.print(f"[{w_col.eg_sentence}]{t}", end="")
                         else:
                             hit = False
                             global word_entries, word_forms
@@ -336,9 +336,9 @@ def examples(node):
                                     break
 
                             if hit:
-                                my_console.print(f"[{w_col.eg_sentence} bold]{t}", end="")
+                                console.print(f"[{w_col.eg_sentence} bold]{t}", end="")
                             else:
-                                my_console.print(f"[{w_col.eg_sentence}]{t}", end="")
+                                console.print(f"[{w_col.eg_sentence}]{t}", end="")
                     else:
                         continue
                 time = time + 1
@@ -357,9 +357,9 @@ def phrases(node):
         try:
             if child.attrib["class"] == "drp":
                 if child.getnext().tag == "span":
-                    my_console.print(f"[{w_col.ph_item} bold]{child.text}", end = "")
+                    console.print(f"[{w_col.ph_item} bold]{child.text}", end = "")
                 else:
-                    my_console.print(f"[{w_col.ph_item} bold]{child.text}", end = "\n")
+                    console.print(f"[{w_col.ph_item} bold]{child.text}", end = "\n")
 
             if child.attrib["class"] == "vg":
                 vg(child)
@@ -369,7 +369,7 @@ def phrases(node):
                 if i.attrib["class"] == "vl":
                     print_or_badge(i.text)
                 else:
-                    my_console.print(f"[{w_col.ph_item} bold]{i.text}", end = "\n")
+                    console.print(f"[{w_col.ph_item} bold]{i.text}", end = "\n")
 
 
 ###########################################
@@ -391,14 +391,14 @@ def related_phrases(node):
     for t in texts:
         if t.strip():
             if t.lower() in words:
-                my_console.print(f"[{w_col.rph_em} bold]{t}", end="\n")
+                console.print(f"[{w_col.rph_em} bold]{t}", end="\n")
             else:
-                my_console.print(f"[{w_col.rph_title} bold]{t}", end="")
+                console.print(f"[{w_col.rph_title} bold]{t}", end="")
 
     pr_sec = children[2]
-    sub_ps = pr_sec.getchildren()[1]  # divs: related-phrases-list-container-xs
+    sub_ps = pr_sec.getchildren()[1] # divs: related-phrases-list-container-xs
 
-    phrases = []    # li tags, each tag has one phrase
+    phrases = [] # li tags, each tag has one phrase
     for i in sub_ps.iterdescendants():
         if i.tag == "li":
             phrases.append(i)
@@ -411,12 +411,12 @@ def related_phrases(node):
         for t in ts:
             t = t.strip("\n").strip()
             if t != ts[-1]:
-                my_console.print(f"[{w_col.rph_item}]{t}", end="")
+                console.print(f"[{w_col.rph_item}]{t}", end="")
             else:
                 if phrase != phrases[-1]:
-                    my_console.print(f"[{w_col.rph_item}]{t},", end=" ")
+                    console.print(f"[{w_col.rph_item}]{t},", end=" ")
                 else:
-                    my_console.print(f"[{w_col.rph_item}]{t}", end="\n")
+                    console.print(f"[{w_col.rph_item}]{t}", end="\n")
 
 
 ###########################################
@@ -468,14 +468,14 @@ def dtText(node, ancestor_attr, count, root_attr=""):
 def print_mw(text, has_tail, tag):
     if tag == "hl":
         if has_tail is True:
-            my_console.print(f"[{w_col.meaning_sentence} bold]{text}", end = "")
+            console.print(f"[{w_col.meaning_sentence} bold]{text}", end = "")
         else:
-            my_console.print(f"[{w_col.meaning_sentence} bold]{text}", end = " ")
+            console.print(f"[{w_col.meaning_sentence} bold]{text}", end = " ")
     if tag == "normal":
         if has_tail is True:
-            my_console.print(f"[{w_col.meaning_sentence}]{text}", end = "")
+            console.print(f"[{w_col.meaning_sentence}]{text}", end = "")
         else:
-            my_console.print(f"[{w_col.meaning_sentence}]{text}", end = " ")
+            console.print(f"[{w_col.meaning_sentence}]{text}", end = " ")
 
 
 def ex_sent(node, ancestor_attr, root_attr="", num_label_count=1):
@@ -642,12 +642,12 @@ def dt(node, ancestor_attr, self_attr, root_attr="", num_label_count=1):
                 else:
                     print_meaning_badge(child.text)
             if child_attr == "dtText":
-                dtText(child, ancestor_attr, dtText_count, root_attr)   # only meaning text
+                dtText(child, ancestor_attr, dtText_count, root_attr) # only meaning text
                 dtText_count += 1
             if child_attr == "uns":
                 uns(child, ancestor_attr, root_attr, num_label_count)
             if child_attr == "sub-content-thread":
-                sub_content_thread(child, ancestor_attr, root_attr, num_label_count)  # example under the meaning
+                sub_content_thread(child, ancestor_attr, root_attr, num_label_count) # example under the meaning
             if child_attr == "ca" or child_attr == "dx-jump":
                 extra(child, ancestor_attr, dtText_count, root_attr)
             if child_attr == "unText":
@@ -769,9 +769,9 @@ def sb_entry(node, parent_attr, num_label_count=1):
         elms = child.getchildren()[0].getchildren()
         for e in elms:
             e_attr = e.attrib["class"]  # "sense has-sn"
-            sense(e, e_attr, attr, parent_attr, num_label_count)        # e.g. sense(child, "sense has-sn", "sb-0 sb-entry", "....", 1)
+            sense(e, e_attr, attr, parent_attr, num_label_count)     # e.g. sense(child, "sense has-sn", "sb-0 sb-entry", "....", 1)
     else:
-        sense(child, child_attr, attr, parent_attr, num_label_count)    # e.g. sense(child, "sense has-sn", "sb-0 sb-entry, "sb has-num has-let ms-lg-4 ms-3 w-100", 1)
+        sense(child, child_attr, attr, parent_attr, num_label_count) # e.g. sense(child, "sense has-sn", "sb-0 sb-entry, "sb has-num has-let ms-lg-4 ms-3 w-100", 1)
 
 
 def vg_sseq_entry_item(node):
@@ -1033,7 +1033,7 @@ def dictionary_entry(node):
                     dxnls(elm)
 
                 if elm.attrib["class"] == "mt-3":
-                    badge = elm.getchildren()[0]  # class "lbs badge mw-badge-gray-100 text-start text-wrap d-inline"
+                    badge = elm.getchildren()[0] # class "lbs badge mw-badge-gray-100 text-start text-wrap d-inline"
                     print_header_badge(badge.text, end="\n")
 
                 if elm.attrib["class"] == "cxl-ref":
@@ -1139,7 +1139,7 @@ def print_pron(node, header=False):
 
 
 def print_or_badge(text):
-    my_console.print(f"[{w_col.or_badge}]{text}", end = "")
+    console.print(f"[{w_col.or_badge}]{text}", end = "")
 
 
 def print_class_if(text, before_semicolon=False, before_il=False):
@@ -1194,8 +1194,8 @@ def print_class_ins(node):
 
 def print_dict_name():
     dict_name = "The Merriam-Webster Dictionary"
-    # console.print(f"[{w_col.dict_name}]{dict_name}", justify="right")
-    my_console.print(f"[#3ab0ff]{dict_name}", justify="center")
+    console.print(f"[{w_col.dict_name}]{dict_name}", justify="right")
+
 
 ###########################################################
 # --- entry point for printing all entries of a word --- #
@@ -1232,8 +1232,8 @@ def parse_and_print(nodes, res_url, new_line=False):
 
     if new_line:
         print()
+    # print_dict_name()
 
-    print_dict_name()
 
 ######################################################
 # --- printing 'Word of the Day' --- #

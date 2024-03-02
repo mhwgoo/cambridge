@@ -3,11 +3,8 @@
 import os
 import sys
 import re
-from rich.console import Console
-from .log import logger
-from .settings import COLOR_EFFECT
-
-console = Console(color_system="truecolor", highlight=False, soft_wrap=True)
+from enum import Enum
+from .color import COLOR_EFFECT
 
 from typing import (
     Optional,
@@ -16,6 +13,12 @@ from typing import (
 
 JustifyMethod = Literal["left", "center", "right"]
 
+Symbol = {
+    "L_BRACKET" : "[",
+    "R_BRACKET" : "]",
+    "SLASH"     : "/",
+    "HASH"      : "#"
+}
 
 def hex_to_rgb(hex):
     h = hex[1:]
@@ -27,51 +30,66 @@ def get_color_escape(r, g, b, background=False):
 
 
 def get_color_effect(code):
-    if not isinstance(code, str):
-        code = str(code)
-
-    color_code = code.strip().upper()
-    if color_code in COLOR_EFFECT.keys():
-        return '\033[' + COLOR_EFFECT[color_code] + 'm'
+    return '\033[' + COLOR_EFFECT[code] + 'm'
 
 
-def to_ansi_string(string):
-    if not isinstance(string, str):
-        logger.debug(f"'{string}' should be of 'str' type!")
-        string = str(string)
+def parse_in_bracket(text):
+    new_text = ""
 
+    for i, t in enumerate(text):
+        if t == Symbol["SLASH"]:
+            new_text = get_color_effect("RESET")
+            return new_text
+
+        if t == Symbol["HASH"]:
+            new_text += get_color_escape(*hex_to_rgb(text[i : i + 7]))
+
+
+    for ce in COLOR_EFFECT.keys():
+        if ce.lower() in text:
+            new_text += get_color_effect(ce)
+
+    return new_text
+
+
+def parse(string):
     texts = re.split(r'[\[^[\]]', string)
 
     if len(texts) == 1:
         return texts[0]
 
+    length = len(string)
     after_parse = ""
 
-    for i, text in enumerate(texts):
-        text_stripped = text.strip(" ")
-        if text_stripped != "":
-            if text_stripped[0] == "/":
-                if text.replace(" ", "")[1:] != texts[i - 2].replace(" ", ""):
-                    sys.exit(f"closing tag '{text}' doesn't match any open tag")
-                else:
-                    after_parse += get_color_effect("RESET")
-            elif "#" in text:
-                for i, t in enumerate(text):
-                    if t == "#":
-                        after_parse += get_color_escape(*hex_to_rgb(text[i : i + 7]))
-                    if t == "b" and text[i : i + 4] == "bold":
-                        after_parse += get_color_effect(text[i : i + 4])
-                    if t == "i" and text[i : i + 6] == "italic":
-                        after_parse += get_color_effect(text[i : i + 6])
+    i = 0
+    while i < length:
+        s = string[i]
 
-            elif text_stripped == "bold":
-                after_parse += get_color_effect(text)
-            elif text_stripped == "italic":
-                after_parse += get_color_effect(text)
-            elif text_stripped == "italic bold" or text_stripped == "bold italic":
-                after_parse += get_color_effect("bold") + get_color_effect("italic")
-            else:
-                after_parse += text
+        if s not in Symbol.values():
+            after_parse += s
+            i = i + 1
+        elif s == Symbol["SLASH"] and string[i - 1] != Symbol["L_BRACKET"]:
+            after_parse += s
+            i = i + 1
+        else:
+            if s == Symbol["L_BRACKET"]:
+                k = i
+                for j, ss in enumerate(string[i + 1 : ]):
+                    k += 1
+                    if ss == Symbol["R_BRACKET"]:
+                        text_in_bracket = string[i + 1 : i + 1 + j]
+                        for word in text_in_bracket.split():
+                            # for normal [], not for color syntax
+                            if word.isalpha() and word.upper() not in COLOR_EFFECT.keys():
+                                after_parse += string[i : i + 1 + j + 1]
+                                i = k
+                                break
+                            else:
+                                after_parse += parse_in_bracket(string[i + 1 : i + 1 + j])
+                                i = k
+                                break
+                        break
+                i = i + 1
 
     return after_parse + get_color_effect("RESET")
 
@@ -84,7 +102,7 @@ class CONSOLE:
         if not objects:
             objects = ("\n",)
 
-        text = to_ansi_string(objects[0])
+        text = parse(objects[0])
 
         if justify is not None and isinstance(objects[0], str):
             cols = os.get_terminal_size().columns
@@ -100,4 +118,21 @@ class CONSOLE:
         else:
             print(text, end=end)
 
-my_console = CONSOLE()
+console = CONSOLE()
+
+# def main():
+    # text = parse("hello world")
+    # text = parse("[#3ab0ffbold]{dict_name}")
+    # print(repr(text))
+    # print(text)
+    # count = 1
+    # input_word = "hello"
+    # w_pron_uk = "/uk/"
+    # w_pron_us = "/us/"
+
+    # print(parse("[bold   red  ]I love you"))
+    # print(repr(parse("[bold   red  ]I love you")))
+    # print(repr(parse("[boldUK ] [hello] [bold red] I love you")))
+    # print(parse("[boldUK ] [hello] [bold red] I love you"))
+    # print(parse("[bold]UK [/bold]" + w_pron_uk + "[bold] US [/bold]" + w_pron_us), end="\n")
+    # print(parse(f"The following [#4A7D95 bold]{count}[/#4A7D95 bold] entries include the term [#b22222 bold]{input_word}[/#b22222 bold]."))

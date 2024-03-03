@@ -191,7 +191,7 @@ def parse_head_title(block):
 
 def parse_head_info(block):
     info = block.find_all("span", ["pos dpos", "lab dlab", "v dv lmr-0"])
-    if info:
+    if info is not None:
         temp = [i.text for i in info]
         type = temp[0]
         text = " ".join(temp[1:])
@@ -200,19 +200,12 @@ def parse_head_info(block):
 
 
 def parse_head_type(head):
-    if head.find("span", "anc-info-head danc-info-head"):
-        w_type = (
-            head.find("span", "anc-info-head danc-info-head").text
-            + head.find(
-                "span",
-                attrs={
-                    "title": "A word that describes an action, condition or experience."
-                },
-            ).text
-        )
+    anc = head.find("span", "anc-info-head danc-info-head")
+    posgram = head.find("div", "posgram dpos-g hdib lmr-5")
+    if anc is not None:
+        w_type = (anc.text + head.find("span", attrs={"title": "A word that describes an action, condition or experience."},).text)
         w_type = replace_all(w_type)
-    elif head.find("div", "posgram dpos-g hdib lmr-5"):
-        posgram = head.find("div", "posgram dpos-g hdib lmr-5")
+    elif posgram is not None:
         w_type = replace_all(posgram.text)
     else:
         w_type = ""
@@ -221,12 +214,14 @@ def parse_head_type(head):
 
 def parse_head_pron(head):
     w_pron_uk = head.find("span", "uk dpron-i").find("span", "pron dpron")
-    if w_pron_uk:
+    if w_pron_uk is not None:
         w_pron_uk = replace_all(w_pron_uk.text).replace("/", "|")
+
     # In bs4, not found element returns None, not raise error
-    if head.find("span", "us dpron-i"):
-        w_pron_us = head.find("span", "us dpron-i").find("span", "pron dpron")
-        if w_pron_us:
+    us_dpron = head.find("span", "us dpron-i")
+    if us_dpron is not None:
+        w_pron_us = us_dpron.find("span", "pron dpron")
+        if w_pron_us is not None:
             w_pron_us = replace_all(w_pron_us.text).replace("/", "|")
             c_print("[bold]UK [/bold]" + w_pron_uk + "[bold] US [/bold]" + w_pron_us, end="  ")
         else:
@@ -260,11 +255,14 @@ def parse_head_usage(head):
 
 
 def parse_head_var(head):
-    if head.find("span", "var dvar"):
-        w_var = replace_all(head.find("span", "var dvar").text)
+    var_dvar = head.find("span", "var dvar")
+    if var_dvar is not None:
+        w_var = replace_all(var_dvar.text)
         print(w_var, end="  ")
-    if head.find_next_sibling("span", "var dvar"):
-        w_var = replace_all(head.find_next_sibling("span", "var dvar").text)
+
+    var_dvar_sib = head.find_next_sibling("span", "var dvar")
+    if var_dvar_sib is not None:
+        w_var = replace_all(var_dvar_sib.text)
         print(w_var, end="  ")
 
 
@@ -317,10 +315,10 @@ def parse_def_title(block):
 
 def parse_ptitle(block):
     p_title = block.find("span", "phrase-title dphrase-title").text
-    if block.find("span", "phrase-info dphrase-info"):
-        phrase_info = replace_all(
-            block.find("span", "phrase-info dphrase-info").text
-        )
+    p_info = block.find("span", "phrase-info dphrase-info")
+
+    if p_info is not None:
+        phrase_info = replace_all(p_info.text)
         print(f"\033[34;1m  {p_title}\033[0m \033[33;1m{phrase_info}\033[0m")
     else:
         print(f"\033[34;1m  {p_title}\033[0m")
@@ -342,14 +340,15 @@ def parse_def_info(def_block):
 
 def parse_meaning(def_block):
     meaning_b = def_block.find("div", "def ddef_d db")
-    if meaning_b.find("span", "lab dlab"):
-        usage_b = meaning_b.find("span", "lab dlab")
+    usage_b = meaning_b.find("span", "lab dlab")
+
+    if usage_b is not None:
         usage = replace_all(usage_b.text)
         meaning_words = replace_all(meaning_b.text).split(usage)[-1].replace(":", "")
-        print(usage + "\033[34m" + meaning_words + "\033[0m", end="")
+        print("\033[34;1m: \033[0m" + usage + "\033[34m" + meaning_words + "\033[0m", end="")
     else:
         meaning_words = replace_all(meaning_b.text).replace(":", "")
-        print("\033[34m" + meaning_words + "\033[0m", end="")
+        print("\033[34;1m: \033[0m" + "\033[34m" + meaning_words + "\033[0m", end="")
 
     def_info = parse_def_info(def_block)
     if def_info:
@@ -357,7 +356,7 @@ def parse_meaning(def_block):
 
     # Print the meaning's specific language translation if any
     meaning_lan = def_block.find("span", "trans dtrans dtrans-se break-cj")
-    if meaning_lan:
+    if meaning_lan is not None:
         meaning_lan_words = meaning_lan.text.replace(";", "；").replace(",", "，")
         print(" \033[34m" + meaning_lan_words + "\033[0m")
     else:
@@ -366,14 +365,15 @@ def parse_meaning(def_block):
 
 def parse_pmeaning(def_block):
     meaning_b = def_block.find("div", "def ddef_d db")
-    if meaning_b.find("span", "lab dlab"):
-        usage_b = meaning_b.find("span", "lab dlab")
+    usage_b = meaning_b.find("span", "lab dlab")
+
+    if usage_b is not None:
         usage = replace_all(usage_b.text)
         meaning_words = replace_all(meaning_b.text).split(usage)[-1].replace(":", "")
-        print("  " + usage + "\033[34m" + meaning_words + "\033[0m", end="")
+        print("  " + "\033[34;1m: \033[0m" + usage + "\033[34m" + meaning_words + "\033[0m", end="")
     else:
         meaning_words = replace_all(meaning_b.text).replace(":", "")
-        print("  " + "\033[34m" + meaning_words + "\033[0m", end="")
+        print("  " + "\033[34;1m: \033[0m" + "\033[34m" + meaning_words + "\033[0m", end="")
 
     def_info = parse_def_info(def_block)
     if def_info:
@@ -381,7 +381,7 @@ def parse_pmeaning(def_block):
 
     # Print the meaning's specific language translation if any
     meaning_lan = def_block.find("span", "trans dtrans dtrans-se break-cj")
-    if meaning_lan:
+    if meaning_lan is not None:
         meaning_lan_words = meaning_lan.text.replace(";", "；").replace(",", "，")
         print(" \033[34m" + meaning_lan_words + "\033[0m")
     else:
@@ -452,10 +452,7 @@ def parse_example(def_block, in_phrase=False):
 
 
 def parse_synonym(def_block):
-    if def_block.find("div", "xref synonym hax dxref-w lmt-25"):
-        s_block = def_block.find("div", "xref synonym hax dxref-w lmt-25")
-    else:
-        s_block = def_block.find("div", "xref synonyms hax dxref-w lmt-25")
+    s_block = def_block.find("div", re.compile("xref synonyms? hax dxref-w lmt-25"))
 
     if s_block is not None:
         s_title = s_block.strong.text.upper()
@@ -468,29 +465,24 @@ def parse_synonym(def_block):
 
 
 def parse_see_also(def_block):
-    if def_block.find("div", "xref see_also hax dxref-w"):
-        see_also_block = def_block.find("div", "xref see_also hax dxref-w")
-    elif def_block.find("div", "xref see_also hax dxref-w lmt-25"):
-        see_also_block = def_block.find("div", "xref see_also hax dxref-w lmt-25")
-    else:
-        return
-    see_also = see_also_block.strong.text.upper()
-    c_print("[bold]" + "\n  " + see_also)
-    items = see_also_block.find_all("span", ["x-h dx-h", "x-p dx-p"])
-    for item in items:
-        c_print("[#757575]  " + item.text, end = " ")
-    modifiers = see_also_block.find_all("span", "x-pos dx-pos")
-    for mod in modifiers:
-        print(mod.text, end = " ")
+    see_also_block = def_block.find("div", re.compile("xref see_also hax dxref-w( lmt-25)?"))
+
+    if see_also_block is not None:
+        see_also = see_also_block.strong.text.upper()
+        c_print("[bold #757575]" + "\n  " + see_also)
+
+        for item in see_also_block.find_all("span", ["x-h dx-h", "x-p dx-p"]):
+            c_print("[#757575]" + "  • " + item.text)
+
+        modifiers = see_also_block.find_all("span", "x-pos dx-pos")
+        for mod in modifiers:
+            print(mod.text, end = " ")
 
     print()
 
 
 def parse_compare(def_block):
-    if def_block.find("div", "xref compare hax dxref-w lmt-25"):
-        compare_block = def_block.find("div", "xref compare hax dxref-w lmt-25")
-    else:
-        compare_block = def_block.find("div", "xref compare hax dxref-w")
+    compare_block = def_block.find("div", re.compile("xref compare hax dxref-w( lmt-25)?"))
 
     if compare_block is not None:
         compare = compare_block.strong.text.upper()
@@ -541,7 +533,6 @@ def parse_def(def_block):
 
 def parse_idiom(block):
     idiom_block = block.find("div", re.compile("xref idioms? hax dxref-w lmt-25 lmb-25"))
-
 
     if idiom_block is not None:
         idiom_title = idiom_block.h3.text.upper()
@@ -607,8 +598,8 @@ def parse_dict_body(block):
                     pass
 
     else:
-        if block.find("div", "idiom-block"):
-            idiom_sole_block = block.find("div", "idiom-block")
+        idiom_sole_block = block.find("div", "idiom-block")
+        if idiom_sole_block is not None:
             parse_sole_idiom(idiom_sole_block)
 
     if block.find(

@@ -1,4 +1,4 @@
-"""Fetch, parse, print, and save Webster dictionary."""
+"""Fetch, parse, print, and save the Merriam-Webster Dictionary."""
 
 import requests
 import threading

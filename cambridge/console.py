@@ -44,7 +44,6 @@ def parse_in_bracket(text):
         if t == Symbol["HASH"]:
             new_text += get_color_escape(*hex_to_rgb(text[i : i + 7]))
 
-
     for ce in COLOR_EFFECT.keys():
         if ce.lower() in text:
             new_text += get_color_effect(ce)
@@ -106,6 +105,7 @@ class CONSOLE:
 
         if justify is not None and isinstance(objects[0], str):
             cols = os.get_terminal_size().columns
+
             # https://docs.python.org/3/library/string.html#grammar-token-format-spec-align
             if justify == "right":
                 print(f"{text:>{cols}}")
@@ -119,20 +119,3 @@ class CONSOLE:
             print(text, end=end)
 
 console = CONSOLE()
-
-# def main():
-    # text = parse("hello world")
-    # text = parse("[#3ab0ffbold]{dict_name}")
-    # print(repr(text))
-    # print(text)
-    # count = 1
-    # input_word = "hello"
-    # w_pron_uk = "/uk/"
-    # w_pron_us = "/us/"
-
-    # print(parse("[bold   red  ]I love you"))
-    # print(repr(parse("[bold   red  ]I love you")))
-    # print(repr(parse("[boldUK ] [hello] [bold red] I love you")))
-    # print(parse("[boldUK ] [hello] [bold red] I love you"))
-    # print(parse("[bold]UK [/bold]" + w_pron_uk + "[bold] US [/bold]" + w_pron_us), end="\n")
-    # print(parse(f"The following [#4A7D95 bold]{count}[/#4A7D95 bold] entries include the term [#b22222 bold]{input_word}[/#b22222 bold]."))

@@ -1,6 +1,9 @@
+"""Fetch, parse, print, and save the Cambridge dictionary."""
+
 import requests
 import threading
 import sys
+import re
 from ..console import console
 from ..errors import ParsedNoneError, NoResultError, call_on_error
 from ..log import logger
@@ -536,12 +539,9 @@ def parse_def(def_block):
     if def_block.find("div", "usagenote dusagenote daccord"):
         parse_usage_note(def_block)
 
-
 def parse_idiom(block):
-    if block.find("div", "xref idiom hax dxref-w lmt-25 lmb-25"):
-        idiom_block = block.find("div", "xref idiom hax dxref-w lmt-25 lmb-25")
-    else:
-        idiom_block = block.find("div", "xref idioms hax dxref-w lmt-25 lmb-25")
+    idiom_block = block.find("div", re.compile("xref idioms? hax dxref-w lmt-25 lmb-25"))
+
 
     if idiom_block is not None:
         idiom_title = idiom_block.h3.text.upper()
@@ -566,10 +566,7 @@ def parse_sole_idiom(block):
 
 
 def parse_phrasal_verb(block):
-    if block.find("div", "xref phrasal_verbs hax dxref-w lmt-25 lmb-25"):
-        pv_block = block.find("div", "xref phrasal_verbs hax dxref-w lmt-25 lmb-25")
-    else:
-        pv_block = block.find("div", "xref phrasal_verb hax dxref-w lmt-25 lmb-25")
+    pv_block = block.find("div", re.compile("xref phrasal_verbs? hax dxref-w lmt-25 lmb-25"))
 
     if pv_block is not None:
         pv_title = pv_block.h3.text.upper()

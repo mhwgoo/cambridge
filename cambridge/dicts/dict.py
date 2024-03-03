@@ -115,7 +115,7 @@ def print_spellcheck(con, cur, input_word, suggestions, dict, is_ch=False):
         if dict == DICT.MERRIAM_WEBSTER.name:
             console.print("[#4A7D95] %s" % sug)
         else:
-            console.print("\033[34m" + " " + sug + "\033[0m")
+            print("\033[34m" + " " + sug + "\033[0m")
 
     console.print(f"Input [NUMBER] to look up the suggestion inferred from the unfound [red]{input_word}[/red], [ENTER] to toggle dictionary, or [ANY OTHER KEY] to exit: ", end="")
     key = input("\033[1m")

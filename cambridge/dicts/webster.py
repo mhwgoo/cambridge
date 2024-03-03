@@ -702,7 +702,7 @@ def sense(node, attr, parent_attr, ancestor_attr, num_label_count=1):
         if "letter-only" in ancestor_attr:
             print("  ", end="")
         else:
-            _print("    ", end = "")
+            print("    ", end = "")
         sense_content = children[1] # class "sense-content w-100"
 
     # meaning with only number

@@ -10,7 +10,7 @@ from ..log import logger
 from ..errors import call_on_error
 from ..dicts import cambridge, webster
 from ..utils import make_a_soup, OP, DICT
-from ..console import console
+from ..console import c_print
 
 
 def fetch(url, session):
@@ -75,11 +75,11 @@ def cache_run(con, cur, input_word, req_url, dict):
         logger.debug(f"{OP.PARSING.name} {res_url}")
         soup = make_a_soup(res_text)
         cambridge.parse_and_print(soup, res_url)
-        console.print(f'\n[#757575]{OP.FOUND.name} "{res_word}" from {dict} in cache. You can add "-f -w" to fetch the {DICT.MERRIAM_WEBSTER.name} dictionary', justify="left")
+        c_print(f'\n[#757575]{OP.FOUND.name} "{res_word}" from {dict} in cache. You can add "-f -w" to fetch the {DICT.MERRIAM_WEBSTER.name} dictionary', justify="left")
     else:
         nodes = webster.parse_dict(res_text, True, res_url, False)
         webster.parse_and_print(nodes, res_url)
-        console.print(f'\n[#757575]{OP.FOUND.name} "{res_word}" from {dict} in cache. You can add "-f" to fetch the {DICT.CAMBRIDGE.name} dictionary', justify="left")
+        c_print(f'\n[#757575]{OP.FOUND.name} "{res_word}" from {dict} in cache. You can add "-f" to fetch the {DICT.CAMBRIDGE.name} dictionary', justify="left")
     return True
 
 
@@ -111,13 +111,13 @@ def print_spellcheck(con, cur, input_word, suggestions, dict, is_ch=False):
     """Parse and print spellcheck info."""
 
     for count, sug in enumerate(suggestions):
-        console.print("[bold]%2d" % (count+1), end="")
+        c_print("[bold]%2d" % (count+1), end="")
         if dict == DICT.MERRIAM_WEBSTER.name:
-            console.print("[#4A7D95] %s" % sug)
+            c_print("[#4A7D95] %s" % sug)
         else:
             print("\033[34m" + " " + sug + "\033[0m")
 
-    console.print(f"Input [NUMBER] to look up the suggestion inferred from the unfound [red]{input_word}[/red], [ENTER] to toggle dictionary, or [ANY OTHER KEY] to exit: ", end="")
+    c_print(f"Input [NUMBER] to look up the suggestion inferred from the unfound [red]{input_word}[/red], [ENTER] to toggle dictionary, or [ANY OTHER KEY] to exit: ", end="")
     key = input("\033[1m")
     if key.isnumeric() and (1 <= int(key) <= len(suggestions)):
         if dict == DICT.MERRIAM_WEBSTER.name:

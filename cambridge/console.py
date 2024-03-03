@@ -93,29 +93,23 @@ def parse(string):
     return after_parse + get_color_effect("RESET")
 
 
-class CONSOLE:
-    def __init__(self):
-        pass
+def c_print(*objects, sep=' ', end='\n', file=None, flush=False, justify: Optional[JustifyMethod] = None):
+    if not objects:
+        objects = ("\n",)
 
-    def print(self, *objects, sep=' ', end='\n', file=None, flush=False, justify: Optional[JustifyMethod] = None):
-        if not objects:
-            objects = ("\n",)
+    text = parse(objects[0])
 
-        text = parse(objects[0])
+    if justify is not None and isinstance(objects[0], str):
+        cols = os.get_terminal_size().columns
 
-        if justify is not None and isinstance(objects[0], str):
-            cols = os.get_terminal_size().columns
-
-            # https://docs.python.org/3/library/string.html#grammar-token-format-spec-align
-            if justify == "right":
-                print(f"{text:>{cols}}")
-            elif justify == "left":
-                print(f"{text:<{cols}}")
-            elif justify == "center":
-                print(f"{text:^{cols}}")
-            else:
-                justify = None
+        # https://docs.python.org/3/library/string.html#grammar-token-format-spec-align
+        if justify == "right":
+            print(f"{text:>{cols}}")
+        elif justify == "left":
+            print(f"{text:<{cols}}")
+        elif justify == "center":
+            print(f"{text:^{cols}}")
         else:
-            print(text, end=end)
-
-console = CONSOLE()
+            justify = None
+    else:
+        print(text, end=end)

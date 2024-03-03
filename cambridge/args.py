@@ -13,7 +13,6 @@ from .cache import (
 from .log import logger
 from .utils import OP, DICT
 from .dicts import webster, cambridge
-from .console import console
 from __init__ import __version__
 
 

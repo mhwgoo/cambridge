@@ -447,6 +447,7 @@ def parse_synonym(def_block):
 
 def parse_see_also(def_block):
     see_also_block = def_block.find("div", re.compile("xref see_also hax dxref-w( lmt-25)?"))
+
     if see_also_block is None:
         return
     else:
@@ -526,6 +527,7 @@ def parse_idiom(block):
 
 def parse_sole_idiom(block):
     idiom_sole_meaning = block.find("div", "def ddef_d db")
+
     if idiom_sole_meaning is not None:
         print("\033[34m" + idiom_sole_meaning.text + "\033[0m")
     parse_example(block)

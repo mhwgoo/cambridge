@@ -447,8 +447,9 @@ def parse_synonym(def_block):
 
 def parse_see_also(def_block):
     see_also_block = def_block.find("div", re.compile("xref see_also hax dxref-w( lmt-25)?"))
-
-    if see_also_block is not None:
+    if see_also_block is None:
+        return
+    else:
         see_also = see_also_block.strong.text.upper()
         c_print("[bold #757575]" + "\n  " + see_also)
 
@@ -472,21 +473,25 @@ def parse_compare(def_block):
             "div", ["item lc lc1 lpb-10 lpr-10", "item lc lc1 lc-xs6-12 lpb-10 lpr-10"]
         ):
             item = word.a.text
+            c_print("[#757575]" + "  • " + item + "[/#757575]", end="")
+
             usage = word.find("span", "x-lab dx-lab")
             if usage:
                 usage = usage.text
-                c_print("[#757575]" + "  • " + item + "[/#757575]" + usage)
-            else:
-                c_print("[#757575]" + "  • " + item)
+                print(usage, end="")
+
+            print()
 
 
 def parse_usage_note(def_block):
     usage_block = def_block.find("div", "usagenote dusagenote daccord")
-    usagenote = usage_block.h5.text
-    c_print("[bold #757575]" + "\n  " + usagenote)
-    for item in usage_block.find_all("li", "text"):
-        item = item.text
-        c_print("[#757575]" + "    " + item)
+
+    if usage_block is not None:
+        usagenote = usage_block.h5.text
+        c_print("[bold #757575]" + "\n  " + usagenote)
+        for item in usage_block.find_all("li", "text"):
+            item = item.text
+            c_print("[#757575]" + "    " + item)
 
 
 def parse_def(def_block):
@@ -497,20 +502,10 @@ def parse_def(def_block):
         parse_meaning(def_block)
         parse_example(def_block)
 
-    if def_block.find(
-        "div", ["xref synonym hax dxref-w lmt-25", "xref synonyms hax dxref-w lmt-25"]
-    ):
-        parse_synonym(def_block)
-    if def_block.find(
-        "div", ["xref see_also hax dxref-w", "xref see_also hax dxref-w lmt-25"]
-    ):
-        parse_see_also(def_block)
-    if def_block.find(
-        "div", ["xref compare hax dxref-w lmt-25", "xref compare hax dxref-w"]
-    ):
-        parse_compare(def_block)
-    if def_block.find("div", "usagenote dusagenote daccord"):
-        parse_usage_note(def_block)
+    parse_synonym(def_block)
+    parse_see_also(def_block)
+    parse_compare(def_block)
+    parse_usage_note(def_block)
 
 def parse_idiom(block):
     idiom_block = block.find("div", re.compile("xref idioms? hax dxref-w lmt-25 lmb-25"))

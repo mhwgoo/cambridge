@@ -313,7 +313,7 @@ def examples(node):
                 for index, t in enumerate(texts):
                     if time in [0, 1, 8, 9, 16, 17, 24, 25]:
                         if index == 0:
-                            c_print(f"\n[{w_col.accessory} bold]|", end="")
+                            c_print(f"\n[{w_col.accessory}]|", end="")
                             c_print(f"[{w_col.eg_sentence}]{t}", end="")
                         else:
                             hit = False
@@ -487,7 +487,7 @@ def ex_sent(node, ancestor_attr, root_attr="", num_label_count=1):
     if num_label_count == 2:
         print(" ", end="")
 
-    c_print(f"[{w_col.accessory} bold]|", end="")
+    c_print(f"[{w_col.accessory}]|", end="")
 
     hl_words = []
     ems = []

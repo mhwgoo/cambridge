@@ -330,17 +330,20 @@ def parse_def_info(def_block):
     def_info = replace_all(def_block.find("span", "def-info ddef-info").text).replace(" or ", "/")
     return def_info
 
-    """ Comment out to defer printing def_info
-    if def_info:
-        if "phrase-body" in def_block.parent.attrs["class"]:
-            print("  " + "\033[33m" + def_info + " " + "\033[0m", end="")
-        else:
-            print("\033[33m" + def_info + " " + "\033[0m", end="")
-    """
 
-def parse_meaning(def_block):
-    meaning_b = def_block.find("div", "def ddef_d db")
-    usage_b = meaning_b.find("span", "lab dlab")
+def print_meaning_lan(meaning_lan):
+    if meaning_lan is not None:
+        meaning_lan_words = meaning_lan.text.replace(";", "；").replace(",", "，")
+        if not meaning_lan_words.startswith("（"):
+            print(" ", end="")
+        print("\033[34m" + meaning_lan_words + "\033[0m")
+    else:
+        print()
+
+
+def print_meaning(meaning_b, usage_b, is_pmeaning):
+    if is_pmeaning:
+        print("  ", end="")
 
     if usage_b is not None:
         usage = replace_all(usage_b.text)
@@ -350,45 +353,23 @@ def parse_meaning(def_block):
         meaning_words = replace_all(meaning_b.text).replace(":", "")
         print("\033[34;1m: \033[0m" + "\033[34m" + meaning_words + "\033[0m", end="")
 
-    def_info = parse_def_info(def_block)
-    if def_info:
-        print("\033[1m " + def_info + "\033[0m", end="")
 
-    # Print the meaning's specific language translation if any
-    meaning_lan = def_block.find("span", "trans dtrans dtrans-se break-cj")
-    if meaning_lan is not None:
-        meaning_lan_words = meaning_lan.text.replace(";", "；").replace(",", "，")
-        print(" \033[34m" + meaning_lan_words + "\033[0m")
-    else:
-        print()
-
-
-def parse_pmeaning(def_block):
+def parse_meaning(def_block, is_pmeaning=False):
     meaning_b = def_block.find("div", "def ddef_d db")
     usage_b = meaning_b.find("span", "lab dlab")
 
-    if usage_b is not None:
-        usage = replace_all(usage_b.text)
-        meaning_words = replace_all(meaning_b.text).split(usage)[-1].replace(":", "")
-        print("  " + "\033[34;1m: \033[0m" + usage + "\033[34m" + meaning_words + "\033[0m", end="")
-    else:
-        meaning_words = replace_all(meaning_b.text).replace(":", "")
-        print("  " + "\033[34;1m: \033[0m" + "\033[34m" + meaning_words + "\033[0m", end="")
+    print_meaning(meaning_b, usage_b, is_pmeaning)
 
     def_info = parse_def_info(def_block)
     if def_info:
-        print("\033[1m " + def_info + "\033[0m", end="")
+        print("\033[1m " + "[" + def_info + "]" + "\033[0m", end="")
 
     # Print the meaning's specific language translation if any
     meaning_lan = def_block.find("span", "trans dtrans dtrans-se break-cj")
-    if meaning_lan is not None:
-        meaning_lan_words = meaning_lan.text.replace(";", "；").replace(",", "，")
-        print(" \033[34m" + meaning_lan_words + "\033[0m")
-    else:
-        print()
+    print_meaning_lan(meaning_lan)
 
 
-def parse_example(def_block, in_phrase=False):
+def parse_example(def_block, is_pexample=False):
     # NOTE:
     # suppose the first "if" has already run
     # and, the second is also "if", rather than "elif"
@@ -401,7 +382,7 @@ def parse_example(def_block, in_phrase=False):
         if e is not None:
             example = replace_all(e.find("span", "eg deg").text)
 
-            if in_phrase:
+            if is_pexample:
                 print("  ", end="")
 
             # Print the exmaple's specific language translation if any
@@ -510,8 +491,8 @@ def parse_usage_note(def_block):
 
 def parse_def(def_block):
     if "phrase-body" in def_block.parent.attrs["class"]:
-        parse_pmeaning(def_block)
-        parse_example(def_block, in_phrase=True)
+        parse_meaning(def_block, True)
+        parse_example(def_block, True)
     else:
         parse_meaning(def_block)
         parse_example(def_block)
@@ -602,23 +583,8 @@ def parse_dict_body(block):
         if idiom_sole_block is not None:
             parse_sole_idiom(idiom_sole_block)
 
-    if block.find(
-        "div",
-        [
-            "xref idiom hax dxref-w lmt-25 lmb-25",
-            "xref idioms hax dxref-w lmt-25 lmb-25",
-        ],
-    ):
-        parse_idiom(block)
-
-    if block.find(
-        "div",
-        [
-            "xref phrasal_verbs hax dxref-w lmt-25 lmb-25",
-            "xref phrasal_verb hax dxref-w lmt-25 lmb-25",
-        ],
-    ):
-        parse_phrasal_verb(block)
+    parse_idiom(block)
+    parse_phrasal_verb(block)
 
 
 # ----------Parse Dict Name----------

@@ -1,5 +1,3 @@
-"""Shared functionality of all dictionaries."""
-
 import sys
 import sqlite3
 import requests

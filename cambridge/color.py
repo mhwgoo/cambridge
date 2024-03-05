@@ -1,6 +1,3 @@
-"""This script contains color settings."""
-
-
 COLOR_EFFECT = {
     "BLACK"         : "30",
     "RED"           : "31",

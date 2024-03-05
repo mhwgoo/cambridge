@@ -1,5 +1,3 @@
-"""Fetch, parse, print, and save the Merriam-Webster Dictionary."""
-
 import requests
 import threading
 import sys

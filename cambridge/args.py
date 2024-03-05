@@ -1,5 +1,3 @@
-"""Set, parse, and dispatch terminal arguments."""
-
 import sqlite3
 import logging
 import argparse
@@ -34,7 +32,7 @@ def parse_args():
     # Add sub-command l
     parser_lw = sub_parsers.add_parser(
         "l",
-        help="list words/phrases you've found before in alphabetical order",
+        help="list alphabetically ordered words/phrases you've found before",
     )
 
     # Make sub-command l run default funtion of "list_words"

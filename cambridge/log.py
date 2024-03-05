@@ -1,7 +1,3 @@
-"""
-This script sets up logger.
-"""
-
 import logging
 
 # Logging only to stdout, not to local

@@ -1,5 +1,3 @@
-"""Print in a customized, prettified fashion."""
-
 import os
 import sys
 import re

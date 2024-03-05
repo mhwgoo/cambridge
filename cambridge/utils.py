@@ -1,5 +1,3 @@
-"""This script contains various utility functions."""
-
 import time
 import cProfile
 import pstats

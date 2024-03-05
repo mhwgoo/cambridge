@@ -1,5 +1,3 @@
-"""Fetch, parse, print, and save the Cambridge dictionary."""
-
 import requests
 import threading
 import sys
@@ -448,20 +446,17 @@ def parse_synonym(def_block):
 def parse_see_also(def_block):
     see_also_block = def_block.find("div", re.compile("xref see_also hax dxref-w( lmt-25)?"))
 
-    if see_also_block is None:
-        return
-    else:
+    if see_also_block is not None:
         see_also = see_also_block.strong.text.upper()
         c_print("[bold #757575]" + "\n  " + see_also)
 
         for item in see_also_block.find_all("span", ["x-h dx-h", "x-p dx-p"]):
-            c_print("[#757575]" + "  • " + item.text)
-
-        modifiers = see_also_block.find_all("span", "x-pos dx-pos")
-        for mod in modifiers:
-            print(mod.text, end = " ")
-
-    print()
+            c_print("[#757575]" + "  • " + item.text, end=" ")
+            next_sibling = item.find_next_sibling("span")
+            if next_sibling is not None:
+                print(next_sibling.text)
+            else:
+                print()
 
 
 def parse_compare(def_block):

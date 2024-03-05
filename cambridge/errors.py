@@ -1,5 +1,3 @@
-"""This script sets up self-defined errors."""
-
 import sys
 from .log import logger
 

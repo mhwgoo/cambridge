@@ -223,9 +223,8 @@ def parse_dict(res_text, found, res_url, is_fresh):
 ###########################################
 
 def nearby_entries(node):
-    """Print entries near value."""
-
     print()
+
     for elm in node.iterdescendants():
         try:
             has_title = (elm.tag == "h2")
@@ -254,8 +253,6 @@ def nearby_entries(node):
 ###########################################
 
 def synonyms(node):
-    """Print synonyms."""
-
     print()
 
     for elm in node.iterdescendants():
@@ -292,8 +289,6 @@ def synonyms(node):
 # Wester scrapes the web for examples in the way that it only finds the exact match of the word.
 # If the word is a verb, only gets the word without tenses; if the word is a noun, only its single form.
 def examples(node):
-    """Print recent examples on the web."""
-
     time = 0
 
     for elm in node.iterdescendants():
@@ -347,9 +342,8 @@ def examples(node):
 ###########################################
 
 def phrases(node):
-    """Print phrases."""
-
     print()
+
     children = node.getchildren()[1]
     for child in children:
         try:
@@ -375,8 +369,6 @@ def phrases(node):
 ###########################################
 
 def related_phrases(node):
-    """Print related phrases."""
-
     print()
 
     children = node.getchildren()
@@ -401,8 +393,10 @@ def related_phrases(node):
         if i.tag == "li":
             phrases.append(i)
 
+    """
     if len(phrases) > 20:
         phrases = phrases[:20]
+    """
 
     for phrase in phrases:
         ts = list(phrase.itertext())
@@ -414,7 +408,7 @@ def related_phrases(node):
                 if phrase != phrases[-1]:
                     c_print(f"[{w_col.rph_item}]{t},", end=" ")
                 else:
-                    c_print(f"[{w_col.rph_item}]{t}", end="\n")
+                    c_print(f"[{w_col.rph_item}]{t}", end="")
 
 
 ###########################################

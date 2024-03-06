@@ -10,6 +10,9 @@ Supports looking up the Merriam-Webster Dictionary, with `-w` or `--webster` opt
 #### Look up Cambridge Dictionary
 ![look up a word in Cambridge Dictionary](/screenshots/cambridge.png)
 
+#### Look up Cambridge Dictionary with Chinese Translation
+![look up a word in Cambridge Dictionary with Chinese Translation](/screenshots/cambridge-cn.png)
+
 #### Look up Merriam-Webster Dictionary
 ![look up a word in Merriam-Webster Dictionary](/screenshots/webster.png)
 

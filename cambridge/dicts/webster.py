@@ -169,7 +169,7 @@ def parse_dict(res_text, found, res_url, is_fresh):
         sub_tree = tree.xpath('//*[@id="left-content"]')[0]
 
         s = """
-        //*[@id="left-content"]/div[contains(@id, "dictionary-entry")] |
+        //*[@id="left-content"]/div[contains(@id, "-entry")] |
         //*[@id="left-content"]/div[@id="phrases"] |
         //*[@id="left-content"]/div[@id="synonyms"] |
         //*[@id="left-content"]/div[@id="examples"]/div[@class="content-section-body"]/div[@class="on-web-container"]/div[contains(@class,"on-web")] |
@@ -187,17 +187,14 @@ def parse_dict(res_text, found, res_url, is_fresh):
             print(NoResultError(DICT.MERRIAM_WEBSTER.name))
             sys.exit()
 
-        global res_word
-        result = tree.xpath("//*[@id='dictionary-entry-1']/div[1]/div/div[1]/h1/text()")
+        result = tree.xpath('//*[@id="left-content"]/div[contains(@id, "-entry-1")]/div[1]/div/div[1]/h1/text()') \
+              or tree.xpath('//*[@id="left-content"]/div[contains(@id, "-entry-1")]/div[1]/div/div/h1/span/text()')
 
-        if result:
+        if result is not None:
+            global res_word
             res_word = result[0]
         else:
-            result = tree.xpath("//*[@id='dictionary-entry-1']/div[1]/div/div/h1/span/text()")
-            if not result:
-                parse_redirect(nodes, res_url)
-            else:
-                res_word = result[0]
+            parse_redirect(nodes, res_url)
 
         ## NOTE: [only for debug]
         # for node in nodes:
@@ -386,17 +383,10 @@ def related_phrases(node):
                 c_print(f"[{w_col.rph_title} bold]{t}", end="")
 
     pr_sec = children[2]
-    sub_ps = pr_sec.getchildren()[1] # divs: related-phrases-list-container-xs
-
     phrases = [] # li tags, each tag has one phrase
-    for i in sub_ps.iterdescendants():
+    for i in pr_sec.iterdescendants():
         if i.tag == "li":
             phrases.append(i)
-
-    """
-    if len(phrases) > 20:
-        phrases = phrases[:20]
-    """
 
     for phrase in phrases:
         ts = list(phrase.itertext())
@@ -1204,7 +1194,7 @@ def parse_and_print(nodes, res_url, new_line=False):
         except KeyError:
             attr = node.attrib["class"]
 
-        if "dictionary-entry" in attr:
+        if "-entry" in attr:
             dictionary_entry(node)
 
         if attr == "phrases":

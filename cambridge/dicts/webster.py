@@ -8,7 +8,7 @@ from ..utils import get_request_url, decode_url, OP, DICT
 from ..log import logger
 from ..dicts import dict
 from ..errors import NoResultError
-import color as w_col
+from .. import color as w_col
 
 WEBSTER_BASE_URL = "https://www.merriam-webster.com"
 WEBSTER_DICT_BASE_URL = WEBSTER_BASE_URL + "/dictionary/"

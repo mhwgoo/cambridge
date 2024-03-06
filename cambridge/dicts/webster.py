@@ -124,37 +124,29 @@ def get_wod():
 
 def parse_redirect(nodes, res_url):
     input_word = decode_url(res_url).split("/")[-1]
-    count = len(nodes)
     print("No exact result found.")
-    c_print(f"The following [#4A7D95 bold]{count}[/#4A7D95 bold] entries include the term [#b22222 bold]{input_word}[/#b22222 bold].")
+    c_print(f"The following entries include the term [#b22222 bold]{input_word}[/#b22222 bold].")
 
-    words = []
     for node in nodes:
-        elms_in_order = {}
+        try:
+            attr = node.attrib["id"]
+        except KeyError:
+            attr = node.attrib["class"]
 
-        for elm in node.iterdescendants():
-            if elm.tag == "a" and elm.text == "See the full definition":
-                elms_in_order[elm.tag] = elm
+        if "row entry-header" in attr:
+            print()
+            row_entry_header(node, True)
 
-            elm_attr = elm.get("class")
-            if elm_attr and elm_attr == "dtText":
-                elms_in_order[elm.tag] = elm
+        if "-entry" in attr:
+            print()
+            for n in node.iterchildren():
+                if n.tag == "div" and n.attrib["class"] == "vg":
+                    for child in n.iterchildren():
+                        if child.tag == "p":
+                            x = list(child.itertext())
+                            print("".join(x).strip())
 
-        # print the word
-        href = elms_in_order["a"].attrib["href"]
-        word = href.split("/")[-1]
-        words.append(word)
-        print()
-        print_word(word)
-        print()
-
-        # print the definition
-        dtText(elms_in_order["span"], "", 1, "")
-        print()
-
-    c_print(f'\n[#757575]You can try "camb -w {words[0]}" to get the full definition from the {DICT.MERRIAM_WEBSTER.name} dictionary', \
-                  justify="left", end="")
-    # print_dict_name()
+    c_print(f'\n[#757575]You can add "camb -w" before one above entry to get its full definition from the {DICT.MERRIAM_WEBSTER.name} dictionary')
 
 
 def parse_dict(res_text, found, res_url, is_fresh):
@@ -187,13 +179,18 @@ def parse_dict(res_text, found, res_url, is_fresh):
             print(NoResultError(DICT.MERRIAM_WEBSTER.name))
             sys.exit()
 
-        result = tree.xpath('//*[@id="left-content"]/div[contains(@id, "-entry-1")]/div[1]/div/div[1]/h1/text()') \
-              or tree.xpath('//*[@id="left-content"]/div[contains(@id, "-entry-1")]/div[1]/div/div/h1/span/text()')
+        result = sub_tree.xpath('//*[@id="left-content"]/div[contains(@id, "-entry-1")]/div[1]/div/div[1]/h1/text()') \
+              or sub_tree.xpath('//*[@id="left-content"]/div[contains(@id, "-entry-1")]/div[1]/div/div/h1/span/text()')
 
-        if result is not None:
+        if len(result) != 0:
             global res_word
             res_word = result[0]
         else:
+            redirect_s = """
+            //*[@id="left-content"]/div[contains(@id, "-entry")] |
+            //*[@id="left-content"]/div[contains(@class, "row entry-header")]
+            """
+            nodes = sub_tree.xpath(redirect_s)
             parse_redirect(nodes, res_url)
 
         ## NOTE: [only for debug]
@@ -207,7 +204,7 @@ def parse_dict(res_text, found, res_url, is_fresh):
 
     else:
         result = tree.xpath('//div[@class="widget spelling-suggestion"]')
-        if result:
+        if len(result) != 0:
             nodes = result[0]
         else:
             print(NoResultError(DICT.MERRIAM_WEBSTER.name))
@@ -867,7 +864,7 @@ def entry_attr(node):
                     print_pron(i, True)
 
 
-def row_entry_header(node):
+def row_entry_header(node, is_redirect=False):
     """Print class row entry-header, the parent and caller of entry_header_content() and entry_attr()."""
 
     for elm in node.iterchildren():
@@ -878,6 +875,13 @@ def row_entry_header(node):
                 if "row entry-attr" in i.attrib["class"]:
                     entry_attr(i)
 
+                if is_redirect:
+                    if "hword" == i.attrib["class"]:
+                        hword = "".join(list(i.itertext()))
+                        c_print(f"[bold {w_col.eh_h1_word}]{hword}", end=" ")
+                    if "fl" == i.attrib["class"]:
+                        type = "".join(list(i.itertext()))
+                        c_print(f"[bold {w_col.eh_word_type}]{type}", end="")
 
 # --- parse class "entry-uros" --- #
 def entry_uros(node):

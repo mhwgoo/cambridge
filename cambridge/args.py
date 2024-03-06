@@ -11,7 +11,7 @@ from .cache import (
 from .log import logger
 from .utils import OP, DICT
 from .dicts import webster, cambridge
-from __init__ import __version__
+from .__init__ import __version__
 
 
 def parse_args():

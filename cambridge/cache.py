@@ -40,7 +40,7 @@ def insert_into_table(con, cur, input_word, response_word, url, text):
 def get_cache(con, cur, word, request_url):
     try:
         cur.execute(
-            "SELECT response_url, response_word, response_text FROM words WHERE (response_url = ?) AND (response_word = ? OR input_word = ?)",
+            "SELECT response_url, response_word, response_text FROM words WHERE response_url = ? OR response_word = ? OR input_word = ?",
             (request_url, word, word),
         )
     except sqlite3.OperationalError:

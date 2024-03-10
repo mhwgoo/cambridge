@@ -226,9 +226,9 @@ def parse_head_pron(head):
             c_print("[bold]UK [/bold]" + w_pron_uk, end="  ")
 
 
-def parse_head_tense(head):
-    w_tense = replace_all(head.find("span", "irreg-infls dinfls").text)
-    print(w_tense, end="  ")
+def parse_head_tense(block):
+    w_tense = replace_all(block.text).replace("present participle ", "").replace("past tense and past participle ", "").replace(" |", ",")
+    c_print("[bold]" + w_tense + "[/bold]", end="  ")
 
 
 def parse_head_domain(head):
@@ -236,6 +236,7 @@ def parse_head_domain(head):
     print(domain, end="  ")
 
 
+"""
 def parse_head_usage(head):
     head_usage = head.find("span", "lab dlab")
 
@@ -250,6 +251,7 @@ def parse_head_usage(head):
         return w_usage_next
 
     return ""
+"""
 
 
 def parse_head_var(head):
@@ -275,21 +277,28 @@ def parse_dict_head(block):
     word = parse_head_title(block)
     info = parse_head_info(block)
 
-    if head:
-        head = block.find("div", "pos-header dpos-h")
+    if head is not None:
         w_type = parse_head_type(head)
-        usage = parse_head_usage(head)
+
+        # `usage` find("span", "lab dlab"), which is in `irreg` below e.g. "win someone over"
+        # other words need checking.
+        # usage = parse_head_usage(head)
 
         if not word:
             word = parse_head_title(head)
         if w_type:
-            c_print(f"\n[bold blue]{word}[/bold blue] [bold yellow]{w_type}[/bold yellow] {usage}")
-        if head.find("span", "uk dpron-i"):
-            if head.find("span", "uk dpron-i").find("span", "pron dpron"):
-                parse_head_pron(head)
+            w_type = w_type.replace(" or ", "/")
+            if "phrasal verb with" in w_type:
+                w_type = ""
+            c_print(f"\n[bold blue]{word}[/bold blue] [bold yellow]{w_type}[/bold yellow]")
 
-        if head.find("span", "irreg-infls dinfls"):
-            parse_head_tense(head)
+        dpron = head.find("span", "uk dpron-i")
+        if dpron is not None and dpron.find("span", "pron dpron") is not None:
+            parse_head_pron(head)
+
+        irreg = head.find("span", "irreg-infls dinfls")
+        if irreg is not None:
+            parse_head_tense(irreg)
 
         if head.find("span", "domain ddomain"):
             parse_head_domain(head)
@@ -346,7 +355,7 @@ def print_meaning(meaning_b, usage_b, is_pmeaning):
     if usage_b is not None:
         usage = replace_all(usage_b.text)
         meaning_words = replace_all(meaning_b.text).split(usage)[-1].replace(":", "")
-        print("\033[34;1m: \033[0m" + usage + "\033[34m" + meaning_words + "\033[0m", end="")
+        print("\033[34;1m: \033[0m" + "[" + usage + "]" + "\033[34m" + meaning_words + "\033[0m", end="")
     else:
         meaning_words = replace_all(meaning_b.text).replace(":", "")
         print("\033[34;1m: \033[0m" + "\033[34m" + meaning_words + "\033[0m", end="")
@@ -359,8 +368,11 @@ def parse_meaning(def_block, is_pmeaning=False):
     print_meaning(meaning_b, usage_b, is_pmeaning)
 
     def_info = parse_def_info(def_block)
-    if def_info:
-        print("\033[1m " + "[" + def_info + "]" + "\033[0m", end="")
+    if def_info: 
+        if not def_info.startswith("("):
+            print(" [" + def_info + "]", end="")
+        else:
+            print(" " + def_info, end="")
 
     # Print the meaning's specific language translation if any
     meaning_lan = def_block.find("span", "trans dtrans dtrans-se break-cj")
@@ -396,7 +408,9 @@ def parse_example(def_block, is_pexample=False):
                     "[blue]"
                     + "|"
                     + "[/blue]"
+                    + "["
                     + lab
+                    + "]"
                     + " "
                     + "[#757575]"
                     + example
@@ -408,7 +422,9 @@ def parse_example(def_block, is_pexample=False):
                     "[blue]"
                     + "|"
                     + "[/blue]"
+                    + "["
                     + gram
+                    + "]"
                     + " "
                     + "[#757575]"
                     + example
@@ -420,7 +436,9 @@ def parse_example(def_block, is_pexample=False):
                     "[blue]"
                     + "|"
                     + "[/blue]"
+                    + "["
                     + lu
+                    + "]"
                     + " "
                     + "[#757575]"
                     + example

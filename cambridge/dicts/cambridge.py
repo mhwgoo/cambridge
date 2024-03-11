@@ -201,14 +201,20 @@ def parse_head_info(block):
 def parse_head_type(head):
     anc = head.find("span", "anc-info-head danc-info-head")
     posgram = head.find("div", "posgram dpos-g hdib lmr-5")
+    dpos = head.find("span", attrs={"title": "A word that describes an action, condition or experience."})
 
+    w_type = ""
     if anc is not None:
-        w_type = (anc.text + head.find("span", attrs={"title": "A word that describes an action, condition or experience."},).text)
+        # e.g. "phrasal verb with sneak" superfluous
+        # w_type = anc.text
+        if dpos is not None:
+            w_type += dpos.text
+            dgram = dpos.find_next_sibling("span", "gram dgram")
+            if dgram is not None:
+                w_type += " " + dgram.text
         w_type = replace_all(w_type)
     elif posgram is not None:
         w_type = replace_all(posgram.text)
-    else:
-        w_type = ""
     return w_type
 
 
@@ -230,11 +236,15 @@ def parse_head_pron(head):
 
 
 def parse_head_tense(block):
-    tenses = block.find_all("b", "inf dinf")
-
-    if len(tenses) != 0:
-        for tense in tenses:
-            c_print("[bold]" + tense.text + "[/bold]", end=" ")
+    sub_blocks = block.find_all("span", "inf-group dinfg")
+    if len(sub_blocks) != 0:
+        for index, sub in enumerate(sub_blocks):
+            tenses = sub.find_all("b", "inf dinf")
+            if len(tenses) != 0:
+                for tense in tenses:
+                    c_print("[bold]" + tense.text + "[/bold]", end=" ")
+            if index == 0 and len(sub_blocks) > 1:
+                print("|", end=" ")
 
 
 def parse_head_domain(block):
@@ -272,8 +282,6 @@ def parse_dict_head(block):
             word = parse_head_title(head)
         if w_type:
             w_type = w_type.replace(" or ", "/")
-            if "phrasal verb with" in w_type:
-                w_type = ""
             c_print(f"\n[bold blue]{word}[/bold blue] [bold yellow]{w_type}[/bold yellow]")
 
         parse_head_pron(head)
@@ -353,7 +361,7 @@ def parse_meaning(def_block, is_pmeaning=False):
     print_meaning(meaning_b, usage_b, is_pmeaning)
 
     def_info = parse_def_info(def_block)
-    if def_info: 
+    if def_info:
         if not def_info.startswith("("):
             print(" [" + def_info + "]", end="")
         else:
@@ -434,15 +442,24 @@ def parse_example(def_block, is_pexample=False):
                 c_print("[blue]" + "|" + "[/blue]" + "[#757575]" + example + example_lan_sent)
 
 
-def parse_synonym(def_block):
-    s_block = def_block.find("div", re.compile("xref synonyms? hax dxref-w lmt-25"))
+def print_synonym(block, in_def_block=True):
+    s_title = block.strong.text.upper()
+    c_print("[bold #757575]" + "\n  " + s_title)
 
+    for s in block.find_all("div", ["item lc lc1 lpb-10 lpr-10", "item lc lc1 lc-xs6-12 lpb-10 lpr-10"]):
+        s = s.text
+        c_print("[#757575]" + "  • " + s)
+
+    if not in_def_block:
+        print()
+
+
+def parse_synonym(block):
+    s_block = block.find("div", re.compile("xref synonyms? hax dxref-w( lmt-25)?"))
     if s_block is not None:
-        s_title = s_block.strong.text.upper()
-        c_print("[bold #757575]" + "\n  " + s_title)
-        for s in s_block.find_all("div", ["item lc lc1 lpb-10 lpr-10", "item lc lc1 lc-xs6-12 lpb-10 lpr-10"]):
-            s = s.text
-            c_print("[#757575]" + "  • " + s)
+        print_synonym(s_block)
+    else:
+        print_synonym(block, False)
 
 
 def parse_see_also(def_block):
@@ -550,6 +567,9 @@ def parse_dict_body(block):
                         attr = child.attrs["class"]
                         if attr and attr == ["def-block", "ddef_block"]:
                             parse_def(child)
+
+                        if attr and "synonym" in attr:
+                            parse_synonym(child)
 
                         if attr and (attr == ["pr", "phrase-block", "dphrase-block", "lmb-25"] or attr == ["pr", "phrase-block", "dphrase-block"]):
                             parse_ptitle(child)

@@ -66,8 +66,11 @@ def get_request_url(url, input_word, dict):
     """Return the url formatted to request the web page."""
 
     if dict == DICT.CAMBRIDGE.name:
-        query_word = input_word.replace(" ", "-").replace("/", "-")
-        request_url = url + query_word
+        if " " in input_word:
+            query_word = input_word.replace(" ", "+").replace("/", "+")
+            request_url = url + query_word
+        else:
+            request_url = url + input_word
         return request_url
 
     return url + parse.quote(input_word)

@@ -18,6 +18,8 @@ from ..dicts import dict
 
 
 CAMBRIDGE_URL = "https://dictionary.cambridge.org"
+CAMBRIDGE_EN_SEARCH_URL = CAMBRIDGE_URL + "/search/direct/?datasetsearch=english&q="
+CAMBRIDGE_CN_SEARCH_URL = CAMBRIDGE_URL + "/search/direct/?datasetsearch=english-chinese-simplified&q="
 CAMBRIDGE_DICT_BASE_URL = CAMBRIDGE_URL + "/dictionary/english/"
 CAMBRIDGE_SPELLCHECK_URL = CAMBRIDGE_URL + "/spellcheck/english/?q="
 
@@ -30,9 +32,9 @@ CAMBRIDGE_SPELLCHECK_URL_CN = CAMBRIDGE_URL + "/spellcheck/english-chinese-simpl
 # ----------Request Web Resource----------
 def search_cambridge(con, cur, input_word, is_fresh=False, is_ch=False, no_suggestions=False):
     if is_ch:
-        req_url = get_request_url(CAMBRIDGE_DICT_BASE_URL_CN, input_word, DICT.CAMBRIDGE.name)
+        req_url = get_request_url(CAMBRIDGE_CN_SEARCH_URL, input_word, DICT.CAMBRIDGE.name)
     else:
-        req_url = get_request_url(CAMBRIDGE_DICT_BASE_URL, input_word, DICT.CAMBRIDGE.name)
+        req_url = get_request_url(CAMBRIDGE_EN_SEARCH_URL, input_word, DICT.CAMBRIDGE.name)
 
     if not is_fresh:
         cached = dict.cache_run(con, cur, input_word, req_url, DICT.CAMBRIDGE.name)
@@ -122,14 +124,12 @@ def parse_and_print(first_dict, res_url, new_line=False):
     attempt = 0
     while True:
         try:
-            blocks = first_dict.find_all(
-                "div", ["pr entry-body__el", "entry-body__el clrd js-share-holder", "pr idiom-block"]
-            )
+            blocks = first_dict.find_all("div", ["pr entry-body__el", "entry-body__el clrd js-share-holder", "pr idiom-block"])
         except AttributeError as e:
             attempt = call_on_error(e, res_url, attempt, OP.RETRY_PARSING.name)
             continue
         else:
-            if blocks:
+            if len(blocks) != 0:
                 for block in blocks:
                     parse_dict_head(block)
                     parse_dict_body(block)
@@ -189,7 +189,8 @@ def parse_head_title(block):
 
 def parse_head_info(block):
     info = block.find_all("span", ["pos dpos", "lab dlab", "v dv lmr-0"])
-    if info is not None:
+
+    if len(info) != 0:
         temp = [i.text for i in info]
         type = temp[0]
         text = " ".join(temp[1:])
@@ -200,6 +201,7 @@ def parse_head_info(block):
 def parse_head_type(head):
     anc = head.find("span", "anc-info-head danc-info-head")
     posgram = head.find("div", "posgram dpos-g hdib lmr-5")
+
     if anc is not None:
         w_type = (anc.text + head.find("span", attrs={"title": "A word that describes an action, condition or experience."},).text)
         w_type = replace_all(w_type)
@@ -211,11 +213,12 @@ def parse_head_type(head):
 
 
 def parse_head_pron(head):
-    w_pron_uk = head.find("span", "uk dpron-i").find("span", "pron dpron")
-    if w_pron_uk is not None:
-        w_pron_uk = replace_all(w_pron_uk.text).replace("/", "|")
+    pron_uk = head.find("span", "uk dpron-i")
+    if pron_uk is not None:
+        w_pron_uk = pron_uk.find("span", "pron dpron")
+        if w_pron_uk is not None:
+            w_pron_uk = replace_all(w_pron_uk.text).replace("/", "|")
 
-    # In bs4, not found element returns None, not raise error
     us_dpron = head.find("span", "us dpron-i")
     if us_dpron is not None:
         w_pron_us = us_dpron.find("span", "pron dpron")
@@ -227,31 +230,16 @@ def parse_head_pron(head):
 
 
 def parse_head_tense(block):
-    w_tense = replace_all(block.text).replace("present participle ", "").replace("past tense and past participle ", "").replace(" |", ",")
-    c_print("[bold]" + w_tense + "[/bold]", end="  ")
+    tenses = block.find_all("b", "inf dinf")
+
+    if len(tenses) != 0:
+        for tense in tenses:
+            c_print("[bold]" + tense.text + "[/bold]", end=" ")
 
 
-def parse_head_domain(head):
-    domain = replace_all(head.find("span", "domain ddomain").text)
+def parse_head_domain(block):
+    domain = replace_all(block.text)
     print(domain, end="  ")
-
-
-"""
-def parse_head_usage(head):
-    head_usage = head.find("span", "lab dlab")
-
-    # NOTE: <span class = "var dvar"> </span>, attrs["class"] returns a list
-    if head_usage is not None and head_usage.parent.attrs["class"] != ["var", "dvar"]:
-        w_usage = replace_all(head_usage.text)
-        return w_usage
-
-    head_usage_next = head.find_next_sibling("span", "lab dlab")
-    if head_usage_next is not None and head_usage_next.parent.attrs["class"] != ["var", "dvar"]:
-        w_usage_next= replace_all(head_usage_next.text)
-        return w_usage_next
-
-    return ""
-"""
 
 
 def parse_head_var(head):
@@ -266,8 +254,8 @@ def parse_head_var(head):
         print(w_var, end="  ")
 
 
-def parse_head_spellvar(head):
-    for i in head.find_all("span", "spellvar dspellvar"):
+def parse_head_spellvar(block):
+    for i in block:
         spell_var = replace_all(i.text)
         print(spell_var, end="  ")
 
@@ -280,10 +268,6 @@ def parse_dict_head(block):
     if head is not None:
         w_type = parse_head_type(head)
 
-        # `usage` find("span", "lab dlab"), which is in `irreg` below e.g. "win someone over"
-        # other words need checking.
-        # usage = parse_head_usage(head)
-
         if not word:
             word = parse_head_title(head)
         if w_type:
@@ -292,23 +276,24 @@ def parse_dict_head(block):
                 w_type = ""
             c_print(f"\n[bold blue]{word}[/bold blue] [bold yellow]{w_type}[/bold yellow]")
 
-        dpron = head.find("span", "uk dpron-i")
-        if dpron is not None and dpron.find("span", "pron dpron") is not None:
-            parse_head_pron(head)
+        parse_head_pron(head)
 
         irreg = head.find("span", "irreg-infls dinfls")
         if irreg is not None:
             parse_head_tense(irreg)
 
-        if head.find("span", "domain ddomain"):
-            parse_head_domain(head)
+        domain = head.find("span", "domain ddomain")
+        if domain is not None:
+            parse_head_domain(domain)
 
         parse_head_var(head)
 
-        if head.find("span", "spellvar dspellvar"):
-            parse_head_spellvar(head)
+        spellvar = head.find_all("span", "spellvar dspellvar")
+        if len(spellvar) != 0:
+            parse_head_spellvar(spellvar)
 
         print()
+
     else:
         c_print("[bold blue]" + word)
         if info:
@@ -388,8 +373,9 @@ def parse_example(def_block, is_pexample=False):
     # so, for exclusive cases, you can't write two "ifs" and one "else"
     # it should be one "if", one "elif", and one "else"
     # or three "ifs"
-    for e in def_block.find_all("div", "examp dexamp"):
-        if e is not None:
+    es = def_block.find_all("div", "examp dexamp")
+    if len(es) != 0:
+        for e in es:
             example = replace_all(e.find("span", "eg deg").text)
 
             if is_pexample:
@@ -454,9 +440,7 @@ def parse_synonym(def_block):
     if s_block is not None:
         s_title = s_block.strong.text.upper()
         c_print("[bold #757575]" + "\n  " + s_title)
-        for s in s_block.find_all(
-                "div", ["item lc lc1 lpb-10 lpr-10", "item lc lc1 lc-xs6-12 lpb-10 lpr-10"]
-        ):
+        for s in s_block.find_all("div", ["item lc lc1 lpb-10 lpr-10", "item lc lc1 lc-xs6-12 lpb-10 lpr-10"]):
             s = s.text
             c_print("[#757575]" + "  • " + s)
 
@@ -483,9 +467,7 @@ def parse_compare(def_block):
     if compare_block is not None:
         compare = compare_block.strong.text.upper()
         c_print("[bold #757575]" + "\n  " + compare)
-        for word in compare_block.find_all(
-            "div", ["item lc lc1 lpb-10 lpr-10", "item lc lc1 lc-xs6-12 lpb-10 lpr-10"]
-        ):
+        for word in compare_block.find_all("div", ["item lc lc1 lpb-10 lpr-10", "item lc lc1 lc-xs6-12 lpb-10 lpr-10"]):
             item = word.a.text
             c_print("[#757575]" + "  • " + item + "[/#757575]", end="")
 
@@ -527,13 +509,7 @@ def parse_idiom(block):
     if idiom_block is not None:
         idiom_title = idiom_block.h3.text.upper()
         c_print("[bold #757575]" + "\n" + idiom_title)
-        for idiom in idiom_block.find_all(
-            "div",
-            [
-                "item lc lc1 lpb-10 lpr-10",
-                "item lc lc1 lc-xs6-12 lpb-10 lpr-10",
-            ],
-        ):
+        for idiom in idiom_block.find_all("div", ["item lc lc1 lpb-10 lpr-10", "item lc lc1 lc-xs6-12 lpb-10 lpr-10"]):
             idiom = idiom.text
             c_print("[#757575]" + "  • " + idiom)
 
@@ -553,10 +529,7 @@ def parse_phrasal_verb(block):
     if pv_block is not None:
         pv_title = pv_block.h3.text.upper()
         c_print("[bold #757575]" + "\n" + pv_title)
-        for pv in pv_block.find_all(
-            "div",
-            ["item lc lc1 lc-xs6-12 lpb-10 lpr-10", "item lc lc1 lpb-10 lpr-10"],
-        ):
+        for pv in pv_block.find_all("div", ["item lc lc1 lc-xs6-12 lpb-10 lpr-10", "item lc lc1 lpb-10 lpr-10"]):
             pv = pv.text
             c_print("[#757575]" + "  • " + pv)
 
@@ -564,29 +537,22 @@ def parse_phrasal_verb(block):
 def parse_dict_body(block):
     subblocks = block.find_all("div", ["pr dsense", "pr dsense dsense-noh"])
 
-    if subblocks:
+    if len(subblocks) != 0:
         for subblock in subblocks:
-            # Comment out because it looks superfluous.
+            # Comment out because h3 block seems superfluous.
             # if subblock.find("h3", "dsense_h"):
             #     parse_def_title(subblock)
 
             for child in subblock.find("div", "sense-body dsense_b").children:
-                try:
-                    if child.attrs["class"] == ["def-block", "ddef_block"]:
-                        parse_def(child)
+                attr = child.attrs["class"]
+                if attr == ["def-block", "ddef_block"]:
+                    parse_def(child)
 
-                    if child.attrs["class"] == [
-                        "pr",
-                        "phrase-block",
-                        "dphrase-block",
-                        "lmb-25",
-                    ] or child.attrs["class"] == ["pr", "phrase-block", "dphrase-block"]:
-                        parse_ptitle(child)
+                if attr == ["pr", "phrase-block", "dphrase-block", "lmb-25"] or attr == ["pr", "phrase-block", "dphrase-block"]:
+                    parse_ptitle(child)
 
-                        for i in child.find_all("div", "def-block ddef_block"):
-                            parse_def(i)
-                except Exception:
-                    pass
+                    for i in child.find_all("div", "def-block ddef_block"):
+                        parse_def(i)
 
     else:
         idiom_sole_block = block.find("div", "idiom-block")

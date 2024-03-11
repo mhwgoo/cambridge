@@ -212,21 +212,21 @@ def parse_head_type(head):
     return w_type
 
 
+def print_pron(block, area):
+    w_pron = block.find("span", "pron dpron")
+    if w_pron is not None:
+        w_pron_text = replace_all(w_pron.text).replace("/", "|")
+        c_print(f"[bold]{area} [/bold]" + w_pron_text, end=" ")
+
+
 def parse_head_pron(head):
-    pron_uk = head.find("span", "uk dpron-i")
-    if pron_uk is not None:
-        w_pron_uk = pron_uk.find("span", "pron dpron")
-        if w_pron_uk is not None:
-            w_pron_uk = replace_all(w_pron_uk.text).replace("/", "|")
+    uk_dpron = head.find("span", "uk dpron-i")
+    if uk_dpron is not None:
+        print_pron(uk_dpron, "UK")
 
     us_dpron = head.find("span", "us dpron-i")
     if us_dpron is not None:
-        w_pron_us = us_dpron.find("span", "pron dpron")
-        if w_pron_us is not None:
-            w_pron_us = replace_all(w_pron_us.text).replace("/", "|")
-            c_print("[bold]UK [/bold]" + w_pron_uk + "[bold] US [/bold]" + w_pron_us, end="  ")
-        else:
-            c_print("[bold]UK [/bold]" + w_pron_uk, end="  ")
+        print_pron(us_dpron, "US")
 
 
 def parse_head_tense(block):
@@ -543,16 +543,21 @@ def parse_dict_body(block):
             # if subblock.find("h3", "dsense_h"):
             #     parse_def_title(subblock)
 
-            for child in subblock.find("div", "sense-body dsense_b").children:
-                attr = child.attrs["class"]
-                if attr == ["def-block", "ddef_block"]:
-                    parse_def(child)
+            sense = subblock.find("div", "sense-body dsense_b")
+            if sense is not None:
+                for child in sense.children:
+                    try:
+                        attr = child.attrs["class"]
+                        if attr and attr == ["def-block", "ddef_block"]:
+                            parse_def(child)
 
-                if attr == ["pr", "phrase-block", "dphrase-block", "lmb-25"] or attr == ["pr", "phrase-block", "dphrase-block"]:
-                    parse_ptitle(child)
+                        if attr and (attr == ["pr", "phrase-block", "dphrase-block", "lmb-25"] or attr == ["pr", "phrase-block", "dphrase-block"]):
+                            parse_ptitle(child)
 
-                    for i in child.find_all("div", "def-block ddef_block"):
-                        parse_def(i)
+                            for i in child.find_all("div", "def-block ddef_block"):
+                                parse_def(i)
+                    except Exception:
+                        pass
 
     else:
         idiom_sole_block = block.find("div", "idiom-block")

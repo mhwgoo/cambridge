@@ -366,74 +366,48 @@ def parse_meaning(def_block, is_pmeaning=False):
     print_meaning_lan(meaning_lan)
 
 
+def print_example_tag(tag_block):
+    if tag_block is None:
+        return
+
+    tag = tag_block.text
+    tag = replace_all(tag)
+    print("[" + tag + "]", end= " ")
+
+
 def parse_example(def_block, is_pexample=False):
-    # NOTE:
-    # suppose the first "if" has already run
-    # and, the second is also "if", rather than "elif"
-    # then, codes under "else" will also be run
-    # meaning two cases took effect at the same time, which is not wanted
-    # so, for exclusive cases, you can't write two "ifs" and one "else"
-    # it should be one "if", one "elif", and one "else"
-    # or three "ifs"
     es = def_block.find_all("div", "examp dexamp")
-    if len(es) != 0:
-        for e in es:
-            example = replace_all(e.find("span", "eg deg").text)
+    if len(es) == 0:
+        return
 
-            if is_pexample:
-                print("  ", end="")
+    for e in es:
+        result = e.find("span", "eg deg")
+        if result is not None:
+            example = replace_all(result.text)
+        else:
+            continue
 
-            # Print the exmaple's specific language translation if any
-            example_lan = e.find("span", "trans dtrans dtrans-se hdb break-cj")
-            if example_lan is not None:
-                example_lan_sent = " " + example_lan.text.replace("。", "")
-            else:
-                example_lan_sent = ""
+        if is_pexample:
+            print("  ", end="")
 
-            if e.find("span", "lab dlab"):
-                lab = replace_all(e.find("span", "lab dlab").text)
-                c_print(
-                    "[blue]"
-                    + "|"
-                    + "[/blue]"
-                    + "["
-                    + lab
-                    + "]"
-                    + " "
-                    + "[#757575]"
-                    + example
-                    + example_lan_sent
-                )
-            elif e.find("span", "gram dgram"):
-                gram = replace_all(e.find("span", "gram dgram").text)
-                c_print(
-                    "[blue]"
-                    + "|"
-                    + "[/blue]"
-                    + "["
-                    + gram
-                    + "]"
-                    + " "
-                    + "[#757575]"
-                    + example
-                    + example_lan_sent
-                )
-            elif e.find("span", "lu dlu"):
-                lu = replace_all(e.find("span", "lu dlu").text)
-                c_print(
-                    "[blue]"
-                    + "|"
-                    + "[/blue]"
-                    + "["
-                    + lu
-                    + "]"
-                    + " "
-                    + "[#757575]"
-                    + example
-                    + example_lan_sent
-                )
-            else:
-                c_print("[blue]" + "|" + "[/blue]" + "[#757575]" + example + example_lan_sent)
+        example_lan = e.find("span", "trans dtrans dtrans-se hdb break-cj")
+        if example_lan is not None:
+            example_lan_sent = " " + example_lan.text.replace("。", "")
+        else:
+            example_lan_sent = ""
+
+        c_print("[blue]" + "|" + "[/blue]", end="")
+
+        dlab = e.find("span", "lab dlab")
+        print_example_tag(dlab)
+
+        dgram = e.find("span", "gram dgram")
+        print_example_tag(dgram)
+
+        dlu = e.find("span", "lu dlu")
+        print_example_tag(dlu)
+
+        c_print(f"[#757575]{example}{example_lan_sent}[/#757575]")
 
 
 def print_synonym(block, in_def_block=True):

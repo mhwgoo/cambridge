@@ -426,7 +426,7 @@ def parse_synonym(block):
     s_block = block.find("div", re.compile("xref synonyms? hax dxref-w( lmt-25)?"))
     if s_block is not None:
         print_synonym(s_block)
-    else:
+    elif "synonym" in block.attrs["class"]:
         print_synonym(block, False)
 
 

@@ -76,15 +76,6 @@ def get_request_url(url, input_word, dict):
     return url + parse.quote(input_word)
 
 
-def get_request_url_spellcheck(url, input_word):
-    """Return the url formatted to request Cambridge spellcheck web page."""
-
-    query_word = input_word.replace(" ", "+").replace("/", "+")
-    request_url = url + query_word
-
-    return request_url
-
-
 def decode_url(url):
     return parse.unquote(url)
 

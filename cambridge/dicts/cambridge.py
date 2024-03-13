@@ -8,7 +8,6 @@ from ..log import logger
 from ..utils import (
     make_a_soup,
     get_request_url,
-    get_request_url_spellcheck,
     parse_response_url,
     replace_all,
     OP,
@@ -20,14 +19,9 @@ from ..dicts import dict
 CAMBRIDGE_URL = "https://dictionary.cambridge.org"
 CAMBRIDGE_EN_SEARCH_URL = CAMBRIDGE_URL + "/search/direct/?datasetsearch=english&q="
 CAMBRIDGE_CN_SEARCH_URL = CAMBRIDGE_URL + "/search/direct/?datasetsearch=english-chinese-simplified&q="
-CAMBRIDGE_DICT_BASE_URL = CAMBRIDGE_URL + "/dictionary/english/"
+
 CAMBRIDGE_SPELLCHECK_URL = CAMBRIDGE_URL + "/spellcheck/english/?q="
-
-CAMBRIDGE_DICT_BASE_URL_CN = CAMBRIDGE_URL + "/dictionary/english-chinese-simplified/"
 CAMBRIDGE_SPELLCHECK_URL_CN = CAMBRIDGE_URL + "/spellcheck/english-chinese-simplified/?q="
-# CAMBRIDGE_DICT_BASE_URL_CN_TRADITIONAL = "https://dictionary.cambridge.org/dictionary/english-chinese-traditional/"
-# CAMBRIDGE_SPELLCHECK_URL_CN_TRADITIONAL = CAMBRIDGE_URL + "/spellcheck/english-chinese-traditional/?q="
-
 
 # ----------Request Web Resource----------
 def search_cambridge(con, cur, input_word, is_fresh=False, is_ch=False, no_suggestions=False):
@@ -48,15 +42,15 @@ def fetch_cambridge(req_url, input_word, is_ch):
     """Get response url and response text for later parsing."""
 
     with requests.Session() as session:
-        session.trust_env = False   # not to use proxy
+        session.trust_env = False # not to use proxy
         res = dict.fetch(req_url, session)
 
-        if res.url == CAMBRIDGE_DICT_BASE_URL or res.url == CAMBRIDGE_DICT_BASE_URL_CN:
+        if "spellcheck" in res.url:
             logger.debug(f'{OP.NOT_FOUND.name} "{input_word}" in {DICT.CAMBRIDGE.name}')
             if is_ch:
-                spell_req_url = get_request_url_spellcheck(CAMBRIDGE_SPELLCHECK_URL_CN, input_word)
+                spell_req_url = get_request_url(CAMBRIDGE_SPELLCHECK_URL_CN, input_word, DICT.CAMBRIDGE.name)
             else:
-                spell_req_url = get_request_url_spellcheck(CAMBRIDGE_SPELLCHECK_URL, input_word)
+                spell_req_url = get_request_url(CAMBRIDGE_SPELLCHECK_URL, input_word, DICT.CAMBRIDGE.name)
 
             spell_res = dict.fetch(spell_req_url, session)
             spell_res_url = spell_res.url

@@ -410,7 +410,7 @@ def parse_example(def_block, is_pexample=False):
         c_print(f"[#757575]{example}{example_lan_sent}[/#757575]")
 
 
-def print_synonym(block, in_def_block=True):
+def print_synonym(block):
     s_title = block.strong.text.upper()
     c_print("[bold #757575]" + "\n  " + s_title)
 
@@ -418,8 +418,7 @@ def print_synonym(block, in_def_block=True):
         s = s.text
         c_print("[#757575]" + "  • " + s)
 
-    if not in_def_block:
-        print()
+    print()
 
 
 def parse_synonym(block):
@@ -427,7 +426,7 @@ def parse_synonym(block):
     if s_block is not None:
         print_synonym(s_block)
     elif "synonym" in block.attrs["class"]:
-        print_synonym(block, False)
+        print_synonym(block)
 
 
 def parse_see_also(def_block):

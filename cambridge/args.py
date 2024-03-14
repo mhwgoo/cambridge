@@ -13,7 +13,6 @@ from .utils import OP, DICT
 from .dicts import webster, cambridge
 from .__init__ import __version__
 
-
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Terminal Version of Cambridge Dictionary by default. Also supports Merriam-Webster Dictionary."
@@ -135,28 +134,37 @@ def parse_args():
     if len(sys.argv) == 1:
         print_help(parser, parser_lw, parser_sw, parser_wod)
 
-    elif sys.argv[1] == "-v" or sys.argv[1] == "--version":
-            print("cambridge " + __version__)
-            sys.exit()
-
     elif sys.argv[1] == "-h" or sys.argv[1] == "--help":
-            print_help(parser, parser_lw, parser_sw, parser_wod)
+        print_help(parser, parser_lw, parser_sw, parser_wod)
 
-    elif sys.argv[1] != "l" and sys.argv[1] != "wod" and len(sys.argv) > 1:
+    elif sys.argv[1] == "-v" or sys.argv[1] == "--version":
+        print("cambridge " + __version__)
+        sys.exit()
+
+    elif sys.argv[1] == "l" or sys.argv[1] == "wod":
+        args = parser.parse_args()
+
+    else: # only for command "s"
         to_parse = []
         word = []
-        for i in sys.argv[1:]:
-            if i.startswith("-"):
+        for i in sys.argv[1 : ]:
+            if i.startswith("-") and i[1] in ["-", "h", "d", "f", "w", "c", "n"]:
                 to_parse.append(i)
+            # NOTE
+            # Python stdlib `parser.parse_args()` does not allow the value of an argument to start with "-", e.g. camb -w "-let"
+            # Without the following workaround, Python interpreter will terminate the program  with the error:
+            # `main.py s: error: the following arguments are required: word_or_phrase`
+            # However, in terms of word lookup, you sometimes just want to know the meaning of a specific suffix like "-let"
+            # Luckily, search without "-", the result of which can also contain the meaning of "-let" suffix
+            elif i.startswith("-"):
+                word.append(i[1 : ])
             else:
                 word.append(i)
+
         to_search = " ".join(word)
         to_parse.append(to_search)
-        args = parser_sw.parse_args(to_parse)
-        return args
-    else:
-        args = parser.parse_args()
-        return args
+        args= parser_sw.parse_args(to_parse)
+    return args
 
 
 def print_help(parser, parser_lw, parser_sw, parser_wod):

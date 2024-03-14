@@ -325,6 +325,9 @@ def examples(node):
                             if hit:
                                 c_print(f"[{w_col.eg_sentence} bold]{t}", end="")
                             else:
+                                # FIXME This is a temp solution to embedded "[[]]" e.g "Only Chloe sense its [clears throat] presence"
+                                # Within [], there is also [#xxxxxx bold] to colorize "clears", which is the searched word needing highlighting.
+                                t = t.replace("[", "").replace("]", "")
                                 c_print(f"[{w_col.eg_sentence}]{t}", end="")
                     else:
                         continue

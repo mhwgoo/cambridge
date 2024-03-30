@@ -164,7 +164,7 @@ def parse_dict(res_text, found, res_url, is_fresh):
         //*[@id="left-content"]/div[contains(@id, "-entry")] |
         //*[@id="left-content"]/div[@id="phrases"] |
         //*[@id="left-content"]/div[@id="synonyms"] |
-        //*[@id="left-content"]/div[@id="examples"]/div[@class="content-section-body"]/div[@class="on-web-container"]/div[contains(@class,"on-web")] |
+        //*[@id="left-content"]/div[@id="examples"]/div[@class="content-section-body"]/div[contains(@class,"on-web-container")]/div[contains(@class,"on-web")] |
         //*[@id="left-content"]/div[@id="related-phrases"] |
         //*[@id="left-content"]/div[@id="nearby-entries"]
         """

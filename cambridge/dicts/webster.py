@@ -390,10 +390,11 @@ def related_phrases(node):
 
     for phrase in phrases:
         ts = list(phrase.itertext())
+        ts = "". join(ts).strip("\n").strip()
         if phrase != phrases[-1]:
-            c_print(f"[{w_col.rph_item}]{ts[1]},", end=" ")
+            c_print(f"[{w_col.rph_item}]{ts},", end=" ")
         else:
-            c_print(f"[{w_col.rph_item}]{ts[1]}", end="")
+            c_print(f"[{w_col.rph_item}]{ts}", end="")
 
 
 ###########################################
@@ -647,7 +648,10 @@ def sense(node, attr, parent_attr, ancestor_attr, num_label_count=1):
     elif attr == "sense has-sn has-num":
         sn = children[0].getchildren()[0].text
 
-        if "has-subnum" in ancestor_attr and "sb-0" not in parent_attr:
+        node_prev = node.getprevious()
+        if "has-subnum" in ancestor_attr and node_prev is None and "sb-0" in parent_attr:
+            c_print(f"[bold {w_col.meaning_letter}]{sn}", end = " ")
+        elif "has-subnum" in ancestor_attr and (node_prev is not None or parent_attr != "pseq no-subnum"):
             if num_label_count == 2:
                 print(" ", end="")
             c_print(f"  [bold {w_col.meaning_letter}]{sn}", end = " ")
@@ -658,17 +662,20 @@ def sense(node, attr, parent_attr, ancestor_attr, num_label_count=1):
 
     # meaing with only "b" or "1" + "a" + "(1)", or "1" + "a"
     elif attr == "sense has-sn" or attr == "sen has-sn":
-        if num_label_count == 2:
-            print(" ", end="")
-
         sn = children[0].getchildren()[0].text
 
         if "has-subnum" in ancestor_attr and "sb-0" in parent_attr:
             c_print(f"[bold {w_col.meaning_letter}]{sn}", end = " ")
-        elif "letter-only" in ancestor_attr:
-            c_print(f"[bold {w_col.meaning_letter}]{sn}", end = " ")
         else:
-            c_print(f"  [bold {w_col.meaning_letter}]{sn}", end = " ")
+            if num_label_count == 2:
+                    print(" ", end="")
+
+            if "letter-only" in ancestor_attr:
+                if "sb-0" not in parent_attr:
+                    print("  ", end="")
+                c_print(f"[bold {w_col.meaning_letter}]{sn}", end = " ")
+            else:
+                c_print(f"  [bold {w_col.meaning_letter}]{sn}", end = " ")
 
         sense_content = children[1] # class "sense-content w-100"
 
@@ -677,7 +684,10 @@ def sense(node, attr, parent_attr, ancestor_attr, num_label_count=1):
         if num_label_count == 2:
             print(" ", end="")
         if "letter-only" in ancestor_attr:
-            print("  ", end="")
+            if children[0].attrib["class"] == "sn":
+                print("    ", end = "")
+            else:
+                print("  ", end="")
         else:
             print("    ", end = "")
         sense_content = children[1] # class "sense-content w-100"
@@ -747,7 +757,7 @@ def sb_entry(node, parent_attr, num_label_count=1):
         for e in elms:
             e_attr = e.attrib["class"]  # "sense has-sn"
             sense(e, e_attr, attr, parent_attr, num_label_count)     # e.g. sense(child, "sense has-sn", "sb-0 sb-entry", "....", 1)
-    else:
+    elif "sense" in child_attr and child.tag != "span":
         sense(child, child_attr, attr, parent_attr, num_label_count) # e.g. sense(child, "sense has-sn", "sb-0 sb-entry, "sb has-num has-let ms-lg-4 ms-3 w-100", 1)
 
 
@@ -768,27 +778,20 @@ def vg_sseq_entry_item(node):
             for c in child.iterchildren():
                 cc = c.getchildren()
                 if cc[0].get("class") == "sen has-num-only":
-                    cc_0 = cc[0][0]
-                    cc_1 = cc[0][1]
-                    if cc_0.tag != "span":
-                        for i in cc_0.iterchildren():
-                            i_attr = i.get("class")
-                            if i_attr is not None:
-                                if ("badge mw-badge" in i_attr) or ("il" in i_attr):
-                                    print_meaning_badge(i.text.strip())
-                                if "if" in i_attr:
-                                    print_class_if(i.text)
-                                if i_attr == "et":
-                                    et(i)
-                        print()
-                    elif cc_0.tag == "span" and cc_1.tag == "span" and cc_1.attrib["class"] == "sgram":
-                        print_class_sgram(cc_1)
-                        print()
-                    elif cc_0.tag == "span" and cc_1.tag == "span" and "sl badge mw-badge" in cc_1.attrib["class"]:
-                        print_meaning_badge(cc_1.text, end="\n")
-                    elif cc_0.tag == "span" and cc_1.tag == "span" and cc_1.attrib["class"] == "et":
-                        et(cc_1)
-                    continue
+                    for i in cc[0].iterchildren():
+                        i_attr = i.get("class")
+                        if i_attr is not None:
+                            if ("badge mw-badge" in i_attr) or ("il" in i_attr):
+                                print_meaning_badge(i.text.strip())
+                                if "sl " in i_attr:
+                                    print()
+                            if "if" in i_attr:
+                                print_class_if(i.text)
+                            if i_attr == "et":
+                                et(i)
+                            if i_attr == "sgram":
+                                print_class_sgram(i)
+                            continue
 
                 # print class "sb-0 sb-entry", "sb-1 sb-entry" ...
                 sb_entry(c, attr, num_label_count)
@@ -1063,7 +1066,7 @@ def print_meaning_content(text, end=""):
 def format_basedon_ancestor(ancestor_attr, prefix="", suffix="", root_attr=""):
     print(prefix, end="")
     if ancestor_attr == "sense has-sn has-num-only":
-        print("  ", end=suffix)
+        print("   ", end=suffix)
     if ancestor_attr == "sense has-sn has-num":
         print("    ", end=suffix)
     if ancestor_attr == "sense has-sn":

@@ -12,11 +12,12 @@ from typing import (
 JustifyMethod = Literal["left", "center", "right"]
 
 Symbol = {
-    "L_BRACKET" : "[",
-    "R_BRACKET" : "]",
-    "SLASH"     : "/",
-    "HASH"      : "#"
+    "L_BRACKET" : '[',
+    "R_BRACKET" : ']',
+    "SLASH"     : '/',
+    "HASH"      : '#'
 }
+
 
 def hex_to_rgb(hex):
     h = hex[1:]

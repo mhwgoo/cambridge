@@ -116,7 +116,7 @@ def print_spellcheck(con, cur, input_word, suggestions, dict, is_ch=False):
             print("\033[34m" + " " + sug + "\033[0m")
 
     c_print(f"Press [NUMBER] to look up the suggestion inferred from the unfound [red]{input_word}[/red], [ENTER] to toggle dictionary, or [ANY OTHER KEY] to exit: ", end="")
-    key = input("\033[1m")
+    key = input("")
     if key.isnumeric() and (1 <= int(key) <= len(suggestions)):
         if dict == DICT.MERRIAM_WEBSTER.name:
             webster.search_webster(con, cur, suggestions[int(key) - 1])

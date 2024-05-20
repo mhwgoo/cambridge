@@ -361,9 +361,9 @@ def phrases(node):
                     c_print(f"[{w_col.ph_item} bold]{i.text}", end = "\n")
 
 
-###########################################
-# parse and print related phrases
-###########################################
+##########################################################
+# parse and print related phrases (Phrases Containing ...)
+##########################################################
 
 def related_phrases(node):
     print()
@@ -390,15 +390,10 @@ def related_phrases(node):
 
     for phrase in phrases:
         ts = list(phrase.itertext())
-        for t in ts:
-            t = t.strip("\n").strip()
-            if t != ts[-1]:
-                c_print(f"[{w_col.rph_item}]{t}", end="")
-            else:
-                if phrase != phrases[-1]:
-                    c_print(f"[{w_col.rph_item}]{t},", end=" ")
-                else:
-                    c_print(f"[{w_col.rph_item}]{t}", end="")
+        if phrase != phrases[-1]:
+            c_print(f"[{w_col.rph_item}]{ts[1]},", end=" ")
+        else:
+            c_print(f"[{w_col.rph_item}]{ts[1]}", end="")
 
 
 ###########################################

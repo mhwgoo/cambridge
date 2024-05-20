@@ -778,20 +778,22 @@ def vg_sseq_entry_item(node):
             for c in child.iterchildren():
                 cc = c.getchildren()
                 if cc[0].get("class") == "sen has-num-only":
-                    for i in cc[0].iterchildren():
+                    for i in cc[0].iterdescendants():
                         i_attr = i.get("class")
-                        if i_attr is not None:
+                        if i_attr is not None and i.tag == "span":
                             if ("badge mw-badge" in i_attr) or ("il" in i_attr):
                                 print_meaning_badge(i.text.strip())
-                                if "sl " in i_attr:
-                                    print()
                             if "if" in i_attr:
                                 print_class_if(i.text)
                             if i_attr == "et":
                                 et(i)
                             if i_attr == "sgram":
                                 print_class_sgram(i)
-                            continue
+                            if i.get("class") == "vl":
+                                print_meaning_badge(i.text.strip())
+                            if i.get("class") == "va":
+                                print_class_va(i.text.strip())
+                    print()
 
                 # print class "sb-0 sb-entry", "sb-1 sb-entry" ...
                 sb_entry(c, attr, num_label_count)

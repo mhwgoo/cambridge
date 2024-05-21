@@ -636,6 +636,15 @@ def dt(node, ancestor_attr, self_attr, root_attr="", num_label_count=1):
     print()
 
 
+### print meaning together with tags like, [German Affekt, borrowed from Latin affectus] psychology
+def print_sense_content(node, attr, ancestor_attr, num_label_count):
+    for elm in node.iterdescendants():
+        elm_attr = elm.get("class")
+        if elm_attr is not None and elm.tag == "span":
+            if elm_attr == "dt " or elm_attr == "dt hasSdSense" or elm_attr == "sdsense":
+              dt(elm, attr, elm_attr, ancestor_attr, num_label_count)
+
+
 ### sense(node, "sense has-sn", "sb-0 sb-entry, "sb has-num has-let ms-lg-4 ms-3 w-100", 1)
 def sense(node, attr, parent_attr, ancestor_attr, num_label_count=1):
     children = node.getchildren()
@@ -699,53 +708,8 @@ def sense(node, attr, parent_attr, ancestor_attr, num_label_count=1):
     else:
         sense_content = children[1]
 
-    for c in children:
-        if c.attrib["class"] == "if":
-            print_class_if(c.text.strip())
-        if "badge mw-badge-gray-100" in c.attrib["class"]:
-            print_meaning_badge(c.text.strip(), end="\n")
-
     # "sense-content w-100"
-    elms = sense_content.getchildren()
-    for elm in elms:
-        elm_attr = elm.get("class")
-        if elm_attr is not None:
-            if "badge" in elm_attr:
-                text = "".join(list(elm.itertext())).strip()
-                print_meaning_badge(text)
-
-            if elm_attr == "dt " or elm_attr == "dt hasSdSense" or elm_attr == "sdsense":
-                dt(elm, attr, elm_attr, ancestor_attr, num_label_count)
-
-            if elm_attr == "et":
-                et(elm)
-
-            if elm_attr == "il ":
-                print_meaning_badge(elm.text.strip(), end=" ")
-
-            if elm_attr == "if":
-                print_class_if(elm.text)
-
-            if elm_attr == "sgram":
-                print_class_sgram(elm)
-
-            if elm_attr == "unText":
-                unText_simple(elm, attr, ancestor_attr, num_label_count)
-
-            if elm_attr == "vi":
-                vi(elm, attr, ancestor_attr, num_label_count)
-
-        else:
-            for i in elm.iterchildren():
-                if i.get("class") == "vl":
-                    print_meaning_badge(i.text.strip())
-                elif i.get("class") == "va":
-                    print_class_va(i.text.strip())
-                elif "prons-entries-list" in i.get("class"):
-                    continue
-                    # print_pron(i)
-                else:
-                    print_meaning_content(i.text, end=" ")
+    print_sense_content(sense_content, attr, ancestor_attr, num_label_count)
 
 
 def sb_entry(node, parent_attr, num_label_count=1):
@@ -775,24 +739,41 @@ def vg_sseq_entry_item(node):
 
         # print meaning content
         if "ms-lg-4 ms-3 w-100" in attr:
-            for c in child.iterchildren():
-                cc = c.getchildren()
-                if cc[0].get("class") == "sen has-num-only":
-                    for i in cc[0].iterdescendants():
-                        i_attr = i.get("class")
-                        if i_attr is not None and i.tag == "span":
-                            if ("badge mw-badge" in i_attr) or ("il" in i_attr):
-                                print_meaning_badge(i.text.strip())
-                            if "if" in i_attr:
-                                print_class_if(i.text)
-                            if i_attr == "et":
-                                et(i)
-                            if i_attr == "sgram":
-                                print_class_sgram(i)
-                            if i.get("class") == "vl":
-                                print_meaning_badge(i.text.strip())
-                            if i.get("class") == "va":
-                                print_class_va(i.text.strip())
+            for c in child.iterchildren(): # c:  class="sb-0 sb-entry"
+                cc = c.getchildren()[0]    # cc: class="sen has-num-only"
+                cc_attr = cc.get("class")
+                if cc_attr is not None and cc_attr == "sen has-num-only":
+                    for elm in cc.iterdescendants():
+                        elm_attr = elm.get("class")
+                        if elm_attr is not None and elm.tag == "span":
+                            if "badge" in elm_attr:
+                                text = "".join(list(elm.itertext())).strip()
+                                print_meaning_badge(text)
+
+                            if elm_attr == "et":
+                              et(elm)
+
+                            if elm_attr == "il ":
+                              print_meaning_badge(elm.text.strip(), end=" ")
+
+                            if elm_attr == "if":
+                              print_class_if(elm.text)
+
+                            if elm_attr == "sgram":
+                              print_class_sgram(elm)
+
+                            if elm_attr == "unText":
+                              unText_simple(elm, attr, ancestor_attr, num_label_count)
+
+                            if elm_attr == "vi":
+                              vi(elm, attr, ancestor_attr, num_label_count)
+
+                            if elm_attr == "vl":
+                              print_meaning_badge(elm.text.strip())
+
+                            if elm_attr == "va":
+                              print_class_va(elm.text.strip())
+                            continue
                     print()
 
                 # print class "sb-0 sb-entry", "sb-1 sb-entry" ...
@@ -808,7 +789,7 @@ def et(node):
         print("", end=" ")
 
 def vg(node):
-    """Print one entry(e.g. 1 of 3)'s all meanings. e.g. 1 :the monetary worth of somethng 2 :a fair return... 3 :..."""
+    """Print one entry(e.g. 1 of 3)'s all meanings. e.g. 1 :the monetary worth of something 2 :a fair return... 3 :..."""
 
     children = node.getchildren()
     for child in children:

@@ -69,25 +69,30 @@ def parse(string):
         elif s == Symbol["SLASH"] and string[i - 1] != Symbol["L_BRACKET"]:
             after_parse += s
             i = i + 1
-        else:
-            if s == Symbol["L_BRACKET"]:
+        elif s == Symbol["HASH"] and string[i + 1] != Symbol["L_BRACKET"]:
+            after_parse += s
+            i = i + 1
+        elif s == Symbol["HASH"] and string[i + 1] == Symbol["L_BRACKET"]:
+            i = i + 1
+        elif s == Symbol["L_BRACKET"] and string[i - 1] == Symbol["HASH"]:
                 k = i
                 for j, ss in enumerate(string[i + 1 : ]):
                     k += 1
                     if ss == Symbol["R_BRACKET"]:
                         text_in_bracket = string[i + 1 : i + 1 + j]
                         for word in text_in_bracket.split():
-                            # for normal [], not for color syntax
-                            if word.isalpha() and word.upper() not in COLOR_EFFECT.keys():
-                                after_parse += string[i : i + 1 + j + 1]
-                                i = k
-                                break
-                            else:
-                                after_parse += parse_in_bracket(string[i + 1 : i + 1 + j])
-                                i = k
-                                break
+                            after_parse += parse_in_bracket(string[i + 1 : i + 1 + j])
+                            i = k
+                            break
                         break
                 i = i + 1
+
+        elif s == Symbol["L_BRACKET"] and string[i - 1] != Symbol["HASH"]:
+            after_parse += s
+            i = i + 1
+        else:
+            after_parse += s
+            i = i + 1
 
     return after_parse + get_color_effect("RESET")
 

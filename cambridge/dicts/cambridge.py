@@ -216,7 +216,7 @@ def print_pron(block, area):
     w_pron = block.find("span", "pron dpron")
     if w_pron is not None:
         w_pron_text = replace_all(w_pron.text).replace("/", "|")
-        c_print(f"[bold]{area} [/bold]" + w_pron_text, end=" ")
+        c_print(f"#[bold]{area} #[/bold]" + w_pron_text, end=" ")
 
 
 def parse_head_pron(head):
@@ -236,7 +236,7 @@ def parse_head_tense(block):
             tenses = sub.find_all("b", "inf dinf")
             if len(tenses) != 0:
                 for tense in tenses:
-                    c_print("[bold]" + tense.text + "[/bold]", end=" ")
+                    c_print("#[bold]" + tense.text + "#[/bold]", end=" ")
             if index == 0 and len(sub_blocks) > 1:
                 print("|", end=" ")
 
@@ -276,7 +276,7 @@ def parse_dict_head(block):
             word = parse_head_title(head)
         if w_type:
             w_type = w_type.replace(" or ", "/")
-            c_print(f"\n[bold blue]{word}[/bold blue] [bold yellow]{w_type}[/bold yellow]")
+            c_print(f"\n#[bold blue]{word}#[/bold blue] #[bold yellow]{w_type}#[/bold yellow]")
 
         parse_head_pron(head)
 
@@ -297,7 +297,7 @@ def parse_dict_head(block):
         print()
 
     else:
-        c_print("[bold blue]" + word)
+        c_print("#[bold blue]" + word)
         if info:
             print(f"{info[0]} {info[1]}")
 
@@ -305,7 +305,7 @@ def parse_dict_head(block):
 # ----------Parse Dict Body----------
 def parse_def_title(block):
     d_title = replace_all(block.find("h3", "dsense_h").text)
-    c_print("[red]" + "\n" + d_title.upper())
+    c_print("#[red]" + "\n" + d_title.upper())
 
 def parse_ptitle(block):
     p_title = block.find("span", "phrase-title dphrase-title").text
@@ -396,7 +396,7 @@ def parse_example(def_block, is_pexample=False):
         else:
             example_lan_sent = ""
 
-        c_print("[blue]" + "|" + "[/blue]", end="")
+        c_print("#[blue]" + "|" + "#[/blue]", end="")
 
         dlab = e.find("span", "lab dlab")
         print_example_tag(dlab)
@@ -407,16 +407,16 @@ def parse_example(def_block, is_pexample=False):
         dlu = e.find("span", "lu dlu")
         print_example_tag(dlu)
 
-        c_print(f"[#757575]{example}{example_lan_sent}[/#757575]")
+        c_print(f"#[#757575]{example}{example_lan_sent}#[/#757575]")
 
 
 def print_synonym(block):
     s_title = block.strong.text.upper()
-    c_print("[bold #757575]" + "\n  " + s_title)
+    c_print("#[bold #757575]" + "\n  " + s_title)
 
     for s in block.find_all("div", ["item lc lc1 lpb-10 lpr-10", "item lc lc1 lc-xs6-12 lpb-10 lpr-10"]):
         s = s.text
-        c_print("[#757575]" + "  • " + s)
+        c_print("#[#757575]" + "  • " + s)
 
     print()
 
@@ -434,10 +434,10 @@ def parse_see_also(def_block):
 
     if see_also_block is not None:
         see_also = see_also_block.strong.text.upper()
-        c_print("[bold #757575]" + "\n  " + see_also)
+        c_print("#[bold #757575]" + "\n  " + see_also)
 
         for item in see_also_block.find_all("span", ["x-h dx-h", "x-p dx-p"]):
-            c_print("[#757575]" + "  • " + item.text, end=" ")
+            c_print("#[#757575]" + "  • " + item.text, end=" ")
             next_sibling = item.find_next_sibling("span")
             if next_sibling is not None:
                 print(next_sibling.text)
@@ -450,10 +450,10 @@ def parse_compare(def_block):
 
     if compare_block is not None:
         compare = compare_block.strong.text.upper()
-        c_print("[bold #757575]" + "\n  " + compare)
+        c_print("#[bold #757575]" + "\n  " + compare)
         for word in compare_block.find_all("div", ["item lc lc1 lpb-10 lpr-10", "item lc lc1 lc-xs6-12 lpb-10 lpr-10"]):
             item = word.a.text
-            c_print("[#757575]" + "  • " + item + "[/#757575]", end="")
+            c_print("#[#757575]" + "  • " + item + "#[/#757575]", end="")
 
             usage = word.find("span", "x-lab dx-lab")
             if usage:
@@ -468,10 +468,10 @@ def parse_usage_note(def_block):
 
     if usage_block is not None:
         usagenote = usage_block.h5.text
-        c_print("[bold #757575]" + "\n  " + usagenote)
+        c_print("#[bold #757575]" + "\n  " + usagenote)
         for item in usage_block.find_all("li", "text"):
             item = item.text
-            c_print("[#757575]" + "    " + item)
+            c_print("#[#757575]" + "    " + item)
 
 
 def parse_def(def_block):
@@ -492,10 +492,10 @@ def parse_idiom(block):
 
     if idiom_block is not None:
         idiom_title = idiom_block.h3.text.upper()
-        c_print("[bold #757575]" + "\n" + idiom_title)
+        c_print("#[bold #757575]" + "\n" + idiom_title)
         for idiom in idiom_block.find_all("div", ["item lc lc1 lpb-10 lpr-10", "item lc lc1 lc-xs6-12 lpb-10 lpr-10"]):
             idiom = idiom.text
-            c_print("[#757575]" + "  • " + idiom)
+            c_print("#[#757575]" + "  • " + idiom)
 
 
 def parse_sole_idiom(block):
@@ -512,10 +512,10 @@ def parse_phrasal_verb(block):
 
     if pv_block is not None:
         pv_title = pv_block.h3.text.upper()
-        c_print("[bold #757575]" + "\n" + pv_title)
+        c_print("#[bold #757575]" + "\n" + pv_title)
         for pv in pv_block.find_all("div", ["item lc lc1 lc-xs6-12 lpb-10 lpr-10", "item lc lc1 lpb-10 lpr-10"]):
             pv = pv.text
-            c_print("[#757575]" + "  • " + pv)
+            c_print("#[#757575]" + "  • " + pv)
 
 
 def parse_dict_body(block):
@@ -563,4 +563,4 @@ def parse_dict_name(first_dict):
         dict_name = dict_name.split("the")[-1]
     else:
         dict_name="Cambridge Dictionary"
-    c_print(f"[#757575]{dict_name}", justify="right")
+    c_print(f"#[#757575]{dict_name}", justify="right")

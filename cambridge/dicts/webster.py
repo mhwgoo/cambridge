@@ -136,6 +136,7 @@ def parse_redirect(nodes, res_url):
         if "row entry-header" in attr:
             print()
             row_entry_header(node, True)
+            continue
 
         if "-entry" in attr:
             print()
@@ -145,6 +146,7 @@ def parse_redirect(nodes, res_url):
                         if child.tag == "p":
                             x = list(child.itertext())
                             print("".join(x).strip())
+            continue
 
     c_print(f'\n[#757575]You can add "camb -w" before one above entry to get its full definition from the {DICT.MERRIAM_WEBSTER.name} dictionary')
 
@@ -230,16 +232,20 @@ def nearby_entries(node):
         else:
             if has_title:
                 c_print(f"[bold {w_col.nearby_title}]{elm.text}", end="")
+                continue
 
             if has_em:
                 word = "".join(list(elm.itertext()))
                 c_print(f"[bold {w_col.nearby_em}]{word}", end="\n")
+                continue
 
             if has_word:
                 c_print(f"[{w_col.nearby_word}]{elm.text}", end="\n")
+                continue
 
             if has_nearby:
                 c_print(f"[{w_col.nearby_item}]{elm.text}", end="\n")
+                continue
 
 
 ###########################################
@@ -619,19 +625,27 @@ def dt(node, ancestor_attr, self_attr, root_attr="", num_label_count=1):
                     print_meaning_badge(child.text)
                 else:
                     print_meaning_badge(child.text)
+
+                continue
             if child_attr == "dtText":
                 dtText(child, ancestor_attr, dtText_count, root_attr) # only meaning text
                 dtText_count += 1
+                continue
             if child_attr == "uns":
                 uns(child, ancestor_attr, root_attr, num_label_count)
+                continue
             if child_attr == "sub-content-thread":
                 sub_content_thread(child, ancestor_attr, root_attr, num_label_count) # example under the meaning
+                continue
             if child_attr == "ca" or child_attr == "dx-jump":
                 extra(child, ancestor_attr, dtText_count, root_attr)
+                continue
             if child_attr == "unText":
                 unText_simple(child, ancestor_attr, root_attr, num_label_count)
+                continue
             if child_attr == "vi":
                 vi(child, ancestor_attr, root_attr, num_label_count)
+                continue
 
     print()
 
@@ -643,6 +657,7 @@ def print_sense_content(node, attr, ancestor_attr, num_label_count):
         if elm_attr is not None and elm.tag == "span":
             if elm_attr == "dt " or elm_attr == "dt hasSdSense" or elm_attr == "sdsense":
               dt(elm, attr, elm_attr, ancestor_attr, num_label_count)
+              continue
 
 
 ### sense(node, "sense has-sn", "sb-0 sb-entry, "sb has-num has-let ms-lg-4 ms-3 w-100", 1)
@@ -749,31 +764,39 @@ def vg_sseq_entry_item(node):
                             if "badge" in elm_attr:
                                 text = "".join(list(elm.itertext())).strip()
                                 print_meaning_badge(text)
+                                continue
 
                             if elm_attr == "et":
-                              et(elm)
+                                et(elm)
+                                continue
 
                             if elm_attr == "il ":
-                              print_meaning_badge(elm.text.strip(), end=" ")
+                                print_meaning_badge(elm.text.strip(), end=" ")
+                                continue
 
                             if elm_attr == "if":
-                              print_class_if(elm.text)
+                                print_class_if(elm.text)
+                                continue
 
                             if elm_attr == "sgram":
-                              print_class_sgram(elm)
+                                print_class_sgram(elm)
+                                continue
 
                             if elm_attr == "unText":
-                              unText_simple(elm, attr, ancestor_attr, num_label_count)
+                                unText_simple(elm, attr, ancestor_attr, num_label_count)
+                                continue
 
                             if elm_attr == "vi":
-                              vi(elm, attr, ancestor_attr, num_label_count)
+                                vi(elm, attr, ancestor_attr, num_label_count)
+                                continue
 
                             if elm_attr == "vl":
-                              print_meaning_badge(elm.text.strip())
+                                print_meaning_badge(elm.text.strip())
+                                continue
 
                             if elm_attr == "va":
-                              print_class_va(elm.text.strip())
-                            continue
+                                print_class_va(elm.text.strip())
+                                continue
                     print()
 
                 # print class "sb-0 sb-entry", "sb-1 sb-entry" ...

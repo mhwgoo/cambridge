@@ -414,10 +414,11 @@ def get_word_cases(node):
                 u_words.append(i.text)
     return l_words, u_words
 
-def dtText(node, ancestor_attr, count, root_attr=""):
+#TODO is count necessary?
+def dtText(node, ancestor_attr, count):
     texts = list(node.itertext())
-    if count != 1:
-        format_basedon_ancestor(ancestor_attr, prefix="\n", root_attr=root_attr)
+    #if count != 1:
+    #    format_basedon_ancestor(ancestor_attr, prefix="\n")
 
     l_words = get_word_cases(node)[0]
     u_words = get_word_cases(node)[1]
@@ -456,9 +457,9 @@ def print_mw(text, has_tail, tag):
             c_print(f"#[{w_col.meaning_sentence}]{text}", end = " ")
 
 
-def ex_sent(node, ancestor_attr, root_attr="", num_label_count=1):
+def ex_sent(node, ancestor_attr, num_label_count=1):
     if ancestor_attr:
-        format_basedon_ancestor(ancestor_attr, prefix="\n", root_attr=root_attr)
+        format_basedon_ancestor(ancestor_attr, prefix="\n")
     else:
         print("")
 
@@ -498,13 +499,14 @@ def ex_sent(node, ancestor_attr, root_attr="", num_label_count=1):
                 print_mw(text, normal_has_tail, "normal")
 
 
-def sub_content_thread(node, ancestor_attr, root_attr="", num_label_count=1):
+def sub_content_thread(node, ancestor_attr, num_label_count=1):
     children = node.getchildren()
     for child in children:
         attr = child.attrib["class"]
 
         if ("ex-sent" in attr) and ("aq has-aq" not in attr):
-            ex_sent(child, ancestor_attr, root_attr, num_label_count)
+            ex_sent(child, ancestor_attr, num_label_count)
+            continue
 
         if "vis" in attr:
             elms = child.getchildren()
@@ -512,13 +514,14 @@ def sub_content_thread(node, ancestor_attr, root_attr="", num_label_count=1):
                 elm = e.getchildren()[0]
                 elm_attr = elm.attrib["class"]
                 if ("ex-sent" in elm_attr) and ("aq has-aq" not in elm_attr):
-                    ex_sent(elm, ancestor_attr, root_attr, num_label_count)
+                    ex_sent(elm, ancestor_attr, num_label_count)
+            continue
 
 
-def extra(node, ancestor_attr, count, root_attr=""):
+def extra(node, ancestor_attr, count):
     texts = list(node.itertext())
     if count != 1:
-        format_basedon_ancestor(ancestor_attr, prefix="\n", root_attr=root_attr)
+        format_basedon_ancestor(ancestor_attr, prefix="\n")
 
     l_words = get_word_cases(node)[0]
     u_words = get_word_cases(node)[1]
@@ -542,116 +545,23 @@ def extra(node, ancestor_attr, count, root_attr=""):
     print("", end = " ")
 
 
-def vi(node, ancestor_attr, root_attr, num_label_count=1):
-    children = node.getchildren()
-    for child in children:
-        child_attr = child.get("class")
-        if child_attr == "sub-content-thread":
-            sub_content_thread(child, ancestor_attr, root_attr, num_label_count)
-
-
-def uns(node, ancestor_attr, root_attr, num_label_count=1):
+def unText_simple(node, ancestor_attr, num_label_count=1):
     node_pre = node.getprevious()
-    if node_pre is not None and node_pre.get("class") == "sub-content-thread":
-        print()
-
-    # elms = node.getchildren()[0].getchildren()
-    for child in node.iterchildren():
-        child_attr = child.get("class")
-
-        if child_attr == "un":
-            elms = child.getchildren()
-            for elm in elms:
-                elm_attr = elm.get("class")
-                if elm_attr == "unText":
-                    if num_label_count == 2:
-                        print(" ", end="")
-
-                    text = "".join(list(elm.itertext())).strip()
-                    if "mdash" in elm.getprevious().attrib["class"]:
-                        if node_pre is not None and node_pre.get("class") == "sub-content-thread":
-                            format_basedon_ancestor(ancestor_attr, prefix="", root_attr=root_attr)
-                        print_meaning_arrow("->" + text)
-                    else:
-                        format_basedon_ancestor(ancestor_attr, prefix="", root_attr=root_attr)
-                        print_meaning_badge(text)
-
-                if elm_attr == "sub-content-thread":
-                    sub_content_thread(elm, ancestor_attr, root_attr, num_label_count)
-
-                if elm_attr == "vi":
-                    vi(elm, ancestor_attr, root_attr, num_label_count)
-
-        if child_attr == "unText":
-            unText_simple(child, ancestor_attr, ancestor_attr, num_label_count)
-
-        if child_attr == "vi":
-            format_basedon_ancestor(ancestor_attr, prefix="", root_attr=root_attr)
-            vi(child, ancestor_attr, root_attr, num_label_count)
-
-
-def unText_simple(node, ancestor_attr, root_attr, num_label_count=1):
-    node_pre = node.getprevious()
-    if node_pre is not None and (node_pre.get("class") == "un" or node_pre.get("class") == "uns"):
+    node_pre_attr = node_pre.get("class")
+    if node_pre is not None and (node_pre_attr == "un" or node_pre_attr == "uns"):
         print()
 
     if num_label_count == 2:
         print(" ", end="")
 
-    text = list(node.itertext())
-    format_basedon_ancestor(ancestor_attr, prefix="", root_attr=root_attr)
-    for t in text:
-        print_meaning_content(t, end="")
-
-
-def dt(node, ancestor_attr, self_attr, root_attr="", num_label_count=1):
-    children = node.getchildren()
-    dtText_count = 1
-
-    for child in children:
-        child_attr = child.get("class")
-        if child_attr is not None:
-            if child_attr == "sd": # label before meaning content
-                if self_attr == "sdsense":
-                    format_basedon_ancestor(ancestor_attr, prefix="")
-                    if num_label_count == 2:
-                        print(" ", end="")
-                    print_meaning_badge(child.text)
-                else:
-                    print_meaning_badge(child.text)
-
-                continue
-            if child_attr == "dtText":
-                dtText(child, ancestor_attr, dtText_count, root_attr) # only meaning text
-                dtText_count += 1
-                continue
-            if child_attr == "uns":
-                uns(child, ancestor_attr, root_attr, num_label_count)
-                continue
-            if child_attr == "sub-content-thread":
-                sub_content_thread(child, ancestor_attr, root_attr, num_label_count) # example under the meaning
-                continue
-            if child_attr == "ca" or child_attr == "dx-jump":
-                extra(child, ancestor_attr, dtText_count, root_attr)
-                continue
-            if child_attr == "unText":
-                unText_simple(child, ancestor_attr, root_attr, num_label_count)
-                continue
-            if child_attr == "vi":
-                vi(child, ancestor_attr, root_attr, num_label_count)
-                continue
-
-    print()
-
-
-### print meaning together with tags like, [German Affekt, borrowed from Latin affectus] psychology
-def print_sense_content(node, attr, ancestor_attr, num_label_count):
-    for elm in node.iterdescendants():
-        elm_attr = elm.get("class")
-        if elm_attr is not None and elm.tag == "span":
-            if elm_attr == "dt " or elm_attr == "dt hasSdSense" or elm_attr == "sdsense":
-              dt(elm, attr, elm_attr, ancestor_attr, num_label_count)
-              continue
+    text = "".join(list(node.itertext())).strip()
+    if "mdash" in node_pre_attr:
+        if node_pre is not None and node_pre_attr == "sub-content-thread":
+            format_basedon_ancestor(ancestor_attr, prefix="")
+        print_meaning_arrow("->" + text)
+    else:
+        format_basedon_ancestor(ancestor_attr, prefix="")
+        print_meaning_badge(text)
 
 
 ### sense(node, "sense has-sn", "sb-0 sb-entry, "sb has-num has-let ms-lg-4 ms-3 w-100", 1)
@@ -718,7 +628,7 @@ def sense(node, attr, parent_attr, ancestor_attr, num_label_count=1):
         sense_content = children[1]
 
     # "sense-content w-100"
-    print_sense_content(sense_content, attr, ancestor_attr, num_label_count)
+    tags(sense_content, attr)
 
 
 def sb_entry(node, parent_attr, num_label_count=1):
@@ -732,6 +642,73 @@ def sb_entry(node, parent_attr, num_label_count=1):
             sense(e, e_attr, attr, parent_attr, num_label_count)     # e.g. sense(child, "sense has-sn", "sb-0 sb-entry", "....", 1)
     elif "sense" in child_attr and child.tag != "span":
         sense(child, child_attr, attr, parent_attr, num_label_count) # e.g. sense(child, "sense has-sn", "sb-0 sb-entry, "sb has-num has-let ms-lg-4 ms-3 w-100", 1)
+
+
+def tags(node, ancestor_attr):
+    dtText_count = 1
+    num_label_count = 1
+    for elm in node.iterdescendants():
+        elm_attr = elm.get("class")
+        if elm_attr is not None:
+            if "badge" in elm_attr:
+                text = "".join(list(elm.itertext())).strip()
+                print_meaning_badge(text)
+                continue
+
+            if elm_attr == "et":
+                et(elm)
+                continue
+
+            if elm_attr == "il ":
+                print_meaning_badge(elm.text.strip(), end=" ")
+                continue
+
+            if elm_attr == "if":
+                print_class_if(elm.text)
+                continue
+
+            if elm_attr == "sgram":
+                print_class_sgram(elm)
+                continue
+
+            if elm_attr == "vl":
+                print_meaning_badge(elm.text.strip())
+                continue
+
+            if elm_attr == "va":
+                print_class_va(elm.text.strip())
+                continue
+
+            if elm_attr == "sd":
+                parent = elm.getparent()
+                parent_attr = parent.get("class")
+                parent_prev = parent.getprevious()
+                if parent_attr is not None and parent_attr == "sdsense":
+                    format_basedon_ancestor(ancestor_attr, prefix="")
+                    if num_label_count == 2:
+                        print(" ", end="")
+                if parent_prev is not None and "hasSdSense" in parent_prev.get("class"): 
+                    print()
+                print_meaning_badge(elm.text)
+
+            if elm_attr == "dtText":
+                dtText(elm, ancestor_attr, dtText_count) # only meaning text
+                dtText_count += 1
+                continue
+
+            if elm_attr == "sub-content-thread":
+                sub_content_thread(elm, ancestor_attr, num_label_count) # example under the meaning
+                continue
+
+            if elm_attr == "ca" or elm_attr == "dx-jump":
+                extra(elm, ancestor_attr, dtText_count)
+                continue
+
+            if elm_attr == "unText":
+                unText_simple(elm, ancestor_attr, num_label_count)
+                continue
+
+    print()
 
 
 def vg_sseq_entry_item(node):
@@ -752,46 +729,7 @@ def vg_sseq_entry_item(node):
                 cc = c.getchildren()[0]    # cc: class="sen has-num-only"
                 cc_attr = cc.get("class")
                 if cc_attr is not None and cc_attr == "sen has-num-only":
-                    for elm in cc.iterdescendants():
-                        elm_attr = elm.get("class")
-                        if elm_attr is not None and elm.tag == "span":
-                            if "badge" in elm_attr:
-                                text = "".join(list(elm.itertext())).strip()
-                                print_meaning_badge(text)
-                                continue
-
-                            if elm_attr == "et":
-                                et(elm)
-                                continue
-
-                            if elm_attr == "il ":
-                                print_meaning_badge(elm.text.strip(), end=" ")
-                                continue
-
-                            if elm_attr == "if":
-                                print_class_if(elm.text)
-                                continue
-
-                            if elm_attr == "sgram":
-                                print_class_sgram(elm)
-                                continue
-
-                            if elm_attr == "unText":
-                                unText_simple(elm, attr, ancestor_attr, num_label_count)
-                                continue
-
-                            if elm_attr == "vi":
-                                vi(elm, attr, ancestor_attr, num_label_count)
-                                continue
-
-                            if elm_attr == "vl":
-                                print_meaning_badge(elm.text.strip())
-                                continue
-
-                            if elm_attr == "va":
-                                print_class_va(elm.text.strip())
-                                continue
-                    print()
+                    tags(cc, cc_attr)
 
                 # print class "sb-0 sb-entry", "sb-1 sb-entry" ...
                 sb_entry(c, attr, num_label_count)
@@ -1063,17 +1001,16 @@ def print_meaning_content(text, end=""):
         c_print(f"#[{w_col.meaning_content}]{text}", end=end)
 
 
-def format_basedon_ancestor(ancestor_attr, prefix="", suffix="", root_attr=""):
+def format_basedon_ancestor(ancestor_attr, prefix="", suffix=""):
     print(prefix, end="")
     if ancestor_attr == "sense has-sn has-num-only":
         print("   ", end=suffix)
     if ancestor_attr == "sense has-sn has-num":
         print("    ", end=suffix)
     if ancestor_attr == "sense has-sn":
-        if "no-sn letter-only" in root_attr:
-            print("  ", end=suffix)
-        else:
-            print("    ", end=suffix)
+        #if "no-sn letter-only" in root_attr:
+        #    print("  ", end=suffix)
+        print("    ", end=suffix)
     if ancestor_attr == "sense  no-subnum":
         print("", end=suffix)
     if ancestor_attr == "sense has-num-only has-subnum-only":

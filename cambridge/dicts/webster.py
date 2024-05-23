@@ -414,11 +414,9 @@ def get_word_cases(node):
                 u_words.append(i.text)
     return l_words, u_words
 
-#TODO is count necessary?
-def dtText(node, ancestor_attr, count):
+def dtText(node, ancestor_attr):
     texts = list(node.itertext())
-    #if count != 1:
-    #    format_basedon_ancestor(ancestor_attr, prefix="\n")
+    format_basedon_ancestor(ancestor_attr)
 
     l_words = get_word_cases(node)[0]
     u_words = get_word_cases(node)[1]
@@ -518,10 +516,9 @@ def sub_content_thread(node, ancestor_attr, num_label_count=1):
             continue
 
 
-def extra(node, ancestor_attr, count):
+def extra(node, ancestor_attr):
     texts = list(node.itertext())
-    if count != 1:
-        format_basedon_ancestor(ancestor_attr, prefix="\n")
+    format_basedon_ancestor(ancestor_attr)
 
     l_words = get_word_cases(node)[0]
     u_words = get_word_cases(node)[1]
@@ -645,7 +642,6 @@ def sb_entry(node, parent_attr, num_label_count=1):
 
 
 def tags(node, ancestor_attr):
-    dtText_count = 1
     num_label_count = 1
     for elm in node.iterdescendants():
         elm_attr = elm.get("class")
@@ -687,13 +683,12 @@ def tags(node, ancestor_attr):
                     format_basedon_ancestor(ancestor_attr, prefix="")
                     if num_label_count == 2:
                         print(" ", end="")
-                if parent_prev is not None and "hasSdSense" in parent_prev.get("class"): 
+                if parent_prev is not None and "hasSdSense" in parent_prev.get("class"):
                     print()
                 print_meaning_badge(elm.text)
 
             if elm_attr == "dtText":
-                dtText(elm, ancestor_attr, dtText_count) # only meaning text
-                dtText_count += 1
+                dtText(elm, ancestor_attr) # only meaning text
                 continue
 
             if elm_attr == "sub-content-thread":
@@ -701,7 +696,7 @@ def tags(node, ancestor_attr):
                 continue
 
             if elm_attr == "ca" or elm_attr == "dx-jump":
-                extra(elm, ancestor_attr, dtText_count)
+                extra(elm, ancestor_attr)
                 continue
 
             if elm_attr == "unText":
@@ -797,7 +792,7 @@ def entry_attr(node):
             for i in elm.iterchildren():
                 if i.tag == "span" and i.attrib["class"] == "word-syllables-entry":
                     syllables = i.text
-                    c_print(f"#{syllables}", end=" ")
+                    print(f"{syllables}", end=" ")
 
                 if i.tag == "span" and "prons-entries-list-inline" in i.attrib["class"]:
                     print_pron(i, True)

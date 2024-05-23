@@ -475,18 +475,19 @@ def ex_sent(node, ancestor_attr, num_label_count=1):
         if attr is not None:
             if i.tag == "em" and "mw" in attr:
                 ems.append(i.text)
+                continue
             if i.tag == "span" and "mw" in attr:
                 hl_words.append(i.text)
+                continue
 
     texts = list(node.itertext())
     count = len(texts)
 
-    # TODO: Here needs a better logic, compliant with both normal words and words as prefixs and suffixs like 'in'.
     for index, t in enumerate(texts):
         text = t.strip("\n").strip()
         if text:
             if t in hl_words:
-                hl_has_tail = ((index != (count - 1)) and (texts[index + 1].strip("\n").strip()) and (not texts[index + 1].strip("\n").strip()[0].isalpha()))
+                hl_has_tail = ((index != (count - 1)) and (texts[index + 1].strip("\n").strip()) and (not texts[index + 1].strip("\n").strip()[0].isalnum()))
                 print_mw(text, hl_has_tail, "hl")
             elif t in ems:
                 if index != 0 and texts[index - 1].endswith(" "):
@@ -895,7 +896,6 @@ def row_headword_row_header_ins(node):
         print()
 
 
-# --- parse class "row headword-row header-vrs" --- #
 def print_vrs(node):
     for elm in node.iterchildren():
         elm_attr = elm.get("class")
@@ -917,16 +917,15 @@ def print_vrs(node):
                         print_pron(child)
                     else:
                         continue
-    print()
 
 
+# --- parse class "row headword-row header-vrs" --- #
 def row_headword_row_header_vrs(node):
     """Print word variants. e.g. premise variants or less commonly premiss"""
 
     children = node.getchildren()[0].getchildren()[0] # class "entry-attr vrs"
     print_vrs(children)
-    if not node.getnext().get("class") == "row headword-row header-ins":
-        print()
+    print()
 
 
 # --- parse class "dxnls" --- #
@@ -1025,7 +1024,7 @@ def print_meaning_content(text, end=""):
 def format_basedon_ancestor(ancestor_attr, prefix="", suffix=""):
     print(prefix, end="")
     if ancestor_attr == "sense has-sn has-num-only":
-        print("   ", end=suffix)
+        print("  ", end=suffix)
     if ancestor_attr == "sense has-sn has-num":
         print("    ", end=suffix)
     if ancestor_attr == "sense has-sn":

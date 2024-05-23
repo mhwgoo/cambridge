@@ -416,10 +416,12 @@ def get_word_cases(node):
 
 def dtText(node, ancestor_attr):
     texts = list(node.itertext())
-    format_basedon_ancestor(ancestor_attr)
 
     l_words = get_word_cases(node)[0]
     u_words = get_word_cases(node)[1]
+
+    if node.getprevious() is not None and node.getprevious().get("class") == "sub-content-thread":
+        format_basedon_ancestor(ancestor_attr, prefix="\n")
 
     for index, text in enumerate(texts):
         if text == " " and index == 0:
@@ -518,7 +520,6 @@ def sub_content_thread(node, ancestor_attr, num_label_count=1):
 
 def extra(node, ancestor_attr):
     texts = list(node.itertext())
-    format_basedon_ancestor(ancestor_attr)
 
     l_words = get_word_cases(node)[0]
     u_words = get_word_cases(node)[1]
@@ -542,22 +543,21 @@ def extra(node, ancestor_attr):
     print("", end = " ")
 
 
-def unText_simple(node, ancestor_attr, num_label_count=1):
+def unText_simple(node, ancestor_attr, num_label_count=1, has_badge=True):
+    text = "".join(list(node.itertext())).strip()
+
+    if not has_badge:
+        print()
+        if num_label_count == 2:
+            print(" ", end="")
+        format_basedon_ancestor(ancestor_attr, prefix="")
+
     node_pre = node.getprevious()
     node_pre_attr = node_pre.get("class")
-    if node_pre is not None and (node_pre_attr == "un" or node_pre_attr == "uns"):
-        print()
 
-    if num_label_count == 2:
-        print(" ", end="")
-
-    text = "".join(list(node.itertext())).strip()
     if "mdash" in node_pre_attr:
-        if node_pre is not None and node_pre_attr == "sub-content-thread":
-            format_basedon_ancestor(ancestor_attr, prefix="")
         print_meaning_arrow("->" + text)
     else:
-        format_basedon_ancestor(ancestor_attr, prefix="")
         print_meaning_badge(text)
 
 
@@ -625,7 +625,7 @@ def sense(node, attr, parent_attr, ancestor_attr, num_label_count=1):
         sense_content = children[1]
 
     # "sense-content w-100"
-    tags(sense_content, attr)
+    tags(sense_content, attr, num_label_count)
 
 
 def sb_entry(node, parent_attr, num_label_count=1):
@@ -641,8 +641,9 @@ def sb_entry(node, parent_attr, num_label_count=1):
         sense(child, child_attr, attr, parent_attr, num_label_count) # e.g. sense(child, "sense has-sn", "sb-0 sb-entry, "sb has-num has-let ms-lg-4 ms-3 w-100", 1)
 
 
-def tags(node, ancestor_attr):
-    num_label_count = 1
+def tags(node, ancestor_attr, num_label_count):
+    has_badge = True
+
     for elm in node.iterdescendants():
         elm_attr = elm.get("class")
         if elm_attr is not None:
@@ -679,12 +680,14 @@ def tags(node, ancestor_attr):
                 parent = elm.getparent()
                 parent_attr = parent.get("class")
                 parent_prev = parent.getprevious()
-                if parent_attr is not None and parent_attr == "sdsense":
-                    format_basedon_ancestor(ancestor_attr, prefix="")
-                    if num_label_count == 2:
-                        print(" ", end="")
                 if parent_prev is not None and "hasSdSense" in parent_prev.get("class"):
                     print()
+                if parent_attr is not None and parent_attr == "sdsense":
+                    format_basedon_ancestor(ancestor_attr, prefix="")
+
+                if num_label_count == 2:
+                    print(" ", end="")
+
                 print_meaning_badge(elm.text)
 
             if elm_attr == "dtText":
@@ -693,6 +696,7 @@ def tags(node, ancestor_attr):
 
             if elm_attr == "sub-content-thread":
                 sub_content_thread(elm, ancestor_attr, num_label_count) # example under the meaning
+                has_badge = False
                 continue
 
             if elm_attr == "ca" or elm_attr == "dx-jump":
@@ -700,7 +704,7 @@ def tags(node, ancestor_attr):
                 continue
 
             if elm_attr == "unText":
-                unText_simple(elm, ancestor_attr, num_label_count)
+                unText_simple(elm, ancestor_attr, num_label_count, has_badge)
                 continue
 
     print()
@@ -724,7 +728,7 @@ def vg_sseq_entry_item(node):
                 cc = c.getchildren()[0]    # cc: class="sen has-num-only"
                 cc_attr = cc.get("class")
                 if cc_attr is not None and cc_attr == "sen has-num-only":
-                    tags(cc, cc_attr)
+                    tags(cc, cc_attr, num_label_count)
 
                 # print class "sb-0 sb-entry", "sb-1 sb-entry" ...
                 sb_entry(c, attr, num_label_count)
@@ -754,8 +758,12 @@ def vg(node):
 
         # print tags like "informal" and the tags at the same livel with transitives
         if "sls" in child.attrib["class"]:
-             e = child.getchildren()[0]
-             c_print(f"#[bold]{e.text}")
+            e = child.getchildren()[0]
+            e_attr = e.get("class")
+            if e_attr is not None and "badge" in e_attr:
+                print_meaning_badge(e.text)
+            else:
+                c_print(f"#[bold]{e.text}")
 
 
 # --- parse class "row entry-header" --- #
@@ -779,9 +787,10 @@ def entry_header_content(node):
 
         if elm.tag == "h2":
             type = " ".join(list(elm.itertext()))
-            c_print(f"#[bold {w_col.eh_word_type}]{type}", end="\n")
+            c_print(f"#[bold {w_col.eh_word_type}]{type}", end="")
             global word_types
             word_types.append(type.strip().lower())
+    print()
 
 
 def entry_attr(node):
@@ -826,23 +835,35 @@ def entry_uros(node):
         if attr is not None:
             if elm.tag == "span" and "fw-bold ure" in attr:
                 c_print(f"#[bold {w_col.wf}]{elm.text}", end = " ")
+                continue
+
             if elm.tag == "span" and "fw-bold fl" in attr:
                 next_sibling = elm.getnext()
-                if next_sibling is not None and next_sibling.get("class") == "utxt":
-                    c_print(f"#[bold {w_col.wf_type}]{elm.text}", end = "")
-                else:
-                    c_print(f"#[bold {w_col.wf_type}]{elm.text}", end = "\n")
+                c_print(f"#[yellow]{elm.text}", end = "")
+                continue
+
             if "ins" in attr:
                 print("", end="")
                 print_class_ins(elm)
+                continue
+
+            if "sl badge" in attr:
+                text = "".join(list(elm.itertext())).strip()
+                print_meaning_badge(text)
+                continue
+
             if "utxt" in attr:
                 for i in elm.iterchildren():
                     sub_attr = i.get("class")
                     if sub_attr is not None and sub_attr == "sub-content-thread":
                         sub_content_thread(i, "", "")
                 print()
+                continue
+
             if "prons-entries-list" in attr:
                 print_pron(elm)
+                continue
+
             if "vrs" in attr:
                 # can't get css element ::before.content like "variants" in the word "duel"
                 child = elm.getchildren()[0]
@@ -850,6 +871,7 @@ def entry_uros(node):
                     attr_c = c.get("class")
                     if attr_c == "il " or attr_c == "vl":
                         print_or_badge(c.text)
+                        continue
                     if attr_c == "va":
                         if c.text is None:
                             for i in child:
@@ -857,10 +879,10 @@ def entry_uros(node):
                         else:
                             print_class_va(c.text)
 
-                        if c.getnext() is None:
-                            print()
+                        continue
                     if "prons-entries-list" in attr_c:
                         continue
+                continue
 
 
 # --- parse class "row headword-row header-ins" --- #
@@ -875,24 +897,27 @@ def row_headword_row_header_ins(node):
 
 # --- parse class "row headword-row header-vrs" --- #
 def print_vrs(node):
-    for child in node.iterdescendants():
-        attr = child.get("class")
-        if attr is not None:
-            if "badge mw-badge-gray-100 text-start text-wrap d-inline" in attr:
-                c_print(f"#[bold]{child.text.strip()}", end="")
-            elif attr == "il " or attr == "vl":
-                print_or_badge(child.text)
-            elif attr == "va":
-                if child.text is None:
-                    for i in child:
-                        print_class_va(i.text)
-                else:
-                    print_class_va(child.text)
-            elif "prons-entries-list" in attr:
-                print_pron(child)
-            else:
-                continue
-                # print(f"{child.text}", end="")
+    for elm in node.iterchildren():
+        elm_attr = elm.get("class")
+        if elm_attr is not None and "badge mw-badge-gray-100 text-start text-wrap d-inline" in elm_attr:
+            c_print(f"#[bold]{elm.text.strip()}", end="")
+        else:
+            for child in elm.iterdescendants():
+                attr = child.get("class")
+                if attr is not None:
+                    if attr == "il " or attr == "vl":
+                        print_or_badge(child.text)
+                    elif attr == "va":
+                        if child.text is None:
+                            for i in child:
+                                print_class_va(i.text)
+                        else:
+                            print_class_va(child.text)
+                    elif "prons-entries-list" in attr:
+                        print_pron(child)
+                    else:
+                        continue
+    print()
 
 
 def row_headword_row_header_vrs(node):
@@ -947,7 +972,9 @@ def dictionary_entry(node):
                     vg(elm)
 
                 if "entry-uros" in elm.attrib["class"]:
-                    entry_uros(elm)
+                    for i in elm.iterchildren():
+                        entry_uros(i)
+                        print()
 
                 if elm.attrib["class"] == "dxnls":
                     dxnls(elm)
@@ -958,12 +985,11 @@ def dictionary_entry(node):
 
                 if elm.attrib["class"] == "cxl-ref":
                     text = list(elm.itertext())
-                    print_meaning_content(":", end="")
+                    print_meaning_content(": ", end="")
                     for t in text:
                         t = t.strip()
                         if t:
                             print_meaning_content(t, end=" ")
-                    print()
 
         except:
             continue
@@ -1088,7 +1114,6 @@ def print_class_ins(node):
                 print_header_badge(child.text.strip(), end=" ")
             elif attr == "prt-a":
                 print_pron(child)
-
             elif attr == "il ":
                 print_or_badge(child.text)
             elif attr == "sep-semicolon":

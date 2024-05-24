@@ -24,14 +24,15 @@ CAMBRIDGE_SPELLCHECK_URL = CAMBRIDGE_URL + "/spellcheck/english/?q="
 CAMBRIDGE_SPELLCHECK_URL_CN = CAMBRIDGE_URL + "/spellcheck/english-chinese-simplified/?q="
 
 # ----------Request Web Resource----------
-def search_cambridge(con, cur, input_word, is_fresh=False, is_ch=False, no_suggestions=False):
-    if is_ch:
-        req_url = get_request_url(CAMBRIDGE_CN_SEARCH_URL, input_word, DICT.CAMBRIDGE.name)
-    else:
-        req_url = get_request_url(CAMBRIDGE_EN_SEARCH_URL, input_word, DICT.CAMBRIDGE.name)
+def search_cambridge(con, cur, input_word, is_fresh=False, is_ch=False, no_suggestions=False, req_url=None):
+    if req_url is None:
+        if is_ch:
+            req_url = get_request_url(CAMBRIDGE_CN_SEARCH_URL, input_word, DICT.CAMBRIDGE.name)
+        else:
+            req_url = get_request_url(CAMBRIDGE_EN_SEARCH_URL, input_word, DICT.CAMBRIDGE.name)
 
     if not is_fresh:
-        cached = dict.cache_run(con, cur, input_word, req_url, DICT.CAMBRIDGE.name)
+        cached = dict.cache_run(con, cur, input_word, req_url)
         if not cached:
             fresh_run(con, cur, req_url, input_word, is_ch, no_suggestions)
     else:

@@ -2,8 +2,6 @@ import sqlite3
 import logging
 import argparse
 import sys
-import os
-import subprocess
 
 from .cache import (
     get_response_words,
@@ -12,8 +10,8 @@ from .cache import (
 )
 from .console import c_print
 from .log import logger
-from .utils import OP, DICT
-from .dicts import webster, cambridge
+from .utils import OP, DICT, is_tool
+from .dicts import webster, cambridge, dict
 from .__init__ import __version__
 
 def parse_args():
@@ -197,49 +195,6 @@ def delete(word, con, cur):
         print(f'{OP.NOT_FOUND.name} "{word}" in cache')
 
 
-def print_word(index, entry):
-    cols = os.get_terminal_size().columns
-    text = entry[0]
-    text_len = len(text)
-
-    if "cambridge" in entry[1]:
-        dict_name = "CAMBRIDGE"
-    else:
-        dict_name = "WEBSTER"
-
-    if index % 2 == 0:
-        print(f"\033[37;;40m{index+1:6d}|{text}", end="")
-        print(f"\033[37;;40m{dict_name:>{cols-text_len-7}}\033[0m")
-
-    else:
-        c_print(f"#[#4A7D95]{index+1:6d}|{text}", end="")
-        c_print(f"#[#4A7D95]{dict_name:>{cols-text_len-7}}")
-
-
-def is_tool(name):
-    """Check whether `name` is on $PATH and marked as executable."""
-
-    from shutil import which
-    return which(name) is not None
-
-
-def fzf(data, con, cur):
-    choices = {}
-    for entry in data:
-        choices[entry[0]] = entry[1]
-
-    c = "\n".join(choices.keys())
-    p1 = subprocess.Popen(["echo", c], stdout=subprocess.PIPE, text=True)
-    p2 = subprocess.Popen(["fzf", "--layout=reverse"], stdin=p1.stdout, stdout=subprocess.PIPE, text=True)
-    input_word = p2.communicate()[0].strip("\n")
-    if p2.returncode == 130 and input_word == "": # press ESC, not word selected, quit out of fzf
-        exit()
-    if "merrian" in choices[input_word]:
-        webster.search_webster(con, cur, input_word)
-    else:
-        cambridge.search_cambridge(con, cur, input_word)
-
-
 def list_words(args, con, cur):
     # The subparser i.e. the sub-command isn't in the namespace of args
 
@@ -260,10 +215,11 @@ def list_words(args, con, cur):
             if not is_tool("fzf"):
                 print()
                 for index, entry in enumerate(data):
-                    print_word(index, entry)
+                    dict_name = "CAMBRIDGE" if "cambridge" in entry[1] else "WEBSTER"
+                    dict.print_entry(index, entry[0], extra=dict_name)
                 print()
             else:
-                fzf(data, con, cur)
+                dict.fzf(data, con, cur)
 
     else:
         try:
@@ -276,20 +232,22 @@ def list_words(args, con, cur):
                     data.sort(reverse=False, key=lambda tup: tup[2])
                     print()
                     for index, entry in enumerate(data):
-                        print_word(index, entry)
+                        dict_name = "CAMBRIDGE" if "cambridge" in entry[1] else "WEBSTER"
+                        dict.print_entry(index, entry[0], extra=dict_name)
                     print()
                 else:
                     data.sort(reverse=True, key=lambda tup: tup[2])
-                    fzf(data, con, cur)
+                    dict.fzf(data, con, cur)
             else:
                 data.sort()
                 if not is_tool("fzf"):
                     print()
                     for index, entry in enumerate(data):
-                        print_word(index, entry)
+                        dict_name = "CAMBRIDGE" if "cambridge" in entry[1] else "WEBSTER"
+                        dict.print_entry(index, entry[0], extra=dict_name)
                     print()
                 else:
-                    fzf(data, con, cur)
+                    dict.fzf(data, con, cur)
 
 
 def search_word(args, con, cur):
@@ -320,15 +278,14 @@ def search_word(args, con, cur):
         sys.exit()
 
     if is_webster:
-        webster.search_webster(con, cur, input_word, is_fresh, no_suggestions)
+        webster.search_webster(con, cur, input_word, is_fresh, no_suggestions, None)
     else:
-        cambridge.search_cambridge(con, cur, input_word, is_fresh, is_ch, no_suggestions)
+        cambridge.search_cambridge(con, cur, input_word, is_fresh, is_ch, no_suggestions, None)
 
 
 def wod(args, con, cur):
     if args.list:
-        print("Coming soon...")
+        webster.get_wod_list()
 
-    # no args supplied
     else:
         webster.get_wod()

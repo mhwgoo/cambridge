@@ -4,7 +4,7 @@ import sys
 from lxml import etree
 
 from ..console import c_print
-from ..utils import get_request_url, decode_url, OP, DICT
+from ..utils import get_request_url, decode_url, OP, DICT, is_tool
 from ..log import logger
 from ..dicts import dict
 from ..errors import NoResultError
@@ -13,6 +13,7 @@ from .. import color as w_col
 WEBSTER_BASE_URL = "https://www.merriam-webster.com"
 WEBSTER_DICT_BASE_URL = WEBSTER_BASE_URL + "/dictionary/"
 WEBSTER_WORD_OF_THE_DAY_URL = WEBSTER_BASE_URL + "/word-of-the-day"
+WEBSTER_WORD_OF_THE_DAY_URL_CALENDAR = WEBSTER_BASE_URL + "/word-of-the-day/calendar"
 
 sub_text = ""
 res_word = ""
@@ -21,7 +22,7 @@ word_forms = []   # A word may have multiple word forms, e.g. "ran", "running", 
 word_types = []   # A word's word types, e.g. "preposition", "adjective"
 
 
-def search_webster(con, cur, input_word, is_fresh=False, no_suggestions=False):
+def search_webster(con, cur, input_word, is_fresh=False, no_suggestions=False, req_url=None):
     """
     Entry point for searching a word in Webster.
     It first checks the cache, if the word has been cached,
@@ -29,11 +30,11 @@ def search_webster(con, cur, input_word, is_fresh=False, no_suggestions=False):
     If the word is found, prints it to the terminal and caches it concurrently.
     if not found, prints word suggestions and exit.
     """
-
-    req_url = get_request_url(WEBSTER_DICT_BASE_URL, input_word, DICT.MERRIAM_WEBSTER.name)
+    if req_url is None:
+        req_url = get_request_url(WEBSTER_DICT_BASE_URL, input_word, DICT.MERRIAM_WEBSTER.name)
 
     if not is_fresh:
-        cached = dict.cache_run(con, cur, input_word, req_url, DICT.MERRIAM_WEBSTER.name)
+        cached = dict.cache_run(con, cur, input_word, req_url)
         if not cached:
             fresh_run(con, cur, req_url, input_word, no_suggestions)
     else:
@@ -117,6 +118,14 @@ def get_wod():
     if found:
         res_url, res_text = result[1]
         parse_and_print_wod(res_url, res_text)
+
+
+def get_wod_list():
+    result = fetch_webster(WEBSTER_WORD_OF_THE_DAY_URL_CALENDAR, "")
+    found = result[0]
+    if found:
+        res_url, res_text = result[1]
+        parse_and_print_wod_calendar(res_url, res_text)
 
 
 def parse_redirect(nodes, res_url):
@@ -1292,3 +1301,16 @@ def parse_and_print_wod(res_url, res_text):
         if "did-you-know" in attr:
             print_wod_dyk(node)
     print()
+
+
+def parse_and_print_wod_calendar(res_url, res_text):
+    logger.info(f"{OP.PARSING.name} {res_url}")
+
+    parser = etree.HTMLParser(remove_comments=True)
+    tree = etree.HTML(res_text, parser)
+    nodes = tree.xpath("//li/h2/a")
+    logger.info(f"{OP.PRINTING.name} the parsed result of {res_url}")
+    data = []
+    for node in nodes:
+        data.append(node.text)
+    dict.fzf_wod(data)

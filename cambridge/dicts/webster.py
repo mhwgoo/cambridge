@@ -1279,6 +1279,7 @@ def parse_and_print_wod(res_url, res_text):
 
     logger.debug(f"{OP.PRINTING.name} the parsed result of {res_url}")
 
+    print()
     for node in nodes:
         attr = node.attrib["class"]
 
@@ -1290,3 +1291,4 @@ def parse_and_print_wod(res_url, res_text):
 
         if "did-you-know" in attr:
             print_wod_dyk(node)
+    print()

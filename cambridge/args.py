@@ -2,12 +2,15 @@ import sqlite3
 import logging
 import argparse
 import sys
+import os
+import subprocess
 
 from .cache import (
     get_response_words,
     get_random_words,
     delete_word,
 )
+from .console import c_print
 from .log import logger
 from .utils import OP, DICT
 from .dicts import webster, cambridge
@@ -193,19 +196,48 @@ def delete(word, con, cur):
     else:
         print(f'{OP.NOT_FOUND.name} "{word}" in cache')
 
-def print_word(entry, cols=40, print_dict_name=True):
-    if (not isinstance(entry, tuple)) or len(entry) < 2:
-        print("not valid")
+
+def print_word(index, entry):
+    cols = os.get_terminal_size().columns
+    text = entry[0]
+    text_len = len(text)
 
     if "cambridge" in entry[1]:
-        dict_name = DICT.CAMBRIDGE.name
+        dict_name = "CAMBRIDGE"
     else:
-        dict_name = DICT.MERRIAM_WEBSTER.name
+        dict_name = "WEBSTER"
 
-    if print_dict_name:
-        print(f"{entry[0]:<{cols}}", dict_name)
+    if index % 2 == 0:
+        print(f"\033[37;;40m{index+1:6d}|{text}", end="")
+        print(f"\033[37;;40m{dict_name:>{cols-text_len-7}}\033[0m")
+
     else:
-        print(f"{entry[0]}")
+        c_print(f"#[#4A7D95]{index+1:6d}|{text}", end="")
+        c_print(f"#[#4A7D95]{dict_name:>{cols-text_len-7}}")
+
+
+def is_tool(name):
+    """Check whether `name` is on $PATH and marked as executable."""
+
+    from shutil import which
+    return which(name) is not None
+
+
+def fzf(data, con, cur):
+    choices = {}
+    for entry in data:
+        choices[entry[0]] = entry[1]
+
+    c = "\n".join(choices.keys())
+    p1 = subprocess.Popen(["echo", c], stdout=subprocess.PIPE, text=True)
+    p2 = subprocess.Popen(["fzf", "--layout=reverse"], stdin=p1.stdout, stdout=subprocess.PIPE, text=True)
+    input_word = p2.communicate()[0].strip("\n")
+    if p2.returncode == 130 and input_word == "": # press ESC, not word selected, quit out of fzf
+        exit()
+    if "merrian" in choices[input_word]:
+        webster.search_webster(con, cur, input_word)
+    else:
+        cambridge.search_cambridge(con, cur, input_word)
 
 
 def list_words(args, con, cur):
@@ -225,8 +257,13 @@ def list_words(args, con, cur):
         except sqlite3.OperationalError:
             logger.error("You may haven't searched any word yet")
         else:
-            for entry in data:
-                print_word(entry)
+            if not is_tool("fzf"):
+                print()
+                for index, entry in enumerate(data):
+                    print_word(index, entry)
+                print()
+            else:
+                fzf(data, con, cur)
 
     else:
         try:
@@ -235,13 +272,25 @@ def list_words(args, con, cur):
             logger.error("You may haven't searched any word yet")
         else:
             if args.time:
-                data.sort(reverse=False, key=lambda tup: tup[2])
-                for entry in data:
-                    print_word(entry)
+                if not is_tool("fzf"):
+                    data.sort(reverse=False, key=lambda tup: tup[2])
+                    print()
+                    for index, entry in enumerate(data):
+                        print_word(index, entry)
+                    print()
+                else:
+                    data.sort(reverse=True, key=lambda tup: tup[2])
+                    fzf(data, con, cur)
             else:
                 data.sort()
-                for entry in data:
-                    print_word(entry, print_dict_name=False)
+                if not is_tool("fzf"):
+                    print()
+                    for index, entry in enumerate(data):
+                        print_word(index, entry)
+                    print()
+                else:
+                    fzf(data, con, cur)
+
 
 def search_word(args, con, cur):
     """

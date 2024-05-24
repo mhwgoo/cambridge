@@ -213,35 +213,11 @@ def list_words(args, con, cur):
 
     if args.delete:
         to_delete = args.delete
-
-        ids = []
-        words = []
-
-        for index, item in enumerate(to_delete):
-            # multiple words/phrases are seperated by ","
-            if "," in item or ("," not in item and index == len(to_delete) - 1):
-                ids.append(index)
-
-        # if there is only one word/phrase to delete
-        if len(ids) == 1:
-            word = " ".join(to_delete).strip().strip(",")
-            delete(word, con, cur)
-
-        # if there are multiple words/phrase to delete
-        else:
-            for i, id in enumerate(ids):
-                if i == 0:
-                    words.append(" ".join(to_delete[: (id + 1)]).strip(",").strip())
-                if i > 0:
-                    words.append(" ".join(to_delete[(ids[i-1] + 1): (id + 1)]).strip(",").strip())
-
-            # If the last word in `to_delete` variable does not end with ",", it should be collected.
-            # Else the last word ends with ",", it has been covered and handled above.
-            if ids[-1] != len(to_delete) - 1:
-                words.append(to_delete[-1])
-
-            for word in words:
-                delete(word, con, cur)
+        words = " ".join(to_delete)
+        for w in words.split(","):
+            i = w.strip()
+            if i:
+                delete(i, con, cur)
 
     elif args.random:
         try:

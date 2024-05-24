@@ -1132,7 +1132,7 @@ def print_class_ins(node):
                 global word_forms
                 word_forms.append(child.text.strip().lower())
             else:
-                print(f"{child.text}", end="")
+                c_print(f"#[bold]{child.text}", end="")
 
 
 def print_dict_name():
@@ -1204,11 +1204,14 @@ def print_wod_header(node):
 def print_wod_p(node):
     text = node.text
     if text:
-        print(f"{text}", end="")
+        print(text, end="")
+
     for child in node.iterchildren():
         if child is not None and child.tag == "em":
-            c_print(f"#[bold]{child.text}", end="")
-            print(f"{child.tail}", end="")
+            t = "".join(list(child.itertext()))
+            c_print(f"#[bold]{t}", end="")
+            print(child.tail, end="")
+            continue
         if child is not None and child.tag == "a":
             child_text = child.text
             child_tail = child.tail
@@ -1216,13 +1219,14 @@ def print_wod_p(node):
                 continue
             else:
                 if child_text is not None:
-                    print(f"{child_text}", end="")
+                    print(child_text, end="")
                 for c in child.iterchildren():
                     if c is not None and c.tag == "em":
                         c_print(f"#[bold]{c.text}", end="")
 
             if child_tail is not None:
-                print(f"{child_tail}", end="")
+                print(child_tail, end="")
+            continue
     print()
 
 

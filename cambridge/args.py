@@ -11,7 +11,7 @@ from .cache import (
 from .console import c_print
 from .log import logger
 from .utils import OP, DICT, is_tool
-from .dicts import webster, cambridge, dict
+from .dicts import webster, cambridge, dicts
 from .__init__ import __version__
 
 def parse_args():
@@ -212,14 +212,13 @@ def list_words(args, con, cur):
         except sqlite3.OperationalError:
             logger.error("You may haven't searched any word yet")
         else:
+            list_notice = "Select and [ENTER] to print the item's meaning; [ESC] to quit out."
             if not is_tool("fzf"):
                 print()
-                for index, entry in enumerate(data):
-                    dict_name = "CAMBRIDGE" if "cambridge" in entry[1] else "WEBSTER"
-                    dict.print_entry(index, entry[0], extra=dict_name)
+                dicts.list_items(data, True)
                 print()
             else:
-                dict.fzf(data, con, cur)
+                dicts.list_items_fzf(con, cur, data, "cache_list", list_notice, None, None, False)
 
     else:
         try:
@@ -227,27 +226,25 @@ def list_words(args, con, cur):
         except sqlite3.OperationalError:
             logger.error("You may haven't searched any word yet")
         else:
+            list_notice = "Select and [ENTER] to print the item's meaning; [ESC] to quit out."
             if args.time:
                 if not is_tool("fzf"):
                     data.sort(reverse=False, key=lambda tup: tup[2])
                     print()
-                    for index, entry in enumerate(data):
-                        dict_name = "CAMBRIDGE" if "cambridge" in entry[1] else "WEBSTER"
-                        dict.print_entry(index, entry[0], extra=dict_name)
+                    dicts.list_items(data, True)
                     print()
                 else:
                     data.sort(reverse=True, key=lambda tup: tup[2])
-                    dict.fzf(data, con, cur)
+                    dicts.list_items_fzf(con, cur, data, "cache_list", list_notice, None, None, False)
+
             else:
                 data.sort()
                 if not is_tool("fzf"):
                     print()
-                    for index, entry in enumerate(data):
-                        dict_name = "CAMBRIDGE" if "cambridge" in entry[1] else "WEBSTER"
-                        dict.print_entry(index, entry[0], extra=dict_name)
+                    dicts.list_items(data, True)
                     print()
                 else:
-                    dict.fzf(data, con, cur)
+                    dicts.list_items_fzf(con, cur, data, "cache_list", list_notice, None, None, False)
 
 
 def search_word(args, con, cur):
@@ -285,7 +282,7 @@ def search_word(args, con, cur):
 
 def wod(args, con, cur):
     if args.list:
-        webster.get_wod_list()
+        webster.get_wod_list(con, cur)
 
     else:
         webster.get_wod()

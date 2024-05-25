@@ -1,4 +1,5 @@
 import sys
+import os
 import sqlite3
 import requests
 import subprocess
@@ -11,6 +12,12 @@ from ..dicts import cambridge, webster
 from ..utils import make_a_soup, OP, DICT, is_tool
 from ..console import c_print
 
+from typing import (
+    Optional,
+    Literal
+)
+
+Initiator = Literal["wod_calendar", "spell_check", "cache_list"]
 
 def fetch(url, session):
     """Make a web request with retry mechanism."""
@@ -105,97 +112,81 @@ def save(con, cur, input_word, response_word, response_url, response_text):
     else:
         logger.debug(f'{OP.CACHED.name} the search result of "{input_word}"')
 
-#TODO add an option for inputing a new word
+
 def print_spellcheck(con, cur, input_word, suggestions, dict_name, is_ch=False):
     """Parse and print spellcheck info."""
 
-    if is_tool("fzf"):
-        fzf_spellcheck(con, cur, input_word, suggestions, dict_name, is_ch)
-    else:
-        for count, sug in enumerate(suggestions):
-            c_print("#[bold]%2d" % (count+1), end="")
-            if dict_name == DICT.MERRIAM_WEBSTER.name:
-                c_print("#[#4A7D95] %s" % sug)
-            else:
-                print("\033[34m" + " " + sug + "\033[0m")
+    is_cambridge = (dict_name == DICT.CAMBRIDGE.name)
+    flip_dict = DICT.MERRIAM_WEBSTER.name if is_cambridge else DICT.CAMBRIDGE.name
 
-        c_print(f"Press [NUMBER] to look up the suggestion inferred from the unfound #[red]{input_word}#[/red], [ENTER] to toggle dictionary, or [ANY OTHER KEY] to exit: ", end="")
+    if is_tool("fzf"):
+        spellcheck_notice = "NOT FOUND. Select and [ENTER] to print the suggestion's meaning; [NUMBER] + [ENTER] to switch to " + flip_dict + "; [ESC] to quit out."
+        list_items_fzf(con, cur, suggestions, "spell_check", spellcheck_notice, input_word, dict_name, is_ch)
+    else:
+        list_items(suggestions, False)
+        spellcheck_notice = "NOT FOUND. [NUMBER] + [ENTER] to print the suggestion's meaning; [ENTER] to switch to " + flip_dict + "; [ANY OTHER KEY] to quit out: "
+        c_print(spellcheck_notice, end="")
         key = input("")
+
         if key.isnumeric() and (1 <= int(key) <= len(suggestions)):
-            if dict_name == DICT.MERRIAM_WEBSTER.name:
-                webster.search_webster(con, cur, suggestions[int(key) - 1])
-            if dict_name == DICT.CAMBRIDGE.name:
-               cambridge.search_cambridge(con, cur, suggestions[int(key) - 1], False, is_ch)
+            cambridge.search_cambridge(con, cur, suggestions[int(key) - 1], False, is_ch) if is_cambrige else webster.search_webster(con, cur, suggestions[int(key) - 1])
         elif key == "":
-            if dict_name == DICT.CAMBRIDGE.name:
-                webster.search_webster(con, cur, input_word)
-            if dict_name == DICT.MERRIAM_WEBSTER.name:
-                cambridge.search_cambridge(con, cur, input_word, False, is_ch)
+            cambridge.search_cambridge(con, cur, suggestions[int(key) - 1], False, is_ch) if not is_cambrige else webster.search_webster(con, cur, suggestions[int(key) - 1])
         else:
             sys.exit()
 
 
-def print_entry(index, entry, extra):
-    import os
-
+def print_word_per_line(index, word, extra=None):
     cols = os.get_terminal_size().columns
-    entry_len = len(entry)
+    word_len = len(word)
 
     if index % 2 == 0:
-        print(f"\033[37;;40m{index+1:6d}|{entry}", end="")
-        print(f"\033[37;;40m{extra:>{cols-entry_len-7}}\033[0m")
-
+        print(f"\033[37;;40m{index+1:6d}|{word}", end="")
+        if extra is not None:
+            print(f"\033[37;;40m{extra:>{cols-word_len-7}}\033[0m")
     else:
-        c_print(f"#[#4A7D95]{index+1:6d}|{entry}", end="")
-        c_print(f"#[#4A7D95]{extra:>{cols-entry_len-7}}")
+        c_print(f"#[#4A7D95]{index+1:6d}|{word}", end="")
+        if extra is not None:
+            c_print(f"#[#4A7D95]{extra:>{cols-word_len-7}}")
 
 
-def fzf(data, con, cur):
-    choices = {}
-    for entry in data:
-        choices[entry[0]] = entry[1]
+def list_items(data, from_list_words=False):
+    for index, entry in enumerate(data):
+        if from_list_words:
+            word = entry[0]
+            dict_name = "CAMBRIDGE" if "cambridge" in entry[1] else "WEBSTER"
+            print_word_per_line(index, word, dict_name)
+        else:
+            print_word_per_line(index, entry, extra=None)
 
-    c = "\n".join(choices.keys())
-    p1 = subprocess.Popen(["echo", c], stdout=subprocess.PIPE, text=True)
-    p2 = subprocess.Popen(["fzf", "--layout=reverse"], stdin=p1.stdout, stdout=subprocess.PIPE, text=True)
-    input_word = p2.communicate()[0].strip("\n")
-    if p2.returncode == 130 and input_word == "": # when pressing ESC, no word selected, quit out of fzf
-        exit()
-    if "merrian" in choices[input_word]:
-        webster.search_webster(con, cur, input_word, req_url=choices[input_word])
+
+def list_items_fzf(con, cur, data, initiator: Optional[Initiator] = None, notice="", input_word=None, dict_name=None, is_ch=False):
+    choices = ""
+    if initiator == "cache_list":
+        for i in data:
+            choices = choices + i[0] + "\n"
+    elif initiator == "wod_calendar":
+        choices = "\n".join(data.keys())
     else:
-        cambridge.search_cambridge(con, cur, input_word, req_url=choices[input_word])
+        choices = "\n".join(data)
+    choices = choices.strip("\n")
 
-
-def fzf_spellcheck(con, cur, input_word, data, dict_name, is_ch):
-    choices = []
-    for entry in data:
-        choices.append(entry)
-
-    choices.append("\nNOT FOUND. Select one suggestion above, or press [ESC] to exit.")
-
-    c = "\n".join(choices)
-    p1 = subprocess.Popen(["echo", c], stdout=subprocess.PIPE, text=True)
-    p2 = subprocess.Popen(["fzf", "--layout=reverse"], stdin=p1.stdout, stdout=subprocess.PIPE, text=True)
+    p1 = subprocess.Popen(["echo", choices], stdout=subprocess.PIPE, text=True)
+    p2 = subprocess.Popen(["fzf", "--layout=reverse", "--bind", "enter:accept-or-print-query", "--header", notice], stdin=p1.stdout, stdout=subprocess.PIPE, text=True)
 
     select_word = p2.communicate()[0].strip("\n")
-    if p2.returncode == 130 and select_word == "": # when pressing ESC, no word selected, quit out of fzf
-        exit()
 
-    if DICT.MERRIAM_WEBSTER.name == dict_name:
-        webster.search_webster(con, cur, select_word, req_url=None)
+    logger.info(f"select_word by fzf is: {repr(select_word)}; returncode by fzf is: {p2.returncode}")
+
+    is_cambridge = (dict_name == DICT.CAMBRIDGE.name)
+
+    if len(select_word) == 1 and not select_word.isalpha() and initiator == "spell_check":
+        webster.search_webster(con, cur, input_word, req_url=None) if is_cambridge else cambridge.search_cambridge(con, cur, input_word, is_ch=is_ch, req_url=None)
+    elif p2.returncode == 0 and select_word != "":
+        if initiator == "wod_calendar":
+            url = webster.WEBSTER_BASE_URL + data[select_word]
+            webster.get_wod_past(url)
+        else:
+            cambridge.search_cambridge(con, cur, select_word, is_ch=is_ch, req_url=None) if is_cambridge else webster.search_webster(con, cur, select_word, req_url=None)
     else:
-        cambridge.search_cambridge(con, cur, select_word, is_ch=is_ch, req_url=None)
-
-
-def fzf_wod(data):
-    choices = []
-    for entry in data:
-        choices.append(entry)
-
-    c = "\n".join(choices)
-    p1 = subprocess.Popen(["echo", c], stdout=subprocess.PIPE, text=True)
-    p2 = subprocess.Popen(["fzf", "--layout=reverse"], stdin=p1.stdout, stdout=subprocess.PIPE, text=True)
-    select_word = p2.communicate()[0].strip("\n")
-    if p2.returncode == 130 and select_word == "": # press ESC, not word selected, quit out of fzf
-        exit()
+        sys.exit()

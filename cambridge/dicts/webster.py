@@ -6,7 +6,7 @@ from lxml import etree
 from ..console import c_print
 from ..utils import get_request_url, decode_url, OP, DICT, is_tool
 from ..log import logger
-from ..dicts import dict
+from ..dicts import dicts
 from ..errors import NoResultError
 from .. import color as w_col
 
@@ -34,7 +34,7 @@ def search_webster(con, cur, input_word, is_fresh=False, no_suggestions=False, r
         req_url = get_request_url(WEBSTER_DICT_BASE_URL, input_word, DICT.MERRIAM_WEBSTER.name)
 
     if not is_fresh:
-        cached = dict.cache_run(con, cur, input_word, req_url)
+        cached = dicts.cache_run(con, cur, input_word, req_url)
         if not cached:
             fresh_run(con, cur, req_url, input_word, no_suggestions)
     else:
@@ -46,7 +46,7 @@ def fetch_webster(request_url, input_word):
 
     with requests.Session() as session:
         session.trust_env = False
-        res = dict.fetch(request_url, session)
+        res = dicts.fetch(request_url, session)
 
         res_url = res.url
         res_text = res.text
@@ -62,7 +62,7 @@ def fetch_webster(request_url, input_word):
         # if status == 301:
         #     loc = res.headers["location"]
         #     new_url = WEBSTER_BASE_URL + loc
-        #     new_res = dict.fetch(new_url, session)
+        #     new_res = dicts.fetch(new_url, session)
 
         elif status == 404:
             logger.debug(f'{OP.NOT_FOUND.name} "{input_word}" in {DICT.MERRIAM_WEBSTER.name}')
@@ -92,7 +92,7 @@ def fresh_run(con, cur, req_url, input_word, no_suggestions=False):
             # sqlite3.ProgrammingError:
             # SQLite objects created in a thread can only be used in that same thread.
             # The object was created in thread id 140704708548544 and this is thread id 123145383600128.
-            dict.save(con, cur, input_word, res_word, res_url, sub_text)
+            dicts.save(con, cur, input_word, res_word, res_url, sub_text)
     else:
         if no_suggestions:
             sys.exit(-1)
@@ -109,7 +109,7 @@ def fresh_run(con, cur, req_url, input_word, no_suggestions=False):
                             sug = w.strip()
                             suggestions.append(sug)
 
-            dict.print_spellcheck(con, cur, input_word, suggestions, DICT.MERRIAM_WEBSTER.name)
+            dicts.print_spellcheck(con, cur, input_word, suggestions, DICT.MERRIAM_WEBSTER.name)
 
 
 def get_wod():
@@ -120,12 +120,20 @@ def get_wod():
         parse_and_print_wod(res_url, res_text)
 
 
-def get_wod_list():
+def get_wod_past(req_url):
+    result = fetch_webster(req_url, "")
+    found = result[0]
+    if found:
+        res_url, res_text = result[1]
+        parse_and_print_wod(res_url, res_text)
+
+
+def get_wod_list(con, cur):
     result = fetch_webster(WEBSTER_WORD_OF_THE_DAY_URL_CALENDAR, "")
     found = result[0]
     if found:
         res_url, res_text = result[1]
-        parse_and_print_wod_calendar(res_url, res_text)
+        parse_and_print_wod_calendar(con, cur, res_url, res_text)
 
 
 def parse_redirect(nodes, res_url):
@@ -1308,14 +1316,17 @@ def parse_and_print_wod(res_url, res_text):
     print()
 
 
-def parse_and_print_wod_calendar(res_url, res_text):
+def parse_and_print_wod_calendar(con, cur, res_url, res_text):
     logger.info(f"{OP.PARSING.name} {res_url}")
 
     parser = etree.HTMLParser(remove_comments=True)
     tree = etree.HTML(res_text, parser)
     nodes = tree.xpath("//li/h2/a")
     logger.info(f"{OP.PRINTING.name} the parsed result of {res_url}")
-    data = []
+
+    data = {}
     for node in nodes:
-        data.append(node.text)
-    dict.fzf_wod(data)
+        data[node.text] = node.attrib["href"]
+
+    calendar_notice = "Select and [ENTER] to print the item's word-of-the-day meaning; [ESC] to quit out."
+    dicts.list_items_fzf(con, cur, data, "wod_calendar", calendar_notice, None, None, False)

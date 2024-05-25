@@ -13,7 +13,7 @@ from ..utils import (
     OP,
     DICT
 )
-from ..dicts import dict
+from ..dicts import dicts
 
 
 CAMBRIDGE_URL = "https://dictionary.cambridge.org"
@@ -32,7 +32,7 @@ def search_cambridge(con, cur, input_word, is_fresh=False, is_ch=False, no_sugge
             req_url = get_request_url(CAMBRIDGE_EN_SEARCH_URL, input_word, DICT.CAMBRIDGE.name)
 
     if not is_fresh:
-        cached = dict.cache_run(con, cur, input_word, req_url)
+        cached = dicts.cache_run(con, cur, input_word, req_url)
         if not cached:
             fresh_run(con, cur, req_url, input_word, is_ch, no_suggestions)
     else:
@@ -44,7 +44,7 @@ def fetch_cambridge(req_url, input_word, is_ch):
 
     with requests.Session() as session:
         session.trust_env = False # not to use proxy
-        res = dict.fetch(req_url, session)
+        res = dicts.fetch(req_url, session)
 
         if "spellcheck" in res.url:
             logger.debug(f'{OP.NOT_FOUND.name} "{input_word}" in {DICT.CAMBRIDGE.name}')
@@ -53,7 +53,7 @@ def fetch_cambridge(req_url, input_word, is_ch):
             else:
                 spell_req_url = get_request_url(CAMBRIDGE_SPELLCHECK_URL, input_word, DICT.CAMBRIDGE.name)
 
-            spell_res = dict.fetch(spell_req_url, session)
+            spell_res = dicts.fetch(spell_req_url, session)
             spell_res_url = spell_res.url
             spell_res_text = spell_res.text
             return False, (spell_res_url, spell_res_text)
@@ -83,7 +83,7 @@ def fresh_run(con, cur, req_url, input_word, is_ch, no_suggestions=False):
         parse_thread.start()
         # parse_thread.join()
 
-        dict.save(con, cur, input_word, response_word, res_url, str(first_dict))
+        dicts.save(con, cur, input_word, response_word, res_url, str(first_dict))
     else:
         if no_suggestions:
             sys.exit(-1)
@@ -106,7 +106,7 @@ def fresh_run(con, cur, req_url, input_word, is_ch, no_suggestions=False):
                         suggestions.append(sug)
 
             logger.debug(f"{OP.PRINTING.name} the parsed result of {spell_res_url}")
-            dict.print_spellcheck(con, cur, input_word, suggestions, DICT.CAMBRIDGE.name, is_ch)
+            dicts.print_spellcheck(con, cur, input_word, suggestions, DICT.CAMBRIDGE.name, is_ch)
 
 
 # ----------The Entry Point For Parse And Print----------

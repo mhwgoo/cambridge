@@ -849,7 +849,7 @@ def entry_uros(node):
 
             if elm.tag == "span" and "fw-bold fl" in attr:
                 next_sibling = elm.getnext()
-                c_print(f"#[#FD7E14]{elm.text}", end = "")
+                c_print(f"#[{w_col.eh_word_type}]{elm.text}", end = "")
                 continue
 
             if "ins" in attr:
@@ -963,45 +963,49 @@ def dictionary_entry(node):
     """Print one entry of the word and its attributes like plural types, pronounciations, tenses, etc."""
 
     print()
-
     for elm in node.iterchildren():
-        try:
-            if elm.attrib["class"]:
-                if "row entry-header" in elm.attrib["class"]:
-                    row_entry_header(elm)
+        elm_attr = elm.get("class")
+        if elm_attr is not None:
+            if "row entry-header" in elm_attr:
+                row_entry_header(elm)
+                continue
 
-                if elm.attrib["class"] == "row headword-row header-ins":
-                    row_headword_row_header_ins(elm)
+            if elm_attr == "row headword-row header-ins":
+                row_headword_row_header_ins(elm)
+                continue
 
-                if elm.attrib["class"] == "row headword-row header-vrs":
-                    row_headword_row_header_vrs(elm)
+            if elm_attr == "row headword-row header-vrs":
+                row_headword_row_header_vrs(elm)
+                continue
 
-                if elm.attrib["class"] == "vg":
-                    vg(elm)
+            if elm_attr == "vg":
+                vg(elm)
+                continue
 
-                if "entry-uros" in elm.attrib["class"]:
-                    for i in elm.iterchildren():
-                        entry_uros(i)
-                        print()
-
-                if elm.attrib["class"] == "dxnls":
-                    dxnls(elm)
-
-                if elm.attrib["class"] == "mt-3":
-                    badge = elm.getchildren()[0] # class "lbs badge mw-badge-gray-100 text-start text-wrap d-inline"
-                    print_header_badge(badge.text, end="\n")
-
-                if elm.attrib["class"] == "cxl-ref":
-                    text = list(elm.itertext())
-                    print_meaning_content(": ", end="")
-                    for t in text:
-                        t = t.strip()
-                        if t:
-                            print_meaning_content(t, end=" ")
+            if "entry-uros" in elm_attr:
+                for i in elm.iterchildren():
+                    entry_uros(i)
                     print()
+                continue
 
-        except:
-            continue
+            if elm_attr == "dxnls":
+                dxnls(elm)
+                continue
+
+            if elm_attr == "mt-3":
+                badge = elm.getchildren()[0] # class "lbs badge mw-badge-gray-100 text-start text-wrap d-inline"
+                print_header_badge(badge.text, end="\n")
+                continue
+
+            if elm_attr == "cxl-ref":
+                text = list(elm.itertext())
+                print_meaning_content(": ", end="")
+                for t in text:
+                    t = t.strip()
+                    if t:
+                        print_meaning_content(t, end=" ")
+                print()
+                continue
 
 
 ##############################

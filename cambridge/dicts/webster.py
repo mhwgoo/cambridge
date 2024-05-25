@@ -709,7 +709,7 @@ def tags(node, ancestor_attr, num_label_count):
                 has_badge = False
                 continue
 
-            if elm_attr == "ca" or elm_attr == "dx-jump":
+            if elm_attr == "ca":
                 extra(elm, ancestor_attr)
                 continue
 
@@ -849,7 +849,7 @@ def entry_uros(node):
 
             if elm.tag == "span" and "fw-bold fl" in attr:
                 next_sibling = elm.getnext()
-                c_print(f"#[yellow]{elm.text}", end = "")
+                c_print(f"#[#FD7E14]{elm.text}", end = "")
                 continue
 
             if "ins" in attr:
@@ -998,6 +998,7 @@ def dictionary_entry(node):
                         t = t.strip()
                         if t:
                             print_meaning_content(t, end=" ")
+                    print()
 
         except:
             continue

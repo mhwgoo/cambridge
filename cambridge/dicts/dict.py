@@ -159,7 +159,7 @@ def fzf(data, con, cur):
     p1 = subprocess.Popen(["echo", c], stdout=subprocess.PIPE, text=True)
     p2 = subprocess.Popen(["fzf", "--layout=reverse"], stdin=p1.stdout, stdout=subprocess.PIPE, text=True)
     input_word = p2.communicate()[0].strip("\n")
-    if p2.returncode == 130 and input_word == "": # press ESC, not word selected, quit out of fzf
+    if p2.returncode == 130 and input_word == "": # when pressing ESC, no word selected, quit out of fzf
         exit()
     if "merrian" in choices[input_word]:
         webster.search_webster(con, cur, input_word, req_url=choices[input_word])
@@ -177,10 +177,12 @@ def fzf_spellcheck(con, cur, input_word, data, dict_name, is_ch):
     c = "\n".join(choices)
     p1 = subprocess.Popen(["echo", c], stdout=subprocess.PIPE, text=True)
     p2 = subprocess.Popen(["fzf", "--layout=reverse"], stdin=p1.stdout, stdout=subprocess.PIPE, text=True)
+
     select_word = p2.communicate()[0].strip("\n")
-    if p2.returncode == 130 and select_word == "": # press ESC, not word selected, quit out of fzf
+    if p2.returncode == 130 and select_word == "": # when pressing ESC, no word selected, quit out of fzf
         exit()
-    if "merrian" in dict_name.lower():
+
+    if DICT.MERRIAM_WEBSTER.name == dict_name:
         webster.search_webster(con, cur, select_word, req_url=None)
     else:
         cambridge.search_cambridge(con, cur, select_word, is_ch=is_ch, req_url=None)

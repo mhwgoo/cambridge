@@ -874,7 +874,7 @@ def entry_uros(node):
                 for i in elm.iterchildren():
                     sub_attr = i.get("class")
                     if sub_attr is not None and sub_attr == "sub-content-thread":
-                        sub_content_thread(i, "", "")
+                        sub_content_thread(i, "")
                 print()
                 continue
 

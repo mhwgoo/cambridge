@@ -12,10 +12,10 @@ from typing import (
 JustifyMethod = Literal["left", "center", "right"]
 
 Symbol = {
-    "L_BRACKET" : '[',
-    "R_BRACKET" : ']',
-    "SLASH"     : '/',
-    "HASH"      : '#'
+    "L_BRACKET" : "[",
+    "R_BRACKET" : "]",
+    "SLASH"     : "/",
+    "HASH"      : "#"
 }
 
 
@@ -41,7 +41,7 @@ def parse_in_bracket(text):
             return new_text
 
         if t == Symbol["HASH"]:
-            new_text += get_color_escape(*hex_to_rgb(text[i : i + 7]))
+            new_text += get_color_escape(*hex_to_rgb(text[i : i + 7]), background=False)
 
     for ce in COLOR_EFFECT.keys():
         if ce.lower() in text:

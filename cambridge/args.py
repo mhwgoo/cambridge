@@ -134,9 +134,11 @@ def parse_args():
 
     if len(sys.argv) == 1:
         print_help(parser, parser_lw, parser_sw, parser_wod)
+        sys.exit()
 
     elif sys.argv[1] == "-h" or sys.argv[1] == "--help":
         print_help(parser, parser_lw, parser_sw, parser_wod)
+        sys.exit()
 
     elif sys.argv[1] == "-v" or sys.argv[1] == "--version":
         print("cambridge " + __version__)
@@ -144,6 +146,7 @@ def parse_args():
 
     elif sys.argv[1] == "l" or sys.argv[1] == "wod":
         args = parser.parse_args()
+        return args
 
     else: # only for command "s"
         to_parse = []
@@ -165,7 +168,7 @@ def parse_args():
         to_search = " ".join(word)
         to_parse.append(to_search)
         args= parser_sw.parse_args(to_parse)
-    return args
+        return args
 
 
 def print_help(parser, parser_lw, parser_sw, parser_wod):

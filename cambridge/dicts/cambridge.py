@@ -411,15 +411,36 @@ def parse_example(def_block, is_pexample=False):
         c_print(f"#[#757575]{example}{example_lan_sent}#[/#757575]")
 
 
+def print_tag(node):
+    for i in node.find_all("span"):
+        has_class = i.has_attr("class")
+        parent = i.find_parent()
+        parent_has_class = parent.has_attr("class")
+
+        # bs4 treats `class="x-h dx-h"` as a dict, key is 'class', value is ['x-h', 'dx-h']
+        # which is counterintuitive, especially with the whole class value as a list.
+
+        if has_class and i.attrs["class"] == ['x-h', 'dx-h']:
+            c_print("#[#757575]" + "  • " + i.text, end="")
+        elif parent_has_class and parent.attrs["class"] == ['x-h', 'dx-h']:
+            continue
+        elif has_class and i.attrs["class"] == ['x-lab', 'dx-lab']:
+            c_print("#[#757575]" + " [" + i.text + "]", end="")
+        elif parent_has_class and parent.attrs["class"] == ['x-lab', 'dx-lab']:
+            continue
+        elif has_class and i.attrs["class"] == ['x-pos', 'dx-pos']:
+            print(" " + i.text, end="")
+        else:
+            c_print("#[#757575]" + " " + i.text, end="")
+    print()
+
+
 def print_synonym(block):
     s_title = block.strong.text.upper()
     c_print("#[bold #757575]" + "\n  " + s_title)
 
-    for s in block.find_all("div", ["item lc lc1 lpb-10 lpr-10", "item lc lc1 lc-xs6-12 lpb-10 lpr-10"]):
-        s = s.text
-        c_print("#[#757575]" + "  • " + s)
-
-    print()
+    for item in block.find_all("div", ["item lc lc1 lpb-10 lpr-10", "item lc lc1 lc-xs6-12 lpb-10 lpr-10"]):
+        print_tag(item)
 
 
 def parse_synonym(block):
@@ -436,14 +457,7 @@ def parse_see_also(def_block):
     if see_also_block is not None:
         see_also = see_also_block.strong.text.upper()
         c_print("#[bold #757575]" + "\n  " + see_also)
-
-        for item in see_also_block.find_all("span", ["x-h dx-h", "x-p dx-p"]):
-            c_print("#[#757575]" + "  • " + item.text, end=" ")
-            next_sibling = item.find_next_sibling("span")
-            if next_sibling is not None:
-                print(next_sibling.text)
-            else:
-                print()
+        print_tag(see_also_block)
 
 
 def parse_compare(def_block):
@@ -452,16 +466,8 @@ def parse_compare(def_block):
     if compare_block is not None:
         compare = compare_block.strong.text.upper()
         c_print("#[bold #757575]" + "\n  " + compare)
-        for word in compare_block.find_all("div", ["item lc lc1 lpb-10 lpr-10", "item lc lc1 lc-xs6-12 lpb-10 lpr-10"]):
-            item = word.a.text
-            c_print("#[#757575]" + "  • " + item + "#[/#757575]", end="")
-
-            usage = word.find("span", "x-lab dx-lab")
-            if usage:
-                usage = usage.text
-                print(usage, end="")
-
-            print()
+        for item in compare_block.find_all("div", ["item lc lc1 lpb-10 lpr-10", "item lc lc1 lc-xs6-12 lpb-10 lpr-10"]):
+            print_tag(item)
 
 
 def parse_usage_note(def_block):
@@ -494,9 +500,8 @@ def parse_idiom(block):
     if idiom_block is not None:
         idiom_title = idiom_block.h3.text.upper()
         c_print("#[bold #757575]" + "\n" + idiom_title)
-        for idiom in idiom_block.find_all("div", ["item lc lc1 lpb-10 lpr-10", "item lc lc1 lc-xs6-12 lpb-10 lpr-10"]):
-            idiom = idiom.text
-            c_print("#[#757575]" + "  • " + idiom)
+        for item in idiom_block.find_all("div", ["item lc lc1 lpb-10 lpr-10", "item lc lc1 lc-xs6-12 lpb-10 lpr-10"]):
+            print_tag(item)
 
 
 def parse_sole_idiom(block):
@@ -514,9 +519,8 @@ def parse_phrasal_verb(block):
     if pv_block is not None:
         pv_title = pv_block.h3.text.upper()
         c_print("#[bold #757575]" + "\n" + pv_title)
-        for pv in pv_block.find_all("div", ["item lc lc1 lc-xs6-12 lpb-10 lpr-10", "item lc lc1 lpb-10 lpr-10"]):
-            pv = pv.text
-            c_print("#[#757575]" + "  • " + pv)
+        for item in pv_block.find_all("div", ["item lc lc1 lc-xs6-12 lpb-10 lpr-10", "item lc lc1 lpb-10 lpr-10"]):
+            print_tag(item)
 
 
 def parse_dict_body(block):

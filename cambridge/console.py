@@ -101,12 +101,19 @@ def c_print(*objects, sep=' ', end='\n', file=None, flush=False, justify: Option
     if not objects:
         objects = ("\n",)
 
-    text = parse(objects[0])
+    if len(objects)  == 1:
+        text = parse(objects[0])
+    else:
+        new_data = ""
+        for i in objects:
+            new_data = new_data + i
+        text = parse(new_data)
 
     if justify is not None and isinstance(objects[0], str):
         cols = os.get_terminal_size().columns
 
         # https://docs.python.org/3/library/string.html#grammar-token-format-spec-align
+        # FIXME to strip out color effect characters when justifying
         if justify == "right":
             print(f"{text:>{cols}}")
         elif justify == "left":

@@ -212,10 +212,10 @@ def list_words(args, con, cur):
         except sqlite3.OperationalError:
             logger.error("You may haven't searched any word yet")
         else:
-            list_notice = "Select and [ENTER] to print the item's meaning; [ESC] to quit out."
+            list_notice = "Select to print the item's meaning; [ESC] to quit out."
             if not is_tool("fzf"):
                 print()
-                dicts.list_items(data, True)
+                dicts.list_items(data, "cache_list")
                 print()
             else:
                 dicts.list_items_fzf(con, cur, data, "cache_list", list_notice, None, None, False)
@@ -226,22 +226,21 @@ def list_words(args, con, cur):
         except sqlite3.OperationalError:
             logger.error("You may haven't searched any word yet")
         else:
-            list_notice = "Select and [ENTER] to print the item's meaning; [ESC] to quit out."
+            list_notice = "Select to print the item's meaning; [ESC] to quit out."
             if args.time:
                 if not is_tool("fzf"):
                     data.sort(reverse=False, key=lambda tup: tup[2])
                     print()
-                    dicts.list_items(data, True)
+                    dicts.list_items(data, "cache_list")
                     print()
                 else:
                     data.sort(reverse=True, key=lambda tup: tup[2])
                     dicts.list_items_fzf(con, cur, data, "cache_list", list_notice, None, None, False)
-
             else:
                 data.sort()
                 if not is_tool("fzf"):
                     print()
-                    dicts.list_items(data, True)
+                    dicts.list_items(data, "cache_list")
                     print()
                 else:
                     dicts.list_items_fzf(con, cur, data, "cache_list", list_notice, None, None, False)

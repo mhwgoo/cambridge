@@ -97,8 +97,6 @@ def save(con, cur, input_word, response_word, response_url, response_text):
     except sqlite3.IntegrityError as error:
         error_str = str(error)
         if "UNIQUE constraint" in error_str:
-            # For version v3.6.3 and prior, whose cache db has `response_word` column being UNIQUE
-            # in this case, update the record with the new search result
             if "response_word" in error_str:
                 delete_word(con, cur, response_word)
                 insert_into_table(con, cur, input_word, response_word, response_url, response_text)
@@ -120,44 +118,51 @@ def print_spellcheck(con, cur, input_word, suggestions, dict_name, is_ch=False):
     flip_dict = DICT.MERRIAM_WEBSTER.name if is_cambridge else DICT.CAMBRIDGE.name
 
     if is_tool("fzf"):
-        spellcheck_notice = "NOT FOUND. Select and [ENTER] to print the suggestion's meaning; [NUMBER] + [ENTER] to switch to " + flip_dict + "; [ESC] to quit out."
+        spellcheck_notice = "NOT FOUND. Select to print the suggestion's meaning; [NUMBER] to switch to " + flip_dict + "; Input a new word; [ESC] to quit out."
         list_items_fzf(con, cur, suggestions, "spell_check", spellcheck_notice, input_word, dict_name, is_ch)
     else:
-        list_items(suggestions, False)
-        spellcheck_notice = "NOT FOUND. [NUMBER] + [ENTER] to print the suggestion's meaning; [ENTER] to switch to " + flip_dict + "; [ANY OTHER KEY] to quit out: "
+        c_print(dict_name + (int(len(dict_name)/2))*" ", justify="center")
+        list_items(suggestions, "spell_check")
+        spellcheck_notice = "NOT FOUND. [NUMBER] to print the suggestion's meaning; [ENTER] to switch to " + flip_dict + "; Input a new word; [ANY OTHER KEY] to quit out: "
         c_print(spellcheck_notice, end="")
         key = input("")
 
-        if key.isnumeric() and (1 <= int(key) <= len(suggestions)):
-            cambridge.search_cambridge(con, cur, suggestions[int(key) - 1], False, is_ch) if is_cambrige else webster.search_webster(con, cur, suggestions[int(key) - 1])
+        if (key.isnumeric() and (1 <= int(key) <= len(suggestions))) or len(key) > 1:
+            cambridge.search_cambridge(con, cur, suggestions[int(key) - 1], False, is_ch) if is_cambridge else webster.search_webster(con, cur, suggestions[int(key) - 1])
         elif key == "":
-            cambridge.search_cambridge(con, cur, suggestions[int(key) - 1], False, is_ch) if not is_cambrige else webster.search_webster(con, cur, suggestions[int(key) - 1])
+            webster.search_webster(con, cur, input_word) if is_cambridge else cambridge.search_cambridge(con, cur, input_word, False, is_ch)
         else:
             sys.exit()
 
 
-def print_word_per_line(index, word, extra=None):
+def print_word_per_line(index, word, extra=""):
     cols = os.get_terminal_size().columns
     word_len = len(word)
 
     if index % 2 == 0:
-        print(f"\033[37;;40m{index+1:6d}|{word}", end="")
-        if extra is not None:
-            print(f"\033[37;;40m{extra:>{cols-word_len-7}}\033[0m")
+        print(f"\033[37;1;100m{index+1:6d}|{word}", end="")
+        print(f"\033[37;1;100m{extra:>{cols-word_len-7}}\033[0m")
     else:
-        c_print(f"#[#4A7D95]{index+1:6d}|{word}", end="")
-        if extra is not None:
-            c_print(f"#[#4A7D95]{extra:>{cols-word_len-7}}")
+        c_print(f"#[bold #4A7D95]{index+1:6d}|{word}", end="")
+        c_print(f"#[bold #4A7D95]{extra:>{cols-word_len-7}}")
 
 
-def list_items(data, from_list_words=False):
+def list_items(data, initiator: Optional[Initiator] = None):
     for index, entry in enumerate(data):
-        if from_list_words:
+        if initiator == "cache_list":
             word = entry[0]
             dict_name = "CAMBRIDGE" if "cambridge" in entry[1] else "WEBSTER"
             print_word_per_line(index, word, dict_name)
+        elif initiator == "wod_calendar":
+            date_string = data[entry].split("/")[-1]
+            date = ""
+            for i, c in enumerate(date_string):
+                if c.isnumeric():
+                    date = date_string[i:]
+                    break
+            print_word_per_line(index, entry, date)
         else:
-            print_word_per_line(index, entry, extra=None)
+            print_word_per_line(index, entry, "")
 
 
 def list_items_fzf(con, cur, data, initiator: Optional[Initiator] = None, notice="", input_word=None, dict_name=None, is_ch=False):
@@ -176,7 +181,7 @@ def list_items_fzf(con, cur, data, initiator: Optional[Initiator] = None, notice
 
     select_word = p2.communicate()[0].strip("\n")
 
-    logger.info(f"select_word by fzf is: {repr(select_word)}; returncode by fzf is: {p2.returncode}")
+    logger.debug(f"select_word by fzf is: {repr(select_word)}; returncode by fzf is: {p2.returncode}")
 
     is_cambridge = (dict_name == DICT.CAMBRIDGE.name)
 

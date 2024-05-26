@@ -1317,16 +1317,21 @@ def parse_and_print_wod(res_url, res_text):
 
 
 def parse_and_print_wod_calendar(con, cur, res_url, res_text):
-    logger.info(f"{OP.PARSING.name} {res_url}")
+    logger.debug(f"{OP.PARSING.name} {res_url}")
 
     parser = etree.HTMLParser(remove_comments=True)
     tree = etree.HTML(res_text, parser)
     nodes = tree.xpath("//li/h2/a")
-    logger.info(f"{OP.PRINTING.name} the parsed result of {res_url}")
+    logger.debug(f"{OP.PRINTING.name} the parsed result of {res_url}")
 
     data = {}
     for node in nodes:
         data[node.text] = node.attrib["href"]
 
-    calendar_notice = "Select and [ENTER] to print the item's word-of-the-day meaning; [ESC] to quit out."
-    dicts.list_items_fzf(con, cur, data, "wod_calendar", calendar_notice, None, None, False)
+    if is_tool("fzf"):
+        calendar_notice = "Select to print the item's word-of-the-day meaning; [ESC] to quit out."
+        dicts.list_items_fzf(con, cur, data, "wod_calendar", calendar_notice, None, None, False)
+    else:
+        title = DICT.MERRIAM_WEBSTER.name + " Calendar of Word of the Day"
+        c_print(title + (int(len(title)/2))*" ", justify="center")
+        dicts.list_items(data, "wod_calendar")

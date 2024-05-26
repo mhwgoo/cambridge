@@ -22,18 +22,11 @@ I'm a terminal person tired of pulling out a GUI app or browser, inputting words
 3. less than 2s taken to do all the work for the word, including fetching, parsing, printing, and writing cache
 4. less than 0.1s for the same word's later search
 5. only the first dictionary from Cambridge (assuming the optimal) to avoid being confused by multiple dictionaries
-6. a list of word/phrase suggestions will be given, if not found
+6. a list of suggestions will be given, if not found
 7. `camb l` to list words and phrases you've found before
 8. colorscheme well customized to dark, light, blueish, grayish, gruvbox terminal backgrounds
-
-## `fzf`
-With [fzf](https://github.com/junegunn/fzf) installed, `camb l | fzf --preview 'camb {}'` will get you a taste of the `fzf` magic:
-1. display the whole word list
-2. fuzzy find a word from the word list & preview its meaning instantly
-3. preview each word definition instantly as you scroll through the list
-4. `alias cambl="camb l | fzf --preview 'camb {}'"` can be added in your `.bashrc` for convenience
-
-![list words](/screenshots/fzf.png)
+9. support displaying spellcheck suggestion list, word of the day list, cache list by fzf if installed
+10. if fzf not installed, the aforementioned lists's printing has also been beautified with only the terminal
 
 ## Install & Uninstall
 ```python
@@ -68,6 +61,10 @@ camb l -d               # delete one or more words/phrases(separated by ", ") fr
 
 #### Command `wod`
 For displaying 'Word of the Day' in the Merriam Webster Dictionary
+```bash
+camb wod                # list today's Word of the Day from Merriam-Webster Dictionary
+camb wod -l             # list all words of the day
+```
 
 #### General options
 ```bash
@@ -76,7 +73,7 @@ camb -v, --version      # print the current version of the program
 ```
 
 ## TO-DOS
-* [ ] input a new word/phrase when spelling suggestions are not satisfactory without restarting a new command line
+* [x] input a new word/phrase when spelling suggestions are not satisfactory without restarting a new command line
 * [ ] check a particular expression against all cached sentence examples, if found, we can confidently use it like that in our speaking or writing
 * [ ] split and accumulate all sentences from a whole bulk of cache as independent Corpus, then we can use this Corpus outside this program
 * [ ] strengthen 'Word of the Day' functionality from Webster

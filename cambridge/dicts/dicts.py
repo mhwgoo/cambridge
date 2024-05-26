@@ -127,8 +127,10 @@ def print_spellcheck(con, cur, input_word, suggestions, dict_name, is_ch=False):
         c_print(spellcheck_notice, end="")
         key = input("")
 
-        if (key.isnumeric() and (1 <= int(key) <= len(suggestions))) or len(key) > 1:
+        if (key.isnumeric() and (1 <= int(key) <= len(suggestions))):
             cambridge.search_cambridge(con, cur, suggestions[int(key) - 1], False, is_ch) if is_cambridge else webster.search_webster(con, cur, suggestions[int(key) - 1])
+        elif len(key) > 1:
+            cambridge.search_cambridge(con, cur, key, False, is_ch) if is_cambridge else webster.search_webster(con, cur, key)
         elif key == "":
             webster.search_webster(con, cur, input_word) if is_cambridge else cambridge.search_cambridge(con, cur, input_word, False, is_ch)
         else:
@@ -188,7 +190,7 @@ def list_items_fzf(con, cur, data, initiator: Optional[Initiator] = None, notice
     if len(select_word) == 1 and not select_word.isalpha() and initiator == "spell_check":
         webster.search_webster(con, cur, input_word, req_url=None) if is_cambridge else cambridge.search_cambridge(con, cur, input_word, is_ch=is_ch, req_url=None)
     elif p2.returncode == 0 and select_word != "":
-        if initiator == "wod_calendar":
+        if initiator == "wod_calendar" and select_word in data.keys():
             url = webster.WEBSTER_BASE_URL + data[select_word]
             webster.get_wod_past(url)
         else:

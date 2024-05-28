@@ -24,7 +24,7 @@ CAMBRIDGE_SPELLCHECK_URL = CAMBRIDGE_URL + "/spellcheck/english/?q="
 CAMBRIDGE_SPELLCHECK_URL_CN = CAMBRIDGE_URL + "/spellcheck/english-chinese-simplified/?q="
 
 # ----------Request Web Resource----------
-def search_cambridge(con, cur, input_word, is_fresh=False, is_ch=False, no_suggestions=False, req_url=None):
+def search_cambridge(input_word, is_fresh=False, is_ch=False, no_suggestions=False, req_url=None):
     if req_url is None:
         if is_ch:
             req_url = get_request_url(CAMBRIDGE_CN_SEARCH_URL, input_word, DICT.CAMBRIDGE.name)
@@ -32,11 +32,11 @@ def search_cambridge(con, cur, input_word, is_fresh=False, is_ch=False, no_sugge
             req_url = get_request_url(CAMBRIDGE_EN_SEARCH_URL, input_word, DICT.CAMBRIDGE.name)
 
     if not is_fresh:
-        cached = dicts.cache_run(con, cur, input_word, req_url)
+        cached = dicts.cache_run(input_word, req_url)
         if not cached:
-            fresh_run(con, cur, req_url, input_word, is_ch, no_suggestions)
+            fresh_run(req_url, input_word, is_ch, no_suggestions)
     else:
-        fresh_run(con, cur, req_url, input_word, is_ch, no_suggestions)
+        fresh_run(req_url, input_word, is_ch, no_suggestions)
 
 
 def fetch_cambridge(req_url, input_word, is_ch):
@@ -66,7 +66,7 @@ def fetch_cambridge(req_url, input_word, is_ch):
             return True, (res_url, res_text)
 
 
-def fresh_run(con, cur, req_url, input_word, is_ch, no_suggestions=False):
+def fresh_run(req_url, input_word, is_ch, no_suggestions=False):
     """Print the result without cache."""
 
     result = fetch_cambridge(req_url, input_word, is_ch)
@@ -83,7 +83,7 @@ def fresh_run(con, cur, req_url, input_word, is_ch, no_suggestions=False):
         parse_thread.start()
         # parse_thread.join()
 
-        dicts.save(con, cur, input_word, response_word, res_url, str(first_dict))
+        dicts.save(input_word, response_word, res_url, str(first_dict))
     else:
         if no_suggestions:
             sys.exit(-1)
@@ -106,7 +106,7 @@ def fresh_run(con, cur, req_url, input_word, is_ch, no_suggestions=False):
                         suggestions.append(sug)
 
             logger.debug(f"{OP.PRINTING.name} the parsed result of {spell_res_url}")
-            dicts.print_spellcheck(con, cur, input_word, suggestions, DICT.CAMBRIDGE.name, is_ch)
+            dicts.print_spellcheck(input_word, suggestions, DICT.CAMBRIDGE.name, is_ch)
 
 
 # ----------The Entry Point For Parse And Print----------

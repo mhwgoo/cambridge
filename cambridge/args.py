@@ -1,7 +1,7 @@
-import sqlite3
 import logging
 import argparse
 import sys
+import sqlite3
 
 from .cache import (
     get_response_words,
@@ -185,8 +185,8 @@ def print_help(parser, parser_lw, parser_sw, parser_wod):
     sys.exit()
 
 
-def delete(word, con, cur):
-    deleted, data = delete_word(con, cur, word)
+def delete(word):
+    deleted, data = delete_word(word)
 
     if deleted and data is not None:
         for i in data:
@@ -198,7 +198,7 @@ def delete(word, con, cur):
         print(f'{OP.NOT_FOUND.name} "{word}" in cache')
 
 
-def list_words(args, con, cur):
+def list_words(args):
     # The subparser i.e. the sub-command isn't in the namespace of args
 
     if args.delete:
@@ -207,11 +207,11 @@ def list_words(args, con, cur):
         for w in words.split(","):
             i = w.strip()
             if i:
-                delete(i, con, cur)
+                delete(i)
 
     elif args.random:
         try:
-            data = get_random_words(cur)
+            data = get_random_words()
         except sqlite3.OperationalError:
             logger.error("You may haven't searched any word yet")
         else:
@@ -221,11 +221,11 @@ def list_words(args, con, cur):
                 dicts.list_items(data, "cache_list")
                 print()
             else:
-                dicts.list_items_fzf(con, cur, data, "cache_list", list_notice, None, None, False)
+                dicts.list_items_fzf(data, "cache_list", list_notice, None, None, False)
 
     else:
         try:
-            data = get_response_words(cur)
+            data = get_response_words()
         except sqlite3.OperationalError:
             logger.error("You may haven't searched any word yet")
         else:
@@ -238,7 +238,7 @@ def list_words(args, con, cur):
                     print()
                 else:
                     data.sort(reverse=True, key=lambda tup: tup[2])
-                    dicts.list_items_fzf(con, cur, data, "cache_list", list_notice, None, None, False)
+                    dicts.list_items_fzf(data, "cache_list", list_notice, None, None, False)
             else:
                 data.sort()
                 if not is_tool("fzf"):
@@ -246,10 +246,10 @@ def list_words(args, con, cur):
                     dicts.list_items(data, "cache_list")
                     print()
                 else:
-                    dicts.list_items_fzf(con, cur, data, "cache_list", list_notice, None, None, False)
+                    dicts.list_items_fzf(data, "cache_list", list_notice, None, None, False)
 
 
-def search_word(args, con, cur):
+def search_word(args):
     """
     The function is triggered when a user searches a word or phrase on terminal.
     First checks the args having "verbose" in it or not, if so, the debug mode will be turned on.
@@ -277,14 +277,14 @@ def search_word(args, con, cur):
         sys.exit()
 
     if is_webster:
-        webster.search_webster(con, cur, input_word, is_fresh, no_suggestions, None)
+        webster.search_webster(input_word, is_fresh, no_suggestions, None)
     else:
-        cambridge.search_cambridge(con, cur, input_word, is_fresh, is_ch, no_suggestions, None)
+        cambridge.search_cambridge(input_word, is_fresh, is_ch, no_suggestions, None)
 
 
-def wod(args, con, cur):
+def wod(args):
     if args.list:
-        webster.get_wod_list(con, cur)
+        webster.get_wod_list()
 
     else:
         webster.get_wod()

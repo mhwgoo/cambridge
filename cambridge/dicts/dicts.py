@@ -1,8 +1,8 @@
 import sys
 import os
-import sqlite3
 import requests
 import subprocess
+import sqlite3
 from fake_user_agent import user_agent
 
 from ..cache import insert_into_table, get_cache, delete_word
@@ -17,7 +17,7 @@ from typing import (
     Literal
 )
 
-Initiator = Literal["wod_calendar", "spell_check", "cache_list"]
+Initiator = Literal["wod_calendar", "spell_check", "cache_list", "redirect_list"]
 
 def fetch(url, session):
     """Make a web request with retry mechanism."""
@@ -56,22 +56,22 @@ def fetch(url, session):
             return r
 
 
-def cache_run(con, cur, input_word, req_url):
+def cache_run(input_word, req_url):
     """Check the cache is from Cambridge or Merrian Webster."""
 
     # data is a tuple (response_url, response_text) if any
-    data = get_cache(con, cur, input_word, req_url)
+    data = get_cache(input_word, req_url)
 
     if data is None:
         if "s" != input_word[-1]:
             return False
         else:
-            data = get_cache(con, cur, input_word[:-1], req_url)
+            data = get_cache(input_word[:-1], req_url)
             if data is None:
                 if "es" != input_word[-2:]:
                     return False
                 else:
-                    data = get_cache(con, cur, input_word[:-2], req_url)
+                    data = get_cache(input_word[:-2], req_url)
                     if data is None:
                         return False
 
@@ -89,17 +89,17 @@ def cache_run(con, cur, input_word, req_url):
     return True
 
 
-def save(con, cur, input_word, response_word, response_url, response_text):
+def save(input_word, response_word, response_url, response_text):
     """Save a word info into local DB for cache."""
 
     try:
-        insert_into_table(con, cur, input_word, response_word, response_url, response_text)
+        insert_into_table(input_word, response_word, response_url, response_text)
     except sqlite3.IntegrityError as error:
         error_str = str(error)
         if "UNIQUE constraint" in error_str:
             if "response_word" in error_str:
-                delete_word(con, cur, response_word)
-                insert_into_table(con, cur, input_word, response_word, response_url, response_text)
+                delete_word(response_word)
+                insert_into_table(input_word, response_word, response_url, response_text)
                 logger.debug(f'{OP.UPDATED.name} cache for "{input_word}" with the new search result\n')
             else:
                 logger.debug(f'{OP.CANCELLED.name} caching "{input_word}", because it has been already cached before\n')
@@ -111,7 +111,7 @@ def save(con, cur, input_word, response_word, response_url, response_text):
         logger.debug(f'{OP.CACHED.name} the search result of "{input_word}"')
 
 
-def print_spellcheck(con, cur, input_word, suggestions, dict_name, is_ch=False):
+def print_spellcheck(input_word, suggestions, dict_name, is_ch=False):
     """Parse and print spellcheck info."""
 
     is_cambridge = (dict_name == DICT.CAMBRIDGE.name)
@@ -119,7 +119,7 @@ def print_spellcheck(con, cur, input_word, suggestions, dict_name, is_ch=False):
 
     if is_tool("fzf"):
         spellcheck_notice = "NOT FOUND. Select to print the suggestion's meaning; [NUMBER] to switch to " + flip_dict + "; Input a new word; [ESC] to quit out."
-        list_items_fzf(con, cur, suggestions, "spell_check", spellcheck_notice, input_word, dict_name, is_ch)
+        list_items_fzf(suggestions, "spell_check", spellcheck_notice, input_word, dict_name, is_ch)
     else:
         c_print(dict_name + (int(len(dict_name)/2))*" ", justify="center")
         list_items(suggestions, "spell_check")
@@ -128,11 +128,11 @@ def print_spellcheck(con, cur, input_word, suggestions, dict_name, is_ch=False):
         key = input("")
 
         if (key.isnumeric() and (1 <= int(key) <= len(suggestions))):
-            cambridge.search_cambridge(con, cur, suggestions[int(key) - 1], False, is_ch) if is_cambridge else webster.search_webster(con, cur, suggestions[int(key) - 1])
+            cambridge.search_cambridge(suggestions[int(key) - 1], False, is_ch) if is_cambridge else webster.search_webster(suggestions[int(key) - 1])
         elif len(key) > 1:
-            cambridge.search_cambridge(con, cur, key, False, is_ch) if is_cambridge else webster.search_webster(con, cur, key)
+            cambridge.search_cambridge(key, False, is_ch) if is_cambridge else webster.search_webster(key)
         elif key == "":
-            webster.search_webster(con, cur, input_word) if is_cambridge else cambridge.search_cambridge(con, cur, input_word, False, is_ch)
+            webster.search_webster(input_word) if is_cambridge else cambridge.search_cambridge(input_word, False, is_ch)
         else:
             sys.exit()
 
@@ -167,7 +167,7 @@ def list_items(data, initiator: Optional[Initiator] = None):
             print_word_per_line(index, entry, "")
 
 
-def list_items_fzf(con, cur, data, initiator: Optional[Initiator] = None, notice="", input_word=None, dict_name=None, is_ch=False):
+def list_items_fzf(data, initiator: Optional[Initiator] = None, notice="", input_word=None, dict_name=None, is_ch=False):
     choices = ""
     if initiator == "cache_list":
         for i in data:
@@ -188,12 +188,12 @@ def list_items_fzf(con, cur, data, initiator: Optional[Initiator] = None, notice
     is_cambridge = (dict_name == DICT.CAMBRIDGE.name)
 
     if len(select_word) == 1 and not select_word.isalpha() and initiator == "spell_check":
-        webster.search_webster(con, cur, input_word, req_url=None) if is_cambridge else cambridge.search_cambridge(con, cur, input_word, is_ch=is_ch, req_url=None)
+        webster.search_webster(input_word, req_url=None) if is_cambridge else cambridge.search_cambridge(input_word, is_ch=is_ch, req_url=None)
     elif p2.returncode == 0 and select_word != "":
         if initiator == "wod_calendar" and select_word in data.keys():
             url = webster.WEBSTER_BASE_URL + data[select_word]
             webster.get_wod_past(url)
         else:
-            cambridge.search_cambridge(con, cur, select_word, is_ch=is_ch, req_url=None) if is_cambridge else webster.search_webster(con, cur, select_word, req_url=None)
+            cambridge.search_cambridge(select_word, is_ch=is_ch, req_url=None) if is_cambridge else webster.search_webster(select_word, req_url=None)
     else:
         sys.exit()

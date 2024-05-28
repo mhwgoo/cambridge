@@ -22,7 +22,7 @@ word_forms = []   # A word may have multiple word forms, e.g. "ran", "running", 
 word_types = []   # A word's word types, e.g. "preposition", "adjective"
 
 
-def search_webster(con, cur, input_word, is_fresh=False, no_suggestions=False, req_url=None):
+def search_webster(input_word, is_fresh=False, no_suggestions=False, req_url=None):
     """
     Entry point for searching a word in Webster.
     It first checks the cache, if the word has been cached,
@@ -34,11 +34,11 @@ def search_webster(con, cur, input_word, is_fresh=False, no_suggestions=False, r
         req_url = get_request_url(WEBSTER_DICT_BASE_URL, input_word, DICT.MERRIAM_WEBSTER.name)
 
     if not is_fresh:
-        cached = dicts.cache_run(con, cur, input_word, req_url)
+        cached = dicts.cache_run(input_word, req_url)
         if not cached:
-            fresh_run(con, cur, req_url, input_word, no_suggestions)
+            fresh_run(req_url, input_word, no_suggestions)
     else:
-        fresh_run(con, cur, req_url, input_word, no_suggestions)
+        fresh_run(req_url, input_word, no_suggestions)
 
 
 def fetch_webster(request_url, input_word):
@@ -73,7 +73,7 @@ def fetch_webster(request_url, input_word):
             sys.exit()
 
 
-def fresh_run(con, cur, req_url, input_word, no_suggestions=False):
+def fresh_run(req_url, input_word, no_suggestions=False):
     """Print the result without cache."""
 
     result = fetch_webster(req_url, input_word)
@@ -92,7 +92,7 @@ def fresh_run(con, cur, req_url, input_word, no_suggestions=False):
             # sqlite3.ProgrammingError:
             # SQLite objects created in a thread can only be used in that same thread.
             # The object was created in thread id 140704708548544 and this is thread id 123145383600128.
-            dicts.save(con, cur, input_word, res_word, res_url, sub_text)
+            dicts.save(input_word, res_word, res_url, sub_text)
     else:
         if no_suggestions:
             sys.exit(-1)
@@ -109,7 +109,7 @@ def fresh_run(con, cur, req_url, input_word, no_suggestions=False):
                             sug = w.strip()
                             suggestions.append(sug)
 
-            dicts.print_spellcheck(con, cur, input_word, suggestions, DICT.MERRIAM_WEBSTER.name)
+            dicts.print_spellcheck(input_word, suggestions, DICT.MERRIAM_WEBSTER.name)
 
 
 def get_wod():
@@ -128,41 +128,46 @@ def get_wod_past(req_url):
         parse_and_print_wod(res_url, res_text)
 
 
-def get_wod_list(con, cur):
+def get_wod_list():
     result = fetch_webster(WEBSTER_WORD_OF_THE_DAY_URL_CALENDAR, "")
     found = result[0]
     if found:
         res_url, res_text = result[1]
-        parse_and_print_wod_calendar(con, cur, res_url, res_text)
+        parse_and_print_wod_calendar(res_url, res_text)
 
-
+#TODO
 def parse_redirect(nodes, res_url):
     input_word = decode_url(res_url).split("/")[-1]
-    print("No exact result found.")
-    c_print(f"The following entries include the term #[#b22222 bold]{input_word}#[/#b22222 bold].")
+    redirect_notice = "No exact result found. The following suggestions include '{input_word}'"
 
-    for node in nodes:
-        try:
-            attr = node.attrib["id"]
-        except KeyError:
-            attr = node.attrib["class"]
+    if not is_tool("fzf"):
+        c_print(redirect_notice + (int(len(redirect_notice)/2))*" ", justify="center")
 
-        if "row entry-header" in attr:
-            print()
-            row_entry_header(node, True)
-            continue
+        for node in nodes:
+            try:
+                attr = node.attrib["id"]
+            except KeyError:
+                attr = node.attrib["class"]
 
-        if "-entry" in attr:
-            print()
-            for n in node.iterchildren():
-                if n.tag == "div" and n.attrib["class"] == "vg":
-                    for child in n.iterchildren():
-                        if child.tag == "p":
-                            x = list(child.itertext())
-                            print("".join(x).strip())
-            continue
+            if "row entry-header" in attr:
+                print()
+                row_entry_header(node, True)
+                continue
 
-    c_print(f'\n#[#757575]You can add "camb -w" before one above entry to get its full definition from the {DICT.MERRIAM_WEBSTER.name} dictionary')
+            if "-entry" in attr:
+                print()
+                for n in node.iterchildren():
+                    if n.tag == "div" and n.attrib["class"] == "vg":
+                        for child in n.iterchildren():
+                            if child.tag == "p":
+                                x = list(child.itertext())
+                                print("".join(x).strip())
+                continue
+
+        c_print(f'\n#[#757575]You can add "camb -w" before one above entry to get its full definition from the {DICT.MERRIAM_WEBSTER.name} dictionary')
+    else:
+        redirect_notice += " Select to print the suggestion's meaning; [ESC] to quit out."
+        list_items_fzf(data, "redirect_list", redirect_notice, input_word, DICT.MERRIAM_WEBSTER.name, is_ch=False)
 
 
 def parse_dict(res_text, found, res_url, is_fresh):
@@ -196,7 +201,7 @@ def parse_dict(res_text, found, res_url, is_fresh):
             sys.exit()
 
         result = sub_tree.xpath('//*[@id="left-content"]/div[contains(@id, "-entry-1")]/div[1]/div/div[1]/h1/text()') \
-              or sub_tree.xpath('//*[@id="left-content"]/div[contains(@id, "-entry-1")]/div[1]/div/div/h1/span/text()')
+               or sub_tree.xpath('//*[@id="left-content"]/div[contains(@id, "-entry-1")]/div[1]/div/div/h1/span/text()')
 
         if len(result) != 0:
             global res_word
@@ -212,9 +217,9 @@ def parse_dict(res_text, found, res_url, is_fresh):
         ## NOTE: [only for debug]
         # for node in nodes:
         #     try:
-        #         print("id:    ", node.attrib["id"])
+        #        print("id:    ", node.attrib["id"])
         #     except KeyError:
-        #         print("class: ", node.attrib["class"])
+        #        print("class: ", node.attrib["class"])
 
         # sys.exit()
 
@@ -1316,7 +1321,7 @@ def parse_and_print_wod(res_url, res_text):
     print()
 
 
-def parse_and_print_wod_calendar(con, cur, res_url, res_text):
+def parse_and_print_wod_calendar(res_url, res_text):
     logger.debug(f"{OP.PARSING.name} {res_url}")
 
     parser = etree.HTMLParser(remove_comments=True)
@@ -1330,7 +1335,7 @@ def parse_and_print_wod_calendar(con, cur, res_url, res_text):
 
     if is_tool("fzf"):
         calendar_notice = "Select to print the item's word-of-the-day meaning; [ESC] to quit out."
-        dicts.list_items_fzf(con, cur, data, "wod_calendar", calendar_notice, None, None, False)
+        dicts.list_items_fzf(data, "wod_calendar", calendar_notice, None, None, False)
     else:
         title = DICT.MERRIAM_WEBSTER.name + " Calendar of Word of the Day"
         c_print(title + (int(len(title)/2))*" ", justify="center")

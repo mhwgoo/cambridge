@@ -1,11 +1,9 @@
 import logging
 import argparse
 import sys
-import sqlite3
 
 from .cache import (
     get_response_words,
-    get_random_words,
     delete_word,
 )
 from .console import c_print
@@ -210,11 +208,11 @@ def list_words(args):
                 delete(i)
 
     elif args.random:
-        try:
-            data = get_random_words()
-        except sqlite3.OperationalError:
+        result = get_response_words(is_random=True)
+        if not result[0]:
             logger.error("You may haven't searched any word yet")
         else:
+            data = result[1]
             list_notice = "Select to print the item's meaning; [ESC] to quit out."
             if not is_tool("fzf"):
                 print()
@@ -224,11 +222,12 @@ def list_words(args):
                 dicts.list_items_fzf(data, "cache_list", list_notice, None, None, False)
 
     else:
-        try:
-            data = get_response_words()
-        except sqlite3.OperationalError:
+        result = get_response_words(is_random=False)
+        if not result[0]:
             logger.error("You may haven't searched any word yet")
+
         else:
+            data = result[1]
             list_notice = "Select to print the item's meaning; [ESC] to quit out."
             if args.time:
                 if not is_tool("fzf"):

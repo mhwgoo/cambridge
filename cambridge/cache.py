@@ -26,10 +26,18 @@ def create_table():
 def insert_into_table(input_word, response_word, url, text):
     response_word = response_word.lower()
     with con:
-        con.execute(
-            "INSERT INTO words (input_word, response_word, created_at, response_url, response_text) VALUES (?, ?, ?, ?, ?)",
-            (input_word, response_word, current_datetime, url, text)
-        )
+        try:
+            con.execute(
+                "INSERT INTO words (input_word, response_word, created_at, response_url, response_text) VALUES (?, ?, ?, ?, ?)",
+                (input_word, response_word, current_datetime, url, text)
+            )
+        except sqlite3.IntegrityError as error:
+            return (False, error)
+
+        except sqlite3.InterfaceError as error:
+            return (False, error)
+        else:
+            return (True, None)
 
 
 def get_cache(word, request_url):
@@ -46,18 +54,18 @@ def get_cache(word, request_url):
         return data
 
 
-def get_response_words():
-    with con:
-        cur = con.execute("SELECT response_word, response_url, created_at FROM words")
+def get_response_words(is_random=False):
+    try:
+        with con:
+            if is_random:
+                cur = con.execute("SELECT response_word, response_url FROM words ORDER BY RANDOM() LIMIT 20")
+            else:
+                cur = con.execute("SELECT response_word, response_url, created_at FROM words")
+    except sqlite3.OperationalError:
+        return (False, None)
+    else:
         data = cur.fetchall()
-        return data
-
-
-def get_random_words():
-    with con:
-        cur = con.execute("SELECT response_word, response_url FROM words ORDER BY RANDOM() LIMIT 20")
-        data = cur.fetchall()
-        return data
+        return (True, data)
 
 
 def delete_word(word):

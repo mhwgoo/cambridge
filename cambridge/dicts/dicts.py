@@ -2,7 +2,6 @@ import sys
 import os
 import requests
 import subprocess
-import sqlite3
 from fake_user_agent import user_agent
 
 from ..cache import insert_into_table, get_cache, delete_word
@@ -20,8 +19,6 @@ from typing import (
 Initiator = Literal["wod_calendar", "spell_check", "cache_list", "redirect_list"]
 
 def fetch(url, session):
-    """Make a web request with retry mechanism."""
-
     ua = user_agent()
     headers = {"User-Agent": ua}
     session.headers.update(headers)
@@ -57,8 +54,6 @@ def fetch(url, session):
 
 
 def cache_run(input_word, req_url):
-    """Check the cache is from Cambridge or Merrian Webster."""
-
     # data is a tuple (response_url, response_text) if any
     data = get_cache(input_word, req_url)
 
@@ -90,12 +85,11 @@ def cache_run(input_word, req_url):
 
 
 def save(input_word, response_word, response_url, response_text):
-    """Save a word info into local DB for cache."""
-
-    try:
-        insert_into_table(input_word, response_word, response_url, response_text)
-    except sqlite3.IntegrityError as error:
-        error_str = str(error)
+    result = insert_into_table(input_word, response_word, response_url, response_text)
+    if result[0]:
+        logger.debug(f'{OP.CACHED.name} the search result of "{input_word}"')
+    else:
+        error_str = str(result[1])
         if "UNIQUE constraint" in error_str:
             if "response_word" in error_str:
                 delete_word(response_word)
@@ -105,15 +99,9 @@ def save(input_word, response_word, response_url, response_text):
                 logger.debug(f'{OP.CANCELLED.name} caching "{input_word}", because it has been already cached before\n')
         else:
             logger.debug(f'{OP.CANCELLED.name} caching "{input_word}" - {error}\n')
-    except sqlite3.InterfaceError as error:
-        logger.debug(f'{OP.CANCELLED.name} caching "{input_word}" - {error}\n')
-    else:
-        logger.debug(f'{OP.CACHED.name} the search result of "{input_word}"')
 
 
 def print_spellcheck(input_word, suggestions, dict_name, is_ch=False):
-    """Parse and print spellcheck info."""
-
     is_cambridge = (dict_name == DICT.CAMBRIDGE.name)
     flip_dict = DICT.MERRIAM_WEBSTER.name if is_cambridge else DICT.CAMBRIDGE.name
 

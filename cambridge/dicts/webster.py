@@ -76,11 +76,6 @@ def fresh_run(req_url, input_word, no_suggestions=False):
                 target=parse_and_print, args=(nodes, res_url, True)
             )
             parse_thread.start()
-
-            # NOTE
-            # sqlite3.ProgrammingError:
-            # SQLite objects created in a thread can only be used in that same thread.
-            # The object was created in thread id 140704708548544 and this is thread id 123145383600128.
             dicts.save(input_word, res_word, res_url, sub_text)
     else:
         if no_suggestions:
@@ -175,10 +170,6 @@ def parse_dict(res_text, found, res_url, is_fresh):
     return nodes
 
 
-###########################################
-# parse and print nearby entries
-###########################################
-
 def nearby_entries(node):
     print()
 
@@ -209,10 +200,6 @@ def nearby_entries(node):
                 continue
 
 
-###########################################
-# parse and print synonyms
-###########################################
-
 def synonyms(node):
     print()
 
@@ -241,10 +228,6 @@ def synonyms(node):
                     else:
                         c_print(f"#[{w_col.syn_item}]{syn}", end=" ")
 
-
-###########################################
-# parse and print examples
-###########################################
 
 # NOTE:
 # Wester scrapes the web for examples in the way that it only finds the exact match of the word.
@@ -298,10 +281,6 @@ def examples(node):
                 time = time + 1
 
 
-###########################################
-# parse and print phrases
-###########################################
-
 def phrases(node):
     print()
 
@@ -314,7 +293,7 @@ def phrases(node):
                 else:
                     c_print(f"#[{w_col.ph_item} bold]{child.text}", end = "\n")
 
-            if child.attrib["class"] == "vg":
+            elif child.attrib["class"] == "vg":
                 vg(child)
 
         except KeyError:
@@ -324,10 +303,6 @@ def phrases(node):
                 else:
                     c_print(f"#[{w_col.ph_item} bold]{i.text}", end = "\n")
 
-
-##########################################################
-# parse and print related phrases (Phrases Containing ...)
-##########################################################
 
 def related_phrases(node):
     print()
@@ -361,11 +336,6 @@ def related_phrases(node):
             c_print(f"#[{w_col.rph_item}]{ts}", end="")
 
 
-###########################################
-# parse and print dictionary-entry-[number]
-###########################################
-
-# --- parse class "vg" --- #
 def get_word_cases(node):
     l_words = []
     u_words = []
@@ -526,8 +496,9 @@ def unText_simple(node, ancestor_attr, num_label_count=1, has_badge=True):
         print_meaning_badge(text)
 
 
-### sense(node, "sense has-sn", "sb-0 sb-entry, "sb has-num has-let ms-lg-4 ms-3 w-100", 1)
 def sense(node, attr, parent_attr, ancestor_attr, num_label_count=1):
+"""e.g. sense(node, "sense has-sn", "sb-0 sb-entry, "sb has-num has-let ms-lg-4 ms-3 w-100", 1)"""
+
     children = node.getchildren()
 
     # meaning without any sign
@@ -615,33 +586,26 @@ def tags(node, ancestor_attr, num_label_count):
             if "badge" in elm_attr:
                 text = "".join(list(elm.itertext())).strip()
                 print_meaning_badge(text)
-                continue
 
-            if elm_attr == "et":
+            elif elm_attr == "et":
                 et(elm)
-                continue
 
-            if elm_attr == "il ":
+            elif elm_attr == "il ":
                 print_meaning_badge(elm.text.strip(), end=" ")
-                continue
 
-            if elm_attr == "if":
+            elif elm_attr == "if":
                 print_class_if(elm.text)
-                continue
 
-            if elm_attr == "sgram":
+            elif elm_attr == "sgram":
                 print_class_sgram(elm)
-                continue
 
-            if elm_attr == "vl":
+            elif elm_attr == "vl":
                 print_meaning_badge(elm.text.strip())
-                continue
 
-            if elm_attr == "va":
+            elif elm_attr == "va":
                 print_class_va(elm.text.strip())
-                continue
 
-            if elm_attr == "sd":
+            elif elm_attr == "sd":
                 parent = elm.getparent()
                 parent_attr = parent.get("class")
                 parent_prev = parent.getprevious()
@@ -655,22 +619,18 @@ def tags(node, ancestor_attr, num_label_count):
 
                 print_meaning_badge(elm.text)
 
-            if elm_attr == "dtText":
+            elif elm_attr == "dtText":
                 dtText(elm, ancestor_attr) # only meaning text
-                continue
 
-            if elm_attr == "sub-content-thread":
+            elif elm_attr == "sub-content-thread":
                 sub_content_thread(elm, ancestor_attr, num_label_count) # example under the meaning
                 has_badge = False
-                continue
 
-            if elm_attr == "ca":
+            elif elm_attr == "ca":
                 extra(elm, ancestor_attr)
-                continue
 
-            if elm_attr == "unText":
+            elif elm_attr == "unText":
                 unText_simple(elm, ancestor_attr, num_label_count, has_badge)
-                continue
 
     print()
 
@@ -732,7 +692,6 @@ def vg(node):
                 c_print(f"#[bold]{e.text}")
 
 
-# --- parse class "row entry-header" --- #
 def print_word(text):
     c_print(f"#[{w_col.eh_h1_word} bold]{text}", end=" ")
 
@@ -785,7 +744,6 @@ def row_entry_header(node):
                     entry_attr(i)
 
 
-# --- parse class "entry-uros" --- #
 def entry_uros(node):
     """Print other word forms. e.g. valueless, valuelessness"""
 
@@ -844,7 +802,6 @@ def entry_uros(node):
                 continue
 
 
-# --- parse class "row headword-row header-ins" --- #
 def row_headword_row_header_ins(node):
     """Print verb types. e.g. valued; valuing"""
 
@@ -877,7 +834,6 @@ def print_vrs(node):
                         continue
 
 
-# --- parse class "row headword-row header-vrs" --- #
 def row_headword_row_header_vrs(node):
     """Print word variants. e.g. premise variants or less commonly premiss"""
 
@@ -886,7 +842,6 @@ def row_headword_row_header_vrs(node):
     print()
 
 
-# --- parse class "dxnls" --- #
 def dxnls(node):
     """Print dxnls section, such as 'see also', 'compare' etc."""
 
@@ -907,7 +862,6 @@ def dxnls(node):
     print()
 
 
-# --- parse class "dictionary-entry-[number]" --- #
 def dictionary_entry(node):
     """Print one entry of the word and its attributes like plural types, pronounciations, tenses, etc."""
 
@@ -948,10 +902,6 @@ def dictionary_entry(node):
                         print_meaning_content(t, end=" ")
                 print()
 
-
-##############################
-# --- print abstractions --- #
-##############################
 
 def print_meaning_badge(text, end=" "):
     c_print(f"#[{w_col.meaning_badge}]{text}", end=end)
@@ -1095,10 +1045,6 @@ def print_dict_name():
     c_print(f"#[{w_col.dict_name}]{dict_name}", justify="right")
 
 
-###########################################################
-# --- entry point for printing all entries of a word --- #
-###########################################################
-
 def parse_and_print(nodes, res_url, new_line=False):
     logger.debug(f"{OP.PRINTING.name} the parsed result of {res_url}")
 
@@ -1128,13 +1074,9 @@ def parse_and_print(nodes, res_url, new_line=False):
 
     if new_line:
         print()
-    # print_dict_name()
 
 
-######################################################
-# --- printing 'Word of the Day' --- #
-######################################################
-
+# --- Word of the Day --- #
 def print_wod_header(node):
     for elm in node.iterdescendants():
         attr = elm.get("class")

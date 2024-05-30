@@ -23,13 +23,6 @@ word_types = []   # A word's word types, e.g. "preposition", "adjective"
 
 
 def search_webster(input_word, is_fresh=False, no_suggestions=False, req_url=None):
-    """
-    Entry point for searching a word in Webster.
-    It first checks the cache, if the word has been cached,
-    uses it and prints it; if not, go fetch the web.
-    If the word is found, prints it to the terminal and caches it concurrently.
-    if not found, prints word suggestions and exit.
-    """
     if req_url is None:
         req_url = get_request_url(WEBSTER_DICT_BASE_URL, input_word, DICT.MERRIAM_WEBSTER.name)
 
@@ -42,8 +35,6 @@ def search_webster(input_word, is_fresh=False, no_suggestions=False, req_url=Non
 
 
 def fetch_webster(request_url, input_word):
-    """Get response url and response text for future parsing."""
-
     with requests.Session() as session:
         session.trust_env = False
         res = dicts.fetch(request_url, session)
@@ -74,8 +65,6 @@ def fetch_webster(request_url, input_word):
 
 
 def fresh_run(req_url, input_word, no_suggestions=False):
-    """Print the result without cache."""
-
     result = fetch_webster(req_url, input_word)
     found = result[0]
     res_url, res_text = result[1]
@@ -88,7 +77,7 @@ def fresh_run(req_url, input_word, no_suggestions=False):
             )
             parse_thread.start()
 
-            # sqlite must be in the main thread.
+            # NOTE
             # sqlite3.ProgrammingError:
             # SQLite objects created in a thread can only be used in that same thread.
             # The object was created in thread id 140704708548544 and this is thread id 123145383600128.
@@ -135,44 +124,8 @@ def get_wod_list():
         res_url, res_text = result[1]
         parse_and_print_wod_calendar(res_url, res_text)
 
-#TODO
-def parse_redirect(nodes, res_url):
-    input_word = decode_url(res_url).split("/")[-1]
-    redirect_notice = "No exact result found. The following suggestions include '{input_word}'"
-
-    if not is_tool("fzf"):
-        c_print(redirect_notice + (int(len(redirect_notice)/2))*" ", justify="center")
-
-        for node in nodes:
-            try:
-                attr = node.attrib["id"]
-            except KeyError:
-                attr = node.attrib["class"]
-
-            if "row entry-header" in attr:
-                print()
-                row_entry_header(node, True)
-                continue
-
-            if "-entry" in attr:
-                print()
-                for n in node.iterchildren():
-                    if n.tag == "div" and n.attrib["class"] == "vg":
-                        for child in n.iterchildren():
-                            if child.tag == "p":
-                                x = list(child.itertext())
-                                print("".join(x).strip())
-                continue
-
-        c_print(f'\n#[#757575]You can add "camb -w" before one above entry to get its full definition from the {DICT.MERRIAM_WEBSTER.name} dictionary')
-    else:
-        redirect_notice += " Select to print the suggestion's meaning; [ESC] to quit out."
-        list_items_fzf(data, "redirect_list", redirect_notice, input_word, DICT.MERRIAM_WEBSTER.name, is_ch=False)
-
 
 def parse_dict(res_text, found, res_url, is_fresh):
-    """Parse the dict section of the page for the word."""
-
     logger.debug(f"{OP.PARSING.name} {res_url}")
 
     parser = etree.HTMLParser(remove_comments=True)
@@ -207,21 +160,9 @@ def parse_dict(res_text, found, res_url, is_fresh):
             global res_word
             res_word = result[0]
         else:
-            redirect_s = """
-            //*[@id="left-content"]/div[contains(@id, "-entry")] |
-            //*[@id="left-content"]/div[contains(@class, "row entry-header")]
-            """
-            nodes = sub_tree.xpath(redirect_s)
-            parse_redirect(nodes, res_url)
-
-        ## NOTE: [only for debug]
-        # for node in nodes:
-        #     try:
-        #        print("id:    ", node.attrib["id"])
-        #     except KeyError:
-        #        print("class: ", node.attrib["class"])
-
-        # sys.exit()
+            input_word = decode_url(res_url).split("/")[-1]
+            suggestions = sub_tree.xpath("//h2/span/text()")
+            dicts.print_spellcheck(input_word, suggestions, DICT.MERRIAM_WEBSTER.name, is_ch=False)
 
     else:
         result = tree.xpath('//div[@class="widget spelling-suggestion"]')
@@ -230,6 +171,7 @@ def parse_dict(res_text, found, res_url, is_fresh):
         else:
             print(NoResultError(DICT.MERRIAM_WEBSTER.name))
             sys.exit()
+
     return nodes
 
 
@@ -770,17 +712,18 @@ def vg(node):
 
     children = node.getchildren()
     for child in children:
+        attr = child.get("class")
         # print one meaning of one entry
-        if "vg-sseq-entry-item" in child.attrib["class"]:
+        if attr is not None and "vg-sseq-entry-item" in attr:
             vg_sseq_entry_item(child)
 
         # print transitive or intransitive
-        if child.attrib["class"] == "vd firstVd" or child.attrib["class"] == "vd":
+        elif attr is not None and (attr == "vd firstVd" or attr == "vd"):
             e = child.getchildren()[0]
             c_print(f"#[bold]{e.text}")
 
         # print tags like "informal" and the tags at the same livel with transitives
-        if "sls" in child.attrib["class"]:
+        elif attr is not None and "sls" in attr:
             e = child.getchildren()[0]
             e_attr = e.get("class")
             if e_attr is not None and "badge" in e_attr:
@@ -804,11 +747,11 @@ def entry_header_content(node):
             word_entries.append(word.strip().lower())
             print_word(word)
 
-        if elm.tag == "span":
+        elif elm.tag == "span":
             num = " ".join(list(elm.itertext()))
             print(num, end=" ")
 
-        if elm.tag == "h2":
+        elif elm.tag == "h2":
             type = " ".join(list(elm.itertext()))
             c_print(f"#[bold {w_col.eh_word_type}]{type}", end="")
             global word_types
@@ -830,7 +773,7 @@ def entry_attr(node):
                     print_pron(i, True)
 
 
-def row_entry_header(node, is_redirect=False):
+def row_entry_header(node):
     """Print class row entry-header, the parent and caller of entry_header_content() and entry_attr()."""
 
     for elm in node.iterchildren():
@@ -838,16 +781,9 @@ def row_entry_header(node, is_redirect=False):
             for i in elm.iterchildren():
                 if "entry-header-content" in i.attrib["class"]:
                     entry_header_content(i)
-                if "row entry-attr" in i.attrib["class"]:
+                elif "row entry-attr" in i.attrib["class"]:
                     entry_attr(i)
 
-                if is_redirect:
-                    if "hword" == i.attrib["class"]:
-                        hword = "".join(list(i.itertext()))
-                        c_print(f"#[bold {w_col.eh_h1_word}]{hword}", end=" ")
-                    if "fl" == i.attrib["class"]:
-                        type = "".join(list(i.itertext()))
-                        c_print(f"#[bold {w_col.eh_word_type}]{type}", end="")
 
 # --- parse class "entry-uros" --- #
 def entry_uros(node):
@@ -981,36 +917,29 @@ def dictionary_entry(node):
         if elm_attr is not None:
             if "row entry-header" in elm_attr:
                 row_entry_header(elm)
-                continue
 
-            if elm_attr == "row headword-row header-ins":
+            elif elm_attr == "row headword-row header-ins":
                 row_headword_row_header_ins(elm)
-                continue
 
-            if elm_attr == "row headword-row header-vrs":
+            elif elm_attr == "row headword-row header-vrs":
                 row_headword_row_header_vrs(elm)
-                continue
 
-            if elm_attr == "vg":
+            elif elm_attr == "vg":
                 vg(elm)
-                continue
 
-            if "entry-uros" in elm_attr:
+            elif "entry-uros" in elm_attr:
                 for i in elm.iterchildren():
                     entry_uros(i)
                     print()
-                continue
 
-            if elm_attr == "dxnls":
+            elif elm_attr == "dxnls":
                 dxnls(elm)
-                continue
 
-            if elm_attr == "mt-3":
+            elif elm_attr == "mt-3":
                 badge = elm.getchildren()[0] # class "lbs badge mw-badge-gray-100 text-start text-wrap d-inline"
                 print_header_badge(badge.text, end="\n")
-                continue
 
-            if elm_attr == "cxl-ref":
+            elif elm_attr == "cxl-ref":
                 text = list(elm.itertext())
                 print_meaning_content(": ", end="")
                 for t in text:
@@ -1018,7 +947,6 @@ def dictionary_entry(node):
                     if t:
                         print_meaning_content(t, end=" ")
                 print()
-                continue
 
 
 ##############################
@@ -1052,15 +980,15 @@ def format_basedon_ancestor(ancestor_attr, prefix="", suffix=""):
     print(prefix, end="")
     if ancestor_attr == "sense has-sn has-num-only":
         print("  ", end=suffix)
-    if ancestor_attr == "sense has-sn has-num":
+    elif ancestor_attr == "sense has-sn has-num":
         print("    ", end=suffix)
-    if ancestor_attr == "sense has-sn":
+    elif ancestor_attr == "sense has-sn":
         #if "no-sn letter-only" in root_attr:
         #    print("  ", end=suffix)
         print("    ", end=suffix)
-    if ancestor_attr == "sense  no-subnum":
+    elif ancestor_attr == "sense  no-subnum":
         print("", end=suffix)
-    if ancestor_attr == "sense has-num-only has-subnum-only":
+    elif ancestor_attr == "sense has-num-only has-subnum-only":
         print("    ", end=suffix)
 
 
@@ -1172,8 +1100,6 @@ def print_dict_name():
 ###########################################################
 
 def parse_and_print(nodes, res_url, new_line=False):
-    """Parse and print different sections for the word."""
-
     logger.debug(f"{OP.PRINTING.name} the parsed result of {res_url}")
 
     for node in nodes:

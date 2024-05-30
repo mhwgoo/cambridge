@@ -40,8 +40,6 @@ def search_cambridge(input_word, is_fresh=False, is_ch=False, no_suggestions=Fal
 
 
 def fetch_cambridge(req_url, input_word, is_ch):
-    """Get response url and response text for later parsing."""
-
     with requests.Session() as session:
         session.trust_env = False # not to use proxy
         res = dicts.fetch(req_url, session)
@@ -67,8 +65,6 @@ def fetch_cambridge(req_url, input_word, is_ch):
 
 
 def fresh_run(req_url, input_word, is_ch, no_suggestions=False):
-    """Print the result without cache."""
-
     result = fetch_cambridge(req_url, input_word, is_ch)
     found = result[0]
 
@@ -112,8 +108,6 @@ def fresh_run(req_url, input_word, is_ch, no_suggestions=False):
 # ----------The Entry Point For Parse And Print----------
 
 def parse_and_print(first_dict, res_url, new_line=False):
-    """Parse and print different sections for the word."""
-
     logger.debug(f"{OP.PRINTING.name} the parsed result of {res_url}")
 
     attempt = 0
@@ -138,8 +132,6 @@ def parse_and_print(first_dict, res_url, new_line=False):
 
 
 def parse_first_dict(res_url, soup):
-    """Parse the dict section of the page for the word."""
-
     attempt = 0
     logger.debug(f"{OP.PARSING.name} {res_url}")
 
@@ -156,8 +148,6 @@ def parse_first_dict(res_url, soup):
 
 # ----------Parse Response Word----------
 def parse_response_word(soup):
-    "Parse the response word from html head title tag."
-
     temp = soup.find("title").text.split("-")[0].strip()
     if "|" in temp:
         response_word = temp.split("|")[0].strip().lower()

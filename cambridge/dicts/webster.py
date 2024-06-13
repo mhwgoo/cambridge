@@ -120,6 +120,7 @@ def get_wod_list():
         parse_and_print_wod_calendar(res_url, res_text)
 
 
+# --- parsing html --- #
 def parse_dict(res_text, found, res_url, is_fresh):
     logger.debug(f"{OP.PARSING.name} {res_url}")
 
@@ -184,20 +185,16 @@ def nearby_entries(node):
         else:
             if has_title:
                 c_print(f"#[bold {w_col.nearby_title}]{elm.text}", end="")
-                continue
 
-            if has_em:
+            elif has_em:
                 word = "".join(list(elm.itertext()))
                 c_print(f"#[bold {w_col.nearby_em}]{word}", end="\n")
-                continue
 
-            if has_word:
+            elif has_word:
                 c_print(f"#[{w_col.nearby_word}]{elm.text}", end="\n")
-                continue
 
-            if has_nearby:
+            elif has_nearby:
                 c_print(f"#[{w_col.nearby_item}]{elm.text}", end="\n")
-                continue
 
 
 def synonyms(node):
@@ -214,10 +211,10 @@ def synonyms(node):
             if has_title:
                 c_print(f"#[bold {w_col.syn_title}]{elm.text}", end=" ")
 
-            if has_label:
+            elif has_label:
                 c_print(f"\n#[{w_col.syn_label}]{elm.text}")
 
-            if has_syn:
+            elif has_syn:
                 children = elm.getchildren()
                 total_num = len(children)
 
@@ -344,7 +341,7 @@ def get_word_cases(node):
         if attr is not None:
             if "lowercase" in attr:
                 l_words.append(i.text)
-            if "uppercase" in attr:
+            elif "uppercase" in attr:
                 u_words.append(i.text)
     return l_words, u_words
 
@@ -409,10 +406,8 @@ def ex_sent(node, ancestor_attr, num_label_count=1):
         if attr is not None:
             if i.tag == "em" and "mw" in attr:
                 ems.append(i.text)
-                continue
-            if i.tag == "span" and "mw" in attr:
+            elif i.tag == "span" and "mw" in attr:
                 hl_words.append(i.text)
-                continue
 
     texts = list(node.itertext())
     count = len(texts)
@@ -441,16 +436,14 @@ def sub_content_thread(node, ancestor_attr, num_label_count=1):
 
         if ("ex-sent" in attr) and ("aq has-aq" not in attr):
             ex_sent(child, ancestor_attr, num_label_count)
-            continue
 
-        if "vis" in attr:
+        elif "vis" in attr:
             elms = child.getchildren()
             for e in elms:
                 elm = e.getchildren()[0]
                 elm_attr = elm.attrib["class"]
                 if ("ex-sent" in elm_attr) and ("aq has-aq" not in elm_attr):
                     ex_sent(elm, ancestor_attr, num_label_count)
-            continue
 
 
 def extra(node, ancestor_attr):
@@ -458,6 +451,10 @@ def extra(node, ancestor_attr):
 
     l_words = get_word_cases(node)[0]
     u_words = get_word_cases(node)[1]
+
+    prev_attr = node.getprevious().get("class")
+    if prev_attr is not None and prev_attr == "sub-content-thread":
+        print()
 
     for text in texts:
         text_new = text.strip("\n").strip()
@@ -497,7 +494,7 @@ def unText_simple(node, ancestor_attr, num_label_count=1, has_badge=True):
 
 
 def sense(node, attr, parent_attr, ancestor_attr, num_label_count=1):
-"""e.g. sense(node, "sense has-sn", "sb-0 sb-entry, "sb has-num has-let ms-lg-4 ms-3 w-100", 1)"""
+    """e.g. sense(node, "sense has-sn", "sb-0 sb-entry, "sb has-num has-let ms-lg-4 ms-3 w-100", 1)"""
 
     children = node.getchildren()
 
@@ -648,7 +645,7 @@ def vg_sseq_entry_item(node):
             num_label_count = len(child.text)
 
         # print meaning content
-        if "ms-lg-4 ms-3 w-100" in attr:
+        elif "ms-lg-4 ms-3 w-100" in attr:
             for c in child.iterchildren(): # c:  class="sb-0 sb-entry"
                 cc = c.getchildren()[0]    # cc: class="sen has-num-only"
                 cc_attr = cc.get("class")
@@ -728,7 +725,7 @@ def entry_attr(node):
                     syllables = i.text
                     print(f"{syllables}", end=" ")
 
-                if i.tag == "span" and "prons-entries-list-inline" in i.attrib["class"]:
+                elif i.tag == "span" and "prons-entries-list-inline" in i.attrib["class"]:
                     print_pron(i, True)
 
 
@@ -752,54 +749,44 @@ def entry_uros(node):
         if attr is not None:
             if elm.tag == "span" and "fw-bold ure" in attr:
                 c_print(f"#[bold {w_col.wf}]{elm.text}", end = " ")
-                continue
 
-            if elm.tag == "span" and "fw-bold fl" in attr:
+            elif elm.tag == "span" and "fw-bold fl" in attr:
                 next_sibling = elm.getnext()
                 c_print(f"#[{w_col.eh_word_type}]{elm.text}", end = "")
-                continue
 
-            if "ins" in attr:
+            elif "ins" in attr:
                 print("", end="")
                 print_class_ins(elm)
-                continue
 
-            if "sl badge" in attr:
+            elif "sl badge" in attr:
                 text = "".join(list(elm.itertext())).strip()
                 print_meaning_badge(text)
-                continue
 
-            if "utxt" in attr:
+            elif "utxt" in attr:
                 for i in elm.iterchildren():
                     sub_attr = i.get("class")
                     if sub_attr is not None and sub_attr == "sub-content-thread":
                         sub_content_thread(i, "")
                 print()
-                continue
 
-            if "prons-entries-list" in attr:
+            elif "prons-entries-list" in attr:
                 print_pron(elm)
-                continue
 
-            if "vrs" in attr:
+            elif "vrs" in attr:
                 # can't get css element ::before.content like "variants" in the word "duel"
                 child = elm.getchildren()[0]
                 for c in child.iterchildren():
                     attr_c = c.get("class")
                     if attr_c == "il " or attr_c == "vl":
                         print_or_badge(c.text)
-                        continue
-                    if attr_c == "va":
+                    elif attr_c == "va":
                         if c.text is None:
                             for i in child:
                                 print_class_va(i.text)
                         else:
                             print_class_va(c.text)
-
+                    elif "prons-entries-list" in attr_c:
                         continue
-                    if "prons-entries-list" in attr_c:
-                        continue
-                continue
 
 
 def row_headword_row_header_ins(node):
@@ -1057,19 +1044,19 @@ def parse_and_print(nodes, res_url, new_line=False):
         if "-entry" in attr:
             dictionary_entry(node)
 
-        if attr == "phrases":
+        elif attr == "phrases":
             phrases(node)
 
-        if attr == "nearby-entries":
+        elif attr == "nearby-entries":
             nearby_entries(node)
 
-        if attr == "synonyms":
+        elif attr == "synonyms":
             synonyms(node)
 
-        if "on-web" in attr:
+        elif "on-web" in attr:
             examples(node)
 
-        if attr == "related-phrases":
+        elif attr == "related-phrases":
             related_phrases(node)
 
     if new_line:
@@ -1085,14 +1072,14 @@ def print_wod_header(node):
                 c_print(f"#[{w_col.wod_title} bold]{c.text}", end="")
             print()
 
-        if attr == "word-header-txt":
+        elif attr == "word-header-txt":
             c_print(f"#[bold]{elm.text}")
 
-        if attr == "main-attr":
+        elif attr == "main-attr":
             c_print(f"#[{w_col.wod_type}]{elm.text}", end="")
             print(" | ", end="")
 
-        if attr == "word-syllables":
+        elif attr == "word-syllables":
             c_print(f"#[{w_col.wod_syllables}]{elm.text}")
 
 
@@ -1106,8 +1093,7 @@ def print_wod_p(node):
             t = "".join(list(child.itertext()))
             c_print(f"#[bold]{t}", end="")
             print(child.tail, end="")
-            continue
-        if child is not None and child.tag == "a":
+        elif child is not None and child.tag == "a":
             child_text = child.text
             child_tail = child.tail
             if child_text == "See the entry >":
@@ -1121,7 +1107,6 @@ def print_wod_p(node):
 
             if child_tail is not None:
                 print(child_tail, end="")
-            continue
     print()
 
 
@@ -1140,10 +1125,10 @@ def print_wod_def(node):
                 c_print(f"#[{w_col.wod_subtitle} bold]{child.text}", end=" ")
                 c_print(f"#[{w_col.wod_subtitle} bold]{tail}", end="\n")
 
-        if tag == "p":
+        elif tag == "p":
             print_wod_p(elm)
 
-        if tag == "div" and elm.attrib["class"] == "wotd-examples":
+        elif tag == "div" and elm.attrib["class"] == "wotd-examples":
             child = elm.getchildren()[0].getchildren()[0]
             print_wod_p(child)
 
@@ -1155,7 +1140,7 @@ def print_wod_dyk(node):
         if tag == "h2":
             c_print(f"\n#[{w_col.wod_subtitle} bold]{elm.text}")
 
-        if tag == "p":
+        elif tag == "p":
             print_wod_p(elm)
 
 
@@ -1181,10 +1166,10 @@ def parse_and_print_wod(res_url, res_text):
         if "header" in attr:
             print_wod_header(node)
 
-        if "definition" in attr:
+        elif "definition" in attr:
             print_wod_def(node)
 
-        if "did-you-know" in attr:
+        elif "did-you-know" in attr:
             print_wod_dyk(node)
     print()
 

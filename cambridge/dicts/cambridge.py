@@ -23,7 +23,10 @@ CAMBRIDGE_CN_SEARCH_URL = CAMBRIDGE_URL + "/search/direct/?datasetsearch=english
 CAMBRIDGE_SPELLCHECK_URL = CAMBRIDGE_URL + "/spellcheck/english/?q="
 CAMBRIDGE_SPELLCHECK_URL_CN = CAMBRIDGE_URL + "/spellcheck/english-chinese-simplified/?q="
 
-# ----------Request Web Resource----------
+word_entry = ""
+response_word = ""
+
+
 def search_cambridge(input_word, is_fresh=False, is_ch=False, no_suggestions=False, req_url=None):
     if req_url is None:
         if is_ch:
@@ -71,15 +74,15 @@ def fresh_run(req_url, input_word, is_ch, no_suggestions=False):
     if found:
         res_url, res_text = result[1]
         soup = make_a_soup(res_text)
+
+        global response_word
         response_word = parse_response_word(soup)
+        global word_entry
+        word_entry = input_word
 
         first_dict = parse_first_dict(res_url, soup)
+        parse_and_print(first_dict, res_url, True)
 
-        parse_thread = threading.Thread(target=parse_and_print, args=(first_dict, res_url, True))
-        parse_thread.start()
-        # parse_thread.join()
-
-        dicts.save(input_word, response_word, res_url, str(first_dict))
     else:
         if no_suggestions:
             sys.exit(-1)
@@ -105,8 +108,6 @@ def fresh_run(req_url, input_word, is_ch, no_suggestions=False):
             dicts.print_spellcheck(input_word, suggestions, DICT.CAMBRIDGE.name, is_ch)
 
 
-# ----------The Entry Point For Parse And Print----------
-
 def parse_and_print(first_dict, res_url, new_line=False):
     logger.debug(f"{OP.PRINTING.name} the parsed result of {res_url}")
 
@@ -122,9 +123,11 @@ def parse_and_print(first_dict, res_url, new_line=False):
                 for block in blocks:
                     parse_dict_head(block)
                     parse_dict_body(block)
-                # parse_dict_name(first_dict)
+
                 if new_line:
                     print()
+
+                dicts.save(word_entry, response_word, res_url, str(first_dict))
                 return
             else:
                 print(NoResultError(DICT.CAMBRIDGE.name))
@@ -146,7 +149,6 @@ def parse_first_dict(res_url, soup):
     return first_dict
 
 
-# ----------Parse Response Word----------
 def parse_response_word(soup):
     temp = soup.find("title").text.split("-")[0].strip()
     if "|" in temp:
@@ -158,13 +160,6 @@ def parse_response_word(soup):
         response_word = temp.lower()
 
     return response_word
-
-
-# ----------Parse Dict Head----------
-# Compared to Webster, Cambridge is a bunch of deep layered html tags
-# filled with unbearably messy class names.
-# No clear pattern, somewhat irregular, sometimes you just need to
-# tweak your codes for particular words and phrases for them to show.
 
 
 def parse_head_title(block):
@@ -550,7 +545,6 @@ def parse_dict_body(block):
     parse_phrasal_verb(block)
 
 
-# ----------Parse Dict Name----------
 def parse_dict_name(first_dict):
     if first_dict.small is not None:
         dict_info = replace_all(first_dict.small.text).strip("(").strip(")")

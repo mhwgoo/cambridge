@@ -23,5 +23,5 @@ def call_on_error(error, url, attempt, op):
     logger.debug(f"{op} {url} {attempt} times")
     if attempt == 3:
         print(f"Maximum {op} reached: {error}")
-        sys.exit()
+        sys.exit(2)
     return attempt

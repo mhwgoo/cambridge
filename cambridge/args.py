@@ -263,7 +263,7 @@ def search_word(args):
 
     if not input_word:
         print("You didn't input any word or phrase.")
-        sys.exit()
+        sys.exit(3)
 
     # boolean types
     is_webster = args.webster
@@ -273,7 +273,7 @@ def search_word(args):
 
     if is_webster and is_ch:
         print("Webster Dictionary doesn't support English to other language. Try again without -c(--chinese) option")
-        sys.exit()
+        sys.exit(3)
 
     if is_webster:
         webster.search_webster(input_word, is_fresh, no_suggestions, None)

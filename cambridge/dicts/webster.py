@@ -61,7 +61,7 @@ def fetch_webster(request_url, input_word):
 
         else:
             logger.error(f'Something went wrong when fetching {request_url} with STATUS: {status}')
-            sys.exit()
+            sys.exit(2)
 
 
 def fresh_run(req_url, input_word, no_suggestions=False):
@@ -76,6 +76,8 @@ def fresh_run(req_url, input_word, no_suggestions=False):
                 target=parse_and_print, args=(nodes, res_url, True)
             )
             parse_thread.start()
+
+            # logger.debug(f'START CACHING: input_word is "{input_word}"; res_word is "{res_word}"; res_url is "{res_url}"')
             dicts.save(input_word, res_word, res_url, sub_text)
     else:
         if no_suggestions:
@@ -129,46 +131,49 @@ def parse_dict(res_text, found, res_url, is_fresh):
 
     if found:
         sub_tree = tree.xpath('//*[@id="left-content"]')[0]
+        partial_match = sub_tree.xpath('//p[contains(@class,"partial")]')
 
-        s = """
-        //*[@id="left-content"]/div[contains(@id, "-entry")] |
-        //*[@id="left-content"]/div[@id="phrases"] |
-        //*[@id="left-content"]/div[@id="synonyms"] |
-        //*[@id="left-content"]/div[@id="examples"]/div[@class="content-section-body"]/div[contains(@class,"on-web-container")]/div[contains(@class,"on-web")] |
-        //*[@id="left-content"]/div[@id="related-phrases"] |
-        //*[@id="left-content"]/div[@id="nearby-entries"]
-        """
-
-        nodes = sub_tree.xpath(s)
-
-        if is_fresh:
-            global sub_text
-            sub_text = etree.tostring(sub_tree).decode('utf-8')
-
-        if len(nodes) == 0:
-            print(NoResultError(DICT.MERRIAM_WEBSTER.name))
-            sys.exit()
-
-        result = sub_tree.xpath('//*[@id="left-content"]/div[contains(@id, "-entry-1")]/div[1]/div/div[1]/h1/text()') \
-               or sub_tree.xpath('//*[@id="left-content"]/div[contains(@id, "-entry-1")]/div[1]/div/div/h1/span/text()')
-
-        if len(result) != 0:
-            global res_word
-            res_word = result[0]
-        else:
+        if partial_match:
             input_word = decode_url(res_url).split("/")[-1]
-            suggestions = sub_tree.xpath("//h2/span/text()")
+            suggestions = sub_tree.xpath('//h2[@class="hword"]/text() | //h2[@class="hword"]/span/text()')
             dicts.print_spellcheck(input_word, suggestions, DICT.MERRIAM_WEBSTER.name, is_ch=False)
+            sys.exit()
+        else:
+            s = """
+            //*[@id="left-content"]/div[contains(@id, "-entry")] |
+            //*[@id="left-content"]/div[@id="phrases"] |
+            //*[@id="left-content"]/div[@id="synonyms"] |
+            //*[@id="left-content"]/div[@id="examples"]/div[@class="content-section-body"]/div[contains(@class,"on-web-container")]/div[contains(@class,"on-web")] |
+            //*[@id="left-content"]/div[@id="related-phrases"] |
+            //*[@id="left-content"]/div[@id="nearby-entries"]
+            """
+            nodes = sub_tree.xpath(s)
+
+            if is_fresh:
+                global sub_text
+                sub_text = etree.tostring(sub_tree).decode('utf-8')
+
+            if len(nodes) == 0:
+                print(NoResultError(DICT.MERRIAM_WEBSTER.name))
+                sys.exit(1)
+
+            result = sub_tree.xpath('//*[@id="left-content"]/div[contains(@id, "-entry-1")]/div[1]/div/div[1]/h1/text()') \
+                   or sub_tree.xpath('//*[@id="left-content"]/div[contains(@id, "-entry-1")]/div[1]/div/div/h1/span/text()')
+
+            if len(result) != 0:
+                global res_word
+                res_word = result[0]
+
+            return nodes
 
     else:
         result = tree.xpath('//div[@class="widget spelling-suggestion"]')
         if len(result) != 0:
             nodes = result[0]
+            return nodes
         else:
             print(NoResultError(DICT.MERRIAM_WEBSTER.name))
-            sys.exit()
-
-    return nodes
+            sys.exit(1)
 
 
 def nearby_entries(node):

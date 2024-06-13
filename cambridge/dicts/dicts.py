@@ -171,7 +171,7 @@ def list_items_fzf(data, initiator: Optional[Initiator] = None, notice="", input
 
     select_word = p2.communicate()[0].strip("\n")
 
-    logger.debug(f"select_word by fzf is: {repr(select_word)}; returncode by fzf is: {p2.returncode}")
+    # logger.debug(f'select_word by fzf is: "{repr(select_word)}"; returncode by fzf is: "{p2.returncode}"')
 
     is_cambridge = (dict_name == DICT.CAMBRIDGE.name)
 

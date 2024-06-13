@@ -96,7 +96,7 @@ def fresh_run(req_url, input_word, is_ch, no_suggestions=False):
 
             if not nodes:
                 print(NoResultError(DICT.CAMBRIDGE.name))
-                sys.exit()
+                sys.exit(1)
 
             for ul in nodes.find_all("ul", "hul-u"):
                 if "We have these words with similar spellings or pronunciations:" in ul.find_previous_sibling().text:
@@ -131,7 +131,7 @@ def parse_and_print(first_dict, res_url, new_line=False):
                 return
             else:
                 print(NoResultError(DICT.CAMBRIDGE.name))
-                sys.exit()
+                sys.exit(1)
 
 
 def parse_first_dict(res_url, soup):

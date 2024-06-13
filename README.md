@@ -21,7 +21,6 @@ I'm a terminal person tired of pulling out a GUI app or browser, inputting words
 3. less than 2s taken to do all the work for the word, including fetching, parsing, printing, and writing cache
 4. less than 0.1s for the same word's later search by retrieving cache
 5. only the first dictionary from Cambridge (assuming the optimal) to avoid being confused by multiple dictionaries
-6. the searched word/phrases within example sentences made bold together with its tense, plural, etc. form if any
 6. a list of suggestions will be given, if not found
 7. `camb l` to list cached words and phrases
 8. support displaying spellcheck suggestion list, cache list, Webster's word of the day list by `fzf`

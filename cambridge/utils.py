@@ -25,6 +25,7 @@ class OP(Enum):
     UPDATED         = 11,
     SWITCHED        = 12,
     SEARCHING       = 13
+    SELECTED        = 14
 
 
 class DICT(Enum):

@@ -43,18 +43,31 @@ def insert_entry_into_table(input_word, response_word, url, text):
             return (True, None)
 
 
-def get_entry_from_table(word, request_url):
+def check_word_in_table(word, request_url):
     try:
         with con:
             cur = con.execute(
-                "SELECT response_url, response_word, response_text FROM words WHERE response_url = ? OR response_word = ? OR input_word = ?",
+                "SELECT response_url FROM words WHERE response_url = ? OR response_word = ? OR input_word = ?",
                 (request_url, word, word)
             )
     except sqlite3.OperationalError:
         create_table()
+        return None
     else:
-        data = cur.fetchone()
-        return data
+        return cur.fetchone()
+
+
+def get_entry_from_table(response_url):
+    try:
+        with con:
+            # NOTE if (response_url) without comma is passed, you will get:
+            # sqlite3.ProgrammingError: Incorrect number of bindings supplied. The current statement uses 1, and there are 57 supplied.
+            cur = con.execute("SELECT response_word, response_text FROM words WHERE response_url = ?", (response_url,))
+    except sqlite3.OperationalError:
+        create_table()
+        return None
+    else:
+        return cur.fetchone()
 
 
 def get_entries_from_table(is_random=False):
@@ -114,24 +127,37 @@ def list_cache(method):
     return (has_fzf, data)
 
 
-def search_from_cache(input_word, req_url):
+def check_cache(input_word, req_url):
     logger.debug(f'{OP.SEARCHING.name} "{input_word}" in cache')
-    data = get_entry_from_table(input_word, req_url)
+    data = check_word_in_table(input_word, req_url)
 
+    # considering user might input plural nouns, or verbs with tenses
     if data is None:
         if "s" != input_word[-1]:
-            return (False, None)
+            return None
         else:
             data = get_entry_from_table(input_word[:-1], req_url)
             if data is None:
                 if "es" != input_word[-2:]:
-                    return (False, None)
+                    return None
                 else:
                     data = get_entry_from_table(input_word[:-2], req_url)
                     if data is None:
-                        return (False, None)
+                        return None
 
-    return (True, data)
+    if data is not None:
+        data = data[0]
+
+    return data
+
+
+def get_cache(response_url):
+    result = get_entry_from_table(response_url)
+    if result is None:
+        logger.error(f'You might pass the wrong argument "{response_url}" to the function. It must be actually from the cache.')
+        sys.exit(4)
+
+    return result
 
 
 def save_to_cache(input_word, response_word, response_url, response_text):

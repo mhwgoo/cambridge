@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 from console import c_print
 from log import logger
 from utils import fetch, get_request_url, parse_response_url, replace_all, OP, DICT, has_tool, get_suggestion, get_suggestion_by_fzf
-from cache import search_from_cache, save_to_cache
+from cache import check_cache, save_to_cache, get_cache
 import webster
 
 CAMBRIDGE_URL = "https://dictionary.cambridge.org"
@@ -16,35 +16,42 @@ CAMBRIDGE_SPELLCHECK_URL = CAMBRIDGE_URL + "/spellcheck/english/?q="
 CAMBRIDGE_SPELLCHECK_URL_CN = CAMBRIDGE_URL + "/spellcheck/english-chinese-simplified/?q="
 
 
-def search_cambridge(input_word, is_fresh=False, is_ch=False, no_suggestions=False, req_url=None):
+def search_cambridge(input_word, is_fresh=False, is_ch=False, no_suggestions=False, req_url=None, res_url_from_cache=None):
+    if res_url_from_cache is not None:
+        cache_run(res_url_from_cache)
+        sys.exit()
+
     if req_url is None:
         url = CAMBRIDGE_CN_SEARCH_URL if is_ch else CAMBRIDGE_EN_SEARCH_URL
         req_url = get_request_url(url, input_word, DICT.CAMBRIDGE.name)
 
-    if not is_fresh:
-        result = search_from_cache(input_word, req_url)
-        if result[0]:
-            res_url, res_word, res_text = result[1]
-
-            if not DICT.CAMBRIDGE.name.lower() in res_url:
-                webster.search_webster(input_word, False, no_suggestions, req_url)
-            else:
-                logger.debug(f'{OP.FOUND.name} "{res_word}" from {DICT.CAMBRIDGE.name} in cache')
-                logger.debug(f"{OP.PARSING.name} {res_url}")
-                soup = BeautifulSoup(res_text, "lxml")
-                first_dict = soup.find("div", "pr dictionary") or soup.find("div", "pr di superentry")
-
-                logger.debug(f"{OP.PRINTING.name} the parsed result of {res_url}")
-                blocks = first_dict.find_all("div", ["pr entry-body__el", "entry-body__el clrd js-share-holder", "pr idiom-block"])
-                for block in blocks:
-                    parse_dict_head(block)
-                    parse_dict_body(block)
-                c_print(f'\n#[#757575]{OP.FOUND.name} "{res_word}" from {DICT.CAMBRIDGE.name} in cache. You can add "-f -w" to fetch the {DICT.MERRIAM_WEBSTER.name} dictionary')
-            sys.exit()
-        else:
+    if is_fresh:
+        fresh_run(input_word, is_ch, no_suggestions, req_url)
+    else:
+        res_url = check_cache(input_word, req_url)
+        if res_url is None:
             logger.debug(f'{OP.NOT_FOUND.name} "{input_word}" in cache')
+            fresh_run(input_word, is_ch, no_suggestions, req_url)
+        elif not DICT.CAMBRIDGE.name.lower() in res_url:
+            webster.search_webster(input_word, False, no_suggestions, None, res_url)
+        else:
+            cache_run(res_url)
 
-    fresh_run(input_word, is_ch, no_suggestions, req_url)
+
+def cache_run(res_url_from_cache):
+    res_word, res_text = get_cache(res_url_from_cache)
+    logger.debug(f'{OP.FOUND.name} "{res_word}" from {DICT.CAMBRIDGE.name} in cache')
+    logger.debug(f"{OP.PARSING.name} {res_url_from_cache}")
+
+    soup = BeautifulSoup(res_text, "lxml")
+    first_dict = soup.find("div", "pr dictionary") or soup.find("div", "pr di superentry")
+
+    logger.debug(f"{OP.PRINTING.name} the parsed result of {res_url_from_cache}")
+    blocks = first_dict.find_all("div", ["pr entry-body__el", "entry-body__el clrd js-share-holder", "pr idiom-block"])
+    for block in blocks:
+        parse_dict_head(block)
+        parse_dict_body(block)
+    c_print(f'\n#[#757575]{OP.FOUND.name} "{res_word}" from {DICT.CAMBRIDGE.name} in cache. You can add "-f -w" to fetch the {DICT.MERRIAM_WEBSTER.name} dictionary')
 
 
 def fresh_run(input_word, is_ch, no_suggestions, req_url):
@@ -84,6 +91,7 @@ def fresh_run(input_word, is_ch, no_suggestions, req_url):
                 logger.debug(f'{OP.SWITCHED.name} to {DICT.MERRIAM_WEBSTER.name}')
                 webster.search_webster(input_word, True, no_suggestions, None)
             else:
+                logger.debug(f'{OP.SELECTED.name} "{select_word}"')
                 search_cambridge(select_word, False, False, no_suggestions, None)
 
         else:

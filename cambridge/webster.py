@@ -4,7 +4,7 @@ from lxml import etree
 from console import c_print
 from utils import fetch, get_request_url, decode_url, OP, DICT, has_tool, get_suggestion, get_suggestion_by_fzf, get_wod_selection, get_wod_selection_by_fzf
 from log import logger
-from cache import search_from_cache, save_to_cache
+from cache import check_cache, save_to_cache, get_cache
 import camb
 
 import color as w_col
@@ -29,27 +29,35 @@ word_forms = set()      # A word may have multiple word forms, e.g. "ran", "runn
 word_types = set()      # A word's word types, e.g. "preposition", "adjective"
 
 
-def search_webster(input_word, is_fresh=False, no_suggestions=False, req_url=None):
+def search_webster(input_word, is_fresh=False, no_suggestions=False, req_url=None, res_url_from_cache=None):
+    if res_url_from_cache is not None:
+        cache_run(res_url_from_cache)
+        sys.exit()
+
     if req_url is None:
         req_url = get_request_url(WEBSTER_DICT_BASE_URL, input_word, DICT.MERRIAM_WEBSTER.name)
 
-    if not is_fresh:
-        result = search_from_cache(input_word, req_url)
-        if result[0]:
-            res_url, res_word, res_text = result[1]
-            if DICT.CAMBRIDGE.name.lower() in res_url:
-                camb.search_cambridge(input_word, False, False, no_suggestions, req_url)
-            else:
-                logger.debug(f'{OP.FOUND.name} "{res_word}" from {DICT.MERRIAM_WEBSTER.name} in cache')
-                logger.debug(f"{OP.PARSING.name} {res_url}")
-                tree = etree.HTML(res_text, parser)
-                nodes = tree.xpath(search_pattern)
-                parse_and_print(nodes, res_url, new_line=False)
-                c_print(f'\n#[#757575]{OP.FOUND.name} "{res_word}" from {DICT.MERRIAM_WEBSTER.name} in cache. You can add "-f" to fetch the {DICT.CAMBRIDGE.name} dictionary')
-            sys.exit()
-        else:
+    if is_fresh:
+        fresh_run(input_word, no_suggestions, req_url)
+    else:
+        res_url = check_cache(input_word, req_url)
+        if res_url is None:
             logger.debug(f'{OP.NOT_FOUND.name} "{input_word}" in cache')
-    fresh_run(input_word, no_suggestions, req_url)
+            fresh_run(input_word, no_suggestions, req_url)
+        elif DICT.CAMBRIDGE.name.lower() in res_url:
+            camb.search_cambridge(input_word, False, False, no_suggestions, None, res_url)
+        else:
+            cache_run(res_url)
+
+
+def cache_run(res_url_from_cache):
+    res_word, res_text = get_cache(res_url_from_cache)
+    logger.debug(f'{OP.FOUND.name} "{res_word}" from {DICT.MERRIAM_WEBSTER.name} in cache')
+    logger.debug(f"{OP.PARSING.name} {res_url_from_cache}")
+    tree = etree.HTML(res_text, parser)
+    nodes = tree.xpath(search_pattern)
+    parse_and_print(nodes, res_url_from_cache, new_line=False)
+    c_print(f'\n#[#757575]{OP.FOUND.name} "{res_word}" from {DICT.MERRIAM_WEBSTER.name} in cache. You can add "-f" to fetch the {DICT.CAMBRIDGE.name} dictionary')
 
 
 def fresh_run(input_word, no_suggestions, req_url):
@@ -84,6 +92,7 @@ def fresh_run(input_word, no_suggestions, req_url):
                     logger.debug(f'{OP.SWITCHED.name} to {DICT.CAMBRIDGE.name}')
                     camb.search_cambridge(input_word, True, False, no_suggestions, None)
                 else:
+                    logger.debug(f'{OP.SELECTED.name} "{select_word}"')
                     search_webster(select_word, False, no_suggestions, None)
             else:
                 sub_tree = tree.xpath('//*[@id="left-content"]')[0]
@@ -138,6 +147,7 @@ def fresh_run(input_word, no_suggestions, req_url):
                 logger.debug(f'{OP.SWITCHED.name} to {DICT.CAMBRIDGE.name}')
                 camb.search_cambridge(input_word, True, False, no_suggestions, None)
             else:
+                logger.debug(f'{OP.SELECTED.name} "{select_word}"')
                 search_webster(select_word, False, no_suggestions, None)
 
         else:

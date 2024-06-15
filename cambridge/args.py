@@ -200,7 +200,7 @@ def list_words(args):
     has_fzf, data = list_cache(method)
     select_word = get_cache_selection_by_fzf(data) if has_fzf else get_cache_selection(data, method)
 
-    if len(select_word) > 1 and not select_word.isnumeric():
+    if select_word is not None and len(select_word) > 1 and not select_word.isnumeric():
         search_webster(select_word)
     else:
         sys.exit()

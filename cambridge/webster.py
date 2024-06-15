@@ -1,5 +1,5 @@
 import sys
-from lxml import etree
+from lxml import etree # type: ignore
 
 from console import c_print
 from utils import fetch, get_request_url, decode_url, OP, DICT, has_tool, get_suggestion, get_suggestion_by_fzf, get_wod_selection, get_wod_selection_by_fzf
@@ -1176,7 +1176,7 @@ def parse_and_print_wod_calendar(res_url, res_text):
     if select_word in data.keys():
         url = WEBSTER_BASE_URL + data[select_word]
         get_webster_wod_past(url)
-    elif len(select_word) > 1 and not select_word.isnumeric():
+    elif select_word is not None and len(select_word) > 1 and not select_word.isnumeric():
         search_webster(select_word)
     else:
         sys.exit()

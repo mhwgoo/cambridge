@@ -1,3 +1,4 @@
+import sys
 import datetime
 import sqlite3
 from pathlib import Path
@@ -78,10 +79,10 @@ def get_entries_from_table(is_random=False):
             else:
                 cur = con.execute("SELECT response_word, response_url, created_at FROM words")
     except sqlite3.OperationalError:
-        return (False, None)
+        create_table()
+        return None
     else:
-        data = cur.fetchall()
-        return (True, data)
+        return cur.fetchall()
 
 
 def delete_entry_from_table(word):
@@ -109,15 +110,13 @@ def delete_from_cache(word):
 
 def list_cache(method):
     is_random = True if method == "random" else False
-    result = get_entries_from_table(is_random)
+    data = get_entries_from_table(is_random)
 
-    has_fzf = has_tool("fzf")
-
-    if not result[0]:
+    if data is None:
         print("You may haven't searched any word yet")
         sys.exit(3)
 
-    data = result[1]
+    has_fzf = has_tool("fzf")
     if method == "by_alpha":
         data.sort()
     elif method == "by_time":
@@ -136,12 +135,12 @@ def check_cache(input_word, req_url):
         if "s" != input_word[-1]:
             return None
         else:
-            data = get_entry_from_table(input_word[:-1], req_url)
+            data = check_word_in_table(input_word[:-1], req_url)
             if data is None:
                 if "es" != input_word[-2:]:
                     return None
                 else:
-                    data = get_entry_from_table(input_word[:-2], req_url)
+                    data = check_word_in_table(input_word[:-2], req_url)
                     if data is None:
                         return None
 
@@ -174,4 +173,4 @@ def save_to_cache(input_word, response_word, response_url, response_text):
             else:
                 logger.debug(f'{OP.CANCELLED.name} caching "{input_word}", because it has been already cached before\n')
         else:
-            logger.debug(f'{OP.CANCELLED.name} caching "{input_word}" - {error}\n')
+            logger.debug(f'{OP.CANCELLED.name} caching "{input_word}" - {error_str}\n')

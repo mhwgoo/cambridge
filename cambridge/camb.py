@@ -47,7 +47,7 @@ def cache_run(res_url_from_cache):
     first_dict = soup.find("div", "pr dictionary") or soup.find("div", "pr di superentry")
 
     logger.debug(f"{OP.PRINTING.name} the parsed result of {res_url_from_cache}")
-    blocks = first_dict.find_all("div", ["pr entry-body__el", "entry-body__el clrd js-share-holder", "pr idiom-block"])
+    blocks = first_dict.find_all("div", ["pr entry-body__el", "entry-body__el clrd js-share-holder", "pr idiom-block"]) # type: ignore
     for block in blocks:
         parse_dict_head(block)
         parse_dict_body(block)
@@ -77,7 +77,7 @@ def fresh_run(input_word, is_ch, no_suggestions, req_url):
                 logger.error(f"No suggestions found in {DICT.CAMBRIDGE.name}")
                 sys.exit(1)
 
-            for ul in node.find_all("ul", "hul-u"):
+            for ul in node.find_all("ul", "hul-u"): # type: ignore
                 if "We have these words with similar spellings or pronunciations:" in ul.find_previous_sibling().text:
                     for i in ul.find_all("li"):
                         sug = replace_all(i.text)
@@ -101,7 +101,7 @@ def fresh_run(input_word, is_ch, no_suggestions, req_url):
             logger.debug(f"{OP.PARSING.name} {res_url}")
             soup = BeautifulSoup(response.text, "lxml")
 
-            temp = soup.find("title").text.split("-")[0].strip()
+            temp = soup.find("title").text.split("-")[0].strip() # type: ignore
             if "|" in temp:
                 res_word = temp.split("|")[0].strip().lower()
             elif "in Simplified Chinese" in temp:
@@ -114,7 +114,7 @@ def fresh_run(input_word, is_ch, no_suggestions, req_url):
                 logger.error(f"No result found in {DICT.CAMBRIDGE.name}")
                 sys.exit(1)
 
-            blocks = first_dict.find_all("div", ["pr entry-body__el", "entry-body__el clrd js-share-holder", "pr idiom-block"])
+            blocks = first_dict.find_all("div", ["pr entry-body__el", "entry-body__el clrd js-share-holder", "pr idiom-block"]) # type: ignore
             if len(blocks) == 0:
                 logger.error(f"No result found in {DICT.CAMBRIDGE.name}")
                 sys.exit(1)

@@ -1,20 +1,12 @@
-import requests
-import threading
 import sys
 import re
-from ..console import c_print
-from ..errors import ParsedNoneError, NoResultError, call_on_error
-from ..log import logger
-from ..utils import (
-    make_a_soup,
-    get_request_url,
-    parse_response_url,
-    replace_all,
-    OP,
-    DICT
-)
-from ..dicts import dicts
+from bs4 import BeautifulSoup
 
+from console import c_print
+from log import logger
+from utils import fetch, get_request_url, parse_response_url, replace_all, OP, DICT, has_tool, get_suggestion, get_suggestion_by_fzf
+from cache import search_from_cache, save_to_cache
+import webster
 
 CAMBRIDGE_URL = "https://dictionary.cambridge.org"
 CAMBRIDGE_EN_SEARCH_URL = CAMBRIDGE_URL + "/search/direct/?datasetsearch=english&q="
@@ -23,143 +15,111 @@ CAMBRIDGE_CN_SEARCH_URL = CAMBRIDGE_URL + "/search/direct/?datasetsearch=english
 CAMBRIDGE_SPELLCHECK_URL = CAMBRIDGE_URL + "/spellcheck/english/?q="
 CAMBRIDGE_SPELLCHECK_URL_CN = CAMBRIDGE_URL + "/spellcheck/english-chinese-simplified/?q="
 
-word_entry = ""
-response_word = ""
-
 
 def search_cambridge(input_word, is_fresh=False, is_ch=False, no_suggestions=False, req_url=None):
     if req_url is None:
-        if is_ch:
-            req_url = get_request_url(CAMBRIDGE_CN_SEARCH_URL, input_word, DICT.CAMBRIDGE.name)
-        else:
-            req_url = get_request_url(CAMBRIDGE_EN_SEARCH_URL, input_word, DICT.CAMBRIDGE.name)
+        url = CAMBRIDGE_CN_SEARCH_URL if is_ch else CAMBRIDGE_EN_SEARCH_URL
+        req_url = get_request_url(url, input_word, DICT.CAMBRIDGE.name)
 
     if not is_fresh:
-        cached = dicts.cache_run(input_word, req_url)
-        if not cached:
-            fresh_run(req_url, input_word, is_ch, no_suggestions)
-    else:
-        fresh_run(req_url, input_word, is_ch, no_suggestions)
+        result = search_from_cache(input_word, req_url)
+        if result[0]:
+            res_url, res_word, res_text = result[1]
 
-
-def fetch_cambridge(req_url, input_word, is_ch):
-    with requests.Session() as session:
-        session.trust_env = False # not to use proxy
-        res = dicts.fetch(req_url, session)
-
-        if "spellcheck" in res.url:
-            logger.debug(f'{OP.NOT_FOUND.name} "{input_word}" in {DICT.CAMBRIDGE.name}')
-            if is_ch:
-                spell_req_url = get_request_url(CAMBRIDGE_SPELLCHECK_URL_CN, input_word, DICT.CAMBRIDGE.name)
+            if not DICT.CAMBRIDGE.name.lower() in res_url:
+                webster.search_webster(input_word, False, no_suggestions, req_url)
             else:
-                spell_req_url = get_request_url(CAMBRIDGE_SPELLCHECK_URL, input_word, DICT.CAMBRIDGE.name)
+                logger.debug(f'{OP.FOUND.name} "{res_word}" from {DICT.CAMBRIDGE.name} in cache')
+                logger.debug(f"{OP.PARSING.name} {res_url}")
+                soup = BeautifulSoup(res_text, "lxml")
+                first_dict = soup.find("div", "pr dictionary") or soup.find("div", "pr di superentry")
 
-            spell_res = dicts.fetch(spell_req_url, session)
-            spell_res_url = spell_res.url
-            spell_res_text = spell_res.text
-            return False, (spell_res_url, spell_res_text)
-
+                logger.debug(f"{OP.PRINTING.name} the parsed result of {res_url}")
+                blocks = first_dict.find_all("div", ["pr entry-body__el", "entry-body__el clrd js-share-holder", "pr idiom-block"])
+                for block in blocks:
+                    parse_dict_head(block)
+                    parse_dict_body(block)
+                c_print(f'\n#[#757575]{OP.FOUND.name} "{res_word}" from {DICT.CAMBRIDGE.name} in cache. You can add "-f -w" to fetch the {DICT.MERRIAM_WEBSTER.name} dictionary')
+            sys.exit()
         else:
-            res_url = parse_response_url(res.url)
-            res_text = res.text
+            logger.debug(f'{OP.NOT_FOUND.name} "{input_word}" in cache')
 
-            logger.debug(f'{OP.FOUND.name} "{input_word}" in {DICT.CAMBRIDGE.name} at {res_url}')
-            return True, (res_url, res_text)
+    fresh_run(input_word, is_ch, no_suggestions, req_url)
 
 
-def fresh_run(req_url, input_word, is_ch, no_suggestions=False):
-    result = fetch_cambridge(req_url, input_word, is_ch)
-    found = result[0]
+def fresh_run(input_word, is_ch, no_suggestions, req_url):
+        response = fetch(req_url)
+        res_url = response.url
 
-    if found:
-        res_url, res_text = result[1]
-        soup = make_a_soup(res_text)
+        if "spellcheck" in res_url:
+            logger.debug(f'{OP.NOT_FOUND.name} "{input_word}" at {req_url}')
 
-        global response_word
-        response_word = parse_response_word(soup)
-        global word_entry
-        word_entry = input_word
+            if no_suggestions:
+                sys.exit(-1)
 
-        first_dict = parse_first_dict(res_url, soup)
-        parse_and_print(first_dict, res_url, True)
+            spell_base_url = CAMBRIDGE_SPELLCHECK_URL_CN if is_ch else CAMBRIDGE_SPELLCHECK_URL
+            spell_req_url = get_request_url(spell_base_url, input_word, DICT.CAMBRIDGE.name)
+            spell_res = fetch(spell_req_url)
 
-    else:
-        if no_suggestions:
-            sys.exit(-1)
-        else:
-            spell_res_url, spell_res_text = result[1]
-
-            logger.debug(f"{OP.PARSING.name} {spell_res_url}")
-            soup = make_a_soup(spell_res_text)
-            nodes = soup.find("div", "hfl-s lt2b lmt-10 lmb-25 lp-s_r-20")
+            logger.debug(f"{OP.PARSING.name} out suggestions at {spell_res.url}")
+            soup = BeautifulSoup(spell_res.text, "lxml")
+            node = soup.find("div", "hfl-s lt2b lmt-10 lmb-25 lp-s_r-20")
             suggestions = []
 
-            if not nodes:
-                print(NoResultError(DICT.CAMBRIDGE.name))
+            if not node:
+                logger.error(f"No suggestions found in {DICT.CAMBRIDGE.name}")
                 sys.exit(1)
 
-            for ul in nodes.find_all("ul", "hul-u"):
+            for ul in node.find_all("ul", "hul-u"):
                 if "We have these words with similar spellings or pronunciations:" in ul.find_previous_sibling().text:
                     for i in ul.find_all("li"):
                         sug = replace_all(i.text)
                         suggestions.append(sug)
 
-            logger.debug(f"{OP.PRINTING.name} the parsed result of {spell_res_url}")
-            dicts.print_spellcheck(input_word, suggestions, DICT.CAMBRIDGE.name, is_ch)
+            logger.debug(f"{OP.PRINTING.name} out suggestions at {spell_res.url}")
+            select_word = get_suggestion_by_fzf(suggestions, DICT.CAMBRIDGE.name) if has_tool("fzf") else get_suggestion(suggestions, DICT.CAMBRIDGE.name)
+            if select_word is None:
+                sys.exit()
+            elif select_word == "":
+                logger.debug(f'{OP.SWITCHED.name} to {DICT.MERRIAM_WEBSTER.name}')
+                webster.search_webster(input_word, True, no_suggestions, None)
+            else:
+                search_cambridge(select_word, False, False, no_suggestions, None)
 
-
-def parse_and_print(first_dict, res_url, new_line=False):
-    logger.debug(f"{OP.PRINTING.name} the parsed result of {res_url}")
-
-    attempt = 0
-    while True:
-        try:
-            blocks = first_dict.find_all("div", ["pr entry-body__el", "entry-body__el clrd js-share-holder", "pr idiom-block"])
-        except AttributeError as e:
-            attempt = call_on_error(e, res_url, attempt, OP.RETRY_PARSING.name)
-            continue
         else:
-            if len(blocks) != 0:
+            res_url = parse_response_url(res_url)
+            logger.debug(f'{OP.FOUND.name} "{input_word}" in {DICT.CAMBRIDGE.name} at {res_url}')
+
+            logger.debug(f"{OP.PARSING.name} {res_url}")
+            soup = BeautifulSoup(response.text, "lxml")
+
+            temp = soup.find("title").text.split("-")[0].strip()
+            if "|" in temp:
+                res_word = temp.split("|")[0].strip().lower()
+            elif "in Simplified Chinese" in temp:
+                res_word = temp.split("in Simplified Chinese")[0].strip().lower()
+            else:
+                res_word = temp.lower()
+
+            first_dict = soup.find("div", "pr dictionary") or soup.find("div", "pr di superentry")
+            if first_dict is None:
+                logger.error(f"No result found in {DICT.CAMBRIDGE.name}")
+                sys.exit(1)
+
+            blocks = first_dict.find_all("div", ["pr entry-body__el", "entry-body__el clrd js-share-holder", "pr idiom-block"])
+            if len(blocks) == 0:
+                logger.error(f"No result found in {DICT.CAMBRIDGE.name}")
+                sys.exit(1)
+            else:
+                logger.debug(f"{OP.PRINTING.name} the parsed result of {res_url}")
                 for block in blocks:
                     parse_dict_head(block)
                     parse_dict_body(block)
 
-                if new_line:
-                    print()
+                print()
 
-                dicts.save(word_entry, response_word, res_url, str(first_dict))
-                return
-            else:
-                print(NoResultError(DICT.CAMBRIDGE.name))
-                sys.exit(1)
-
-
-def parse_first_dict(res_url, soup):
-    attempt = 0
-    logger.debug(f"{OP.PARSING.name} {res_url}")
-
-    while True:
-        first_dict = soup.find("div", "pr dictionary") or soup.find("div", "pr di superentry")
-        if first_dict is None:
-            attempt = call_on_error(ParsedNoneError(DICT.CAMBRIDGE.name, res_url), res_url, attempt, OP.RETRY_PARSING.name)
-            continue
-        else:
-            break
-
-    return first_dict
-
-
-def parse_response_word(soup):
-    temp = soup.find("title").text.split("-")[0].strip()
-    if "|" in temp:
-        response_word = temp.split("|")[0].strip().lower()
-
-    elif "in Simplified Chinese" in temp:
-        response_word = temp.split("in Simplified Chinese")[0].strip().lower()
-    else:
-        response_word = temp.lower()
-
-    return response_word
+                save_to_cache(input_word, res_word, res_url, str(first_dict))
+                sys.exit()
 
 
 def parse_head_title(block):
@@ -288,10 +248,10 @@ def parse_dict_head(block):
             print(f"{info[0]} {info[1]}")
 
 
-# ----------Parse Dict Body----------
 def parse_def_title(block):
     d_title = replace_all(block.find("h3", "dsense_h").text)
     c_print("#[red]" + "\n" + d_title.upper())
+
 
 def parse_ptitle(block):
     p_title = block.find("span", "phrase-title dphrase-title").text

@@ -1,25 +1,32 @@
-import requests
-import threading
 import sys
 from lxml import etree
 
-from ..console import c_print
-from ..utils import get_request_url, decode_url, OP, DICT, is_tool
-from ..log import logger
-from ..dicts import dicts
-from ..errors import NoResultError
-from .. import color as w_col
+from console import c_print
+from utils import fetch, get_request_url, decode_url, OP, DICT, has_tool, get_suggestion, get_suggestion_by_fzf, get_wod_selection, get_wod_selection_by_fzf
+from log import logger
+from cache import search_from_cache, save_to_cache
+import camb
+
+import color as w_col
 
 WEBSTER_BASE_URL = "https://www.merriam-webster.com"
 WEBSTER_DICT_BASE_URL = WEBSTER_BASE_URL + "/dictionary/"
 WEBSTER_WORD_OF_THE_DAY_URL = WEBSTER_BASE_URL + "/word-of-the-day"
 WEBSTER_WORD_OF_THE_DAY_URL_CALENDAR = WEBSTER_BASE_URL + "/word-of-the-day/calendar"
 
-sub_text = ""
-res_word = ""
-word_entries = [] # A page may have multiple word entries, e.g. "give away", "giveaway"
-word_forms = []   # A word may have multiple word forms, e.g. "ran", "running", "run", "flies"
-word_types = []   # A word's word types, e.g. "preposition", "adjective"
+search_pattern = """
+//*[@id="left-content"]/div[contains(@id, "-entry")] |
+//*[@id="left-content"]/div[@id="phrases"] |
+//*[@id="left-content"]/div[@id="synonyms"] |
+//*[@id="left-content"]/div[@id="examples"]/div[@class="content-section-body"]/div[contains(@class,"on-web-container")]/div[contains(@class,"on-web")] |
+//*[@id="left-content"]/div[@id="related-phrases"] |
+//*[@id="left-content"]/div[@id="nearby-entries"]
+"""
+parser = etree.HTMLParser(remove_comments=True)
+
+word_entries = set() # A page may have multiple word entries, e.g. "give away", "giveaway"
+word_forms = set()      # A word may have multiple word forms, e.g. "ran", "running", "run", "flies"
+word_types = set()      # A word's word types, e.g. "preposition", "adjective"
 
 
 def search_webster(input_word, is_fresh=False, no_suggestions=False, req_url=None):
@@ -27,25 +34,27 @@ def search_webster(input_word, is_fresh=False, no_suggestions=False, req_url=Non
         req_url = get_request_url(WEBSTER_DICT_BASE_URL, input_word, DICT.MERRIAM_WEBSTER.name)
 
     if not is_fresh:
-        cached = dicts.cache_run(input_word, req_url)
-        if not cached:
-            fresh_run(req_url, input_word, no_suggestions)
-    else:
-        fresh_run(req_url, input_word, no_suggestions)
+        result = search_from_cache(input_word, req_url)
+        if result[0]:
+            res_url, res_word, res_text = result[1]
+            if DICT.CAMBRIDGE.name.lower() in res_url:
+                camb.search_cambridge(input_word, False, False, no_suggestions, req_url)
+            else:
+                logger.debug(f'{OP.FOUND.name} "{res_word}" from {DICT.MERRIAM_WEBSTER.name} in cache')
+                logger.debug(f"{OP.PARSING.name} {res_url}")
+                tree = etree.HTML(res_text, parser)
+                nodes = tree.xpath(search_pattern)
+                parse_and_print(nodes, res_url, new_line=False)
+                c_print(f'\n#[#757575]{OP.FOUND.name} "{res_word}" from {DICT.MERRIAM_WEBSTER.name} in cache. You can add "-f" to fetch the {DICT.CAMBRIDGE.name} dictionary')
+            sys.exit()
+        else:
+            logger.debug(f'{OP.NOT_FOUND.name} "{input_word}" in cache')
+    fresh_run(input_word, no_suggestions, req_url)
 
 
-def fetch_webster(request_url, input_word):
-    with requests.Session() as session:
-        session.trust_env = False
-        res = dicts.fetch(request_url, session)
-
-        res_url = res.url
-        res_text = res.text
-        status = res.status_code
-
-        if status == 200:
-            logger.debug(f'{OP.FOUND.name} "{input_word}" in {DICT.MERRIAM_WEBSTER.name} at {res_url}')
-            return True, (res_url, res_text)
+def fresh_run(input_word, no_suggestions, req_url):
+        response = fetch(req_url)
+        res_url = response.url
 
         # By default Requests will perform location redirection for all verbs except HEAD.
         # https://requests.readthedocs.io/en/latest/user/quickstart/#redirection-and-history
@@ -53,127 +62,87 @@ def fetch_webster(request_url, input_word):
         # if status == 301:
         #     loc = res.headers["location"]
         #     new_url = WEBSTER_BASE_URL + loc
-        #     new_res = dicts.fetch(new_url, session)
+        #     new_res = fetch(new_url, session)
+
+        status = response.status_code
+        if status == 200:
+            logger.debug(f'{OP.FOUND.name} "{input_word}" in {DICT.MERRIAM_WEBSTER.name} at {res_url}')
+
+            logger.debug(f"{OP.PARSING.name} {res_url}")
+            tree = etree.HTML(response.text, parser)
+
+            partial_match = tree.xpath('//p[contains(@class,"partial")]')
+            if partial_match:
+                input_word = decode_url(res_url).split("/")[-1]
+                suggestions = tree.xpath('//h2[@class="hword"]/text() | //h2[@class="hword"]/span/text()')
+
+                logger.debug(f"{OP.PRINTING.name} out suggestions at {res_url}")
+                select_word = get_suggestion_by_fzf(suggestions, DICT.MERRIAM_WEBSTER.name) if has_tool("fzf") else get_suggestion(suggestions, DICT.MERRIAM_WEBSTER.name)
+                if select_word is None:
+                    sys.exit()
+                elif select_word == "":
+                    logger.debug(f'{OP.SWITCHED.name} to {DICT.CAMBRIDGE.name}')
+                    camb.search_cambridge(input_word, True, False, no_suggestions, None)
+                else:
+                    search_webster(select_word, False, no_suggestions, None)
+            else:
+                sub_tree = tree.xpath('//*[@id="left-content"]')[0]
+                nodes = sub_tree.xpath(search_pattern)
+                if len(nodes) == 0:
+                    logger.error(f"No result found in {DICT.MERRIAM_WEBSTER.name}")
+                    sys.exit(1)
+
+                # Response word within res_url is not same with what apppears on the web page. e.g. "set in stone"
+                result = sub_tree.xpath('//*[@id="left-content"]/div[contains(@id, "-entry-1")]/div[1]/div/div[1]/h1/text()') \
+                       or sub_tree.xpath('//*[@id="left-content"]/div[contains(@id, "-entry-1")]/div[1]/div/div/h1/span/text()')
+
+                if len(result) == 0:
+                    logger.error(f"No result found in {DICT.MERRIAM_WEBSTER.name}")
+                    sys.exit(1)
+
+                parse_and_print(nodes, res_url, new_line=True)
+
+                sub_text = etree.tostring(sub_tree).decode('utf-8')
+                # logger.debug(f'START CACHING: input_word is "{input_word}"; res_word is "{res_word}"; res_url is "{res_url}"')
+                save_to_cache(input_word, result[0], res_url, sub_text)
 
         elif status == 404:
-            logger.debug(f'{OP.NOT_FOUND.name} "{input_word}" in {DICT.MERRIAM_WEBSTER.name}')
-            return False, (res_url, res_text)
+            logger.debug(f'{OP.NOT_FOUND.name} "{input_word}" at {res_url}')
 
-        else:
-            logger.error(f'Something went wrong when fetching {request_url} with STATUS: {status}')
-            sys.exit(2)
+            if no_suggestions:
+                sys.exit(-1)
 
+            logger.debug(f"{OP.PARSING.name} out suggestions at {res_url}")
+            tree = etree.HTML(response.text, parser)
+            result = tree.xpath('//div[@class="widget spelling-suggestion"]')
+            if len(result) == 0:
+                logger.error(f"No suggestions found in {DICT.MERRIAM_WEBSTER.name}")
+                sys.exit(1)
 
-def fresh_run(req_url, input_word, no_suggestions=False):
-    result = fetch_webster(req_url, input_word)
-    found = result[0]
-    res_url, res_text = result[1]
-    nodes = parse_dict(res_text, found, res_url, True)
-
-    if found:
-        if res_word:
-            parse_thread = threading.Thread(
-                target=parse_and_print, args=(nodes, res_url, True)
-            )
-            parse_thread.start()
-
-            # logger.debug(f'START CACHING: input_word is "{input_word}"; res_word is "{res_word}"; res_url is "{res_url}"')
-            dicts.save(input_word, res_word, res_url, sub_text)
-    else:
-        if no_suggestions:
-            sys.exit(-1)
-        else:
-            logger.debug(f"{OP.PRINTING.name} the parsed result of {res_url}")
+            nodes = result[0]
             suggestions = []
             for node in nodes:
                 if node.tag != "h1":
                     for word in node.itertext():
-                        w = word.strip()
+                        w = word.strip("\n").strip()
                         if w.startswith("The"):
                             continue
                         else:
-                            sug = w.strip()
-                            suggestions.append(sug)
+                            suggestions.append(w)
 
-            dicts.print_spellcheck(input_word, suggestions, DICT.MERRIAM_WEBSTER.name)
+            logger.debug(f"{OP.PRINTING.name} out suggestions at {res_url}")
+            select_word = get_suggestion_by_fzf(suggestions, DICT.MERRIAM_WEBSTER.name) if has_tool("fzf") else get_suggestion(suggestions, DICT.MERRIAM_WEBSTER.name)
+            if select_word is None:
+                sys.exit()
+            elif select_word == "":
+                logger.debug(f'{OP.SWITCHED.name} to {DICT.CAMBRIDGE.name}')
+                camb.search_cambridge(input_word, True, False, no_suggestions, None)
+            else:
+                search_webster(select_word, False, no_suggestions, None)
 
-
-def get_wod():
-    result = fetch_webster(WEBSTER_WORD_OF_THE_DAY_URL, "")
-    found = result[0]
-    if found:
-        res_url, res_text = result[1]
-        parse_and_print_wod(res_url, res_text)
-
-
-def get_wod_past(req_url):
-    result = fetch_webster(req_url, "")
-    found = result[0]
-    if found:
-        res_url, res_text = result[1]
-        parse_and_print_wod(res_url, res_text)
-
-
-def get_wod_list():
-    result = fetch_webster(WEBSTER_WORD_OF_THE_DAY_URL_CALENDAR, "")
-    found = result[0]
-    if found:
-        res_url, res_text = result[1]
-        parse_and_print_wod_calendar(res_url, res_text)
-
-
-# --- parsing html --- #
-def parse_dict(res_text, found, res_url, is_fresh):
-    logger.debug(f"{OP.PARSING.name} {res_url}")
-
-    parser = etree.HTMLParser(remove_comments=True)
-    tree = etree.HTML(res_text, parser)
-
-    if found:
-        sub_tree = tree.xpath('//*[@id="left-content"]')[0]
-        partial_match = sub_tree.xpath('//p[contains(@class,"partial")]')
-
-        if partial_match:
-            input_word = decode_url(res_url).split("/")[-1]
-            suggestions = sub_tree.xpath('//h2[@class="hword"]/text() | //h2[@class="hword"]/span/text()')
-            dicts.print_spellcheck(input_word, suggestions, DICT.MERRIAM_WEBSTER.name, is_ch=False)
-            sys.exit()
         else:
-            s = """
-            //*[@id="left-content"]/div[contains(@id, "-entry")] |
-            //*[@id="left-content"]/div[@id="phrases"] |
-            //*[@id="left-content"]/div[@id="synonyms"] |
-            //*[@id="left-content"]/div[@id="examples"]/div[@class="content-section-body"]/div[contains(@class,"on-web-container")]/div[contains(@class,"on-web")] |
-            //*[@id="left-content"]/div[@id="related-phrases"] |
-            //*[@id="left-content"]/div[@id="nearby-entries"]
-            """
-            nodes = sub_tree.xpath(s)
-
-            if is_fresh:
-                global sub_text
-                sub_text = etree.tostring(sub_tree).decode('utf-8')
-
-            if len(nodes) == 0:
-                print(NoResultError(DICT.MERRIAM_WEBSTER.name))
-                sys.exit(1)
-
-            result = sub_tree.xpath('//*[@id="left-content"]/div[contains(@id, "-entry-1")]/div[1]/div/div[1]/h1/text()') \
-                   or sub_tree.xpath('//*[@id="left-content"]/div[contains(@id, "-entry-1")]/div[1]/div/div/h1/span/text()')
-
-            if len(result) != 0:
-                global res_word
-                res_word = result[0]
-
-            return nodes
-
-    else:
-        result = tree.xpath('//div[@class="widget spelling-suggestion"]')
-        if len(result) != 0:
-            nodes = result[0]
-            return nodes
-        else:
-            print(NoResultError(DICT.MERRIAM_WEBSTER.name))
-            sys.exit(1)
+            logger.error(f'Something went wrong when fetching {req_url} with STATUS: {status}')
+            sys.exit(2)
 
 
 def nearby_entries(node):
@@ -256,11 +225,8 @@ def examples(node):
                             c_print(f"#[{w_col.eg_sentence}]{t}", end="")
                         else:
                             hit = False
-                            global word_entries, word_forms
-                            words = set(word_entries)
-                            forms = set(word_forms)
                             text = t.strip().lower()
-                            for w in words:
+                            for w in word_entries:
                                 if "preposition" in word_types or "adverb" in word_types or "conjuction" in word_types and ("noun" in word_types and text[-1] !="s"):
                                     if w == text:
                                         hit = True
@@ -269,7 +235,7 @@ def examples(node):
                                     if w in text and len(text) < 20:
                                         hit = True
                                         break
-                            for f in forms:
+                            for f in word_forms:
                                 if f == text:
                                     hit = True
                                     break
@@ -313,12 +279,10 @@ def related_phrases(node):
 
     title = children[1]
     texts = list(title.itertext())
-    global word_entries
-    words = set(word_entries)
 
     for t in texts:
         if t.strip():
-            if t.lower() in words:
+            if t.lower() in word_entries:
                 c_print(f"#[{w_col.rph_em} bold]{t}", end="\n")
             else:
                 c_print(f"#[{w_col.rph_title} bold]{t}", end="")
@@ -365,9 +329,9 @@ def dtText(node, ancestor_attr):
         if text == ": ":
             print_meaning_content(text, end="")
         elif text == " see also ":
-            print_meaning_keyword(text.strip())
+            print_meaning_keyword(text.strip().upper())
         elif text == " see " or text == " compare ":
-            print_meaning_keyword("->" + text.strip())
+            print_meaning_keyword("->" + text.strip().upper())
         elif u_words and text in u_words:
             text_new = text.upper()
             print_meaning_content(text_new, end="")
@@ -585,7 +549,7 @@ def tags(node, ancestor_attr, num_label_count):
     for elm in node.iterdescendants():
         elm_attr = elm.get("class")
         if elm_attr is not None:
-            if "badge" in elm_attr:
+            if "badge" in elm_attr and "pron" not in elm_attr:
                 text = "".join(list(elm.itertext())).strip()
                 print_meaning_badge(text)
 
@@ -633,6 +597,9 @@ def tags(node, ancestor_attr, num_label_count):
 
             elif elm_attr == "unText":
                 unText_simple(elm, ancestor_attr, num_label_count, has_badge)
+
+            elif "prons-entries-list" in elm_attr:
+                print_pron(elm)
 
     print()
 
@@ -693,6 +660,9 @@ def vg(node):
             else:
                 c_print(f"#[bold]{e.text}")
 
+            if "vg-sseq-entry-item" in child.getnext().get("class"):
+                print()
+
 
 def print_word(text):
     c_print(f"#[{w_col.eh_h1_word} bold]{text}", end=" ")
@@ -705,7 +675,7 @@ def entry_header_content(node):
         if elm.tag == "h1" or elm.tag == "p":
             word = "".join(list(elm.itertext()))
             global word_entries
-            word_entries.append(word.strip().lower())
+            word_entries.add(word.strip().lower())
             print_word(word)
 
         elif elm.tag == "span":
@@ -716,7 +686,8 @@ def entry_header_content(node):
             type = " ".join(list(elm.itertext()))
             c_print(f"#[bold {w_col.eh_word_type}]{type}", end="")
             global word_types
-            word_types.append(type.strip().lower())
+            word_types.add(type.strip().lower())
+
     print()
 
 
@@ -908,7 +879,7 @@ def print_meaning_arrow(text, end=" "):
 
 
 def print_meaning_keyword(text, end=" "):
-    c_print(f"#[{w_col.meaning_keyword}]{text}", end=end)
+    c_print(f"#[bold {w_col.meaning_keyword}]{text}", end=end)
 
 
 def print_meaning_content(text, end=""):
@@ -1027,7 +998,7 @@ def print_class_ins(node):
                     else:
                         print_class_if(child.text, before_semicolon=False)
                 global word_forms
-                word_forms.append(child.text.strip().lower())
+                word_forms.add(child.text.strip().lower())
             else:
                 c_print(f"#[bold]{child.text}", end="")
 
@@ -1191,10 +1162,26 @@ def parse_and_print_wod_calendar(res_url, res_text):
     for node in nodes:
         data[node.text] = node.attrib["href"]
 
-    if is_tool("fzf"):
-        calendar_notice = "Select to print the item's word-of-the-day meaning; [ESC] to quit out."
-        dicts.list_items_fzf(data, "wod_calendar", calendar_notice, None, None, False)
+    select_word = get_wod_selection_by_fzf(data) if has_tool("fzf") else get_wod_selection(data)
+    if select_word in data.keys():
+        url = WEBSTER_BASE_URL + data[select_word]
+        get_webster_wod_past(url)
+    elif len(select_word) > 1 and not select_word.isnumeric():
+        search_webster(select_word)
     else:
-        title = DICT.MERRIAM_WEBSTER.name + " Calendar of Word of the Day"
-        c_print(title + (int(len(title)/2))*" ", justify="center")
-        dicts.list_items(data, "wod_calendar")
+        sys.exit()
+
+
+def get_webster_wod():
+    response = fetch(WEBSTER_WORD_OF_THE_DAY_URL)
+    parse_and_print_wod(response.url, response.text)
+
+
+def get_webster_wod_past(req_url):
+    response = fetch(req_url)
+    parse_and_print_wod(response.url, response.text)
+
+
+def get_webster_wod_list():
+    response = fetch(WEBSTER_WORD_OF_THE_DAY_URL_CALENDAR)
+    parse_and_print_wod_calendar(response.url, response.text)

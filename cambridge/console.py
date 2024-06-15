@@ -2,7 +2,7 @@ import os
 import sys
 import re
 from enum import Enum
-from .color import COLOR_EFFECT
+from color import COLOR_EFFECT
 
 from typing import (
     Optional,

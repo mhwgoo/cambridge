@@ -1,16 +1,12 @@
-import logging
-import argparse
 import sys
+import argparse
+import logging
 
-from .cache import (
-    get_response_words,
-    delete_word,
-)
-from .console import c_print
-from .log import logger
-from .utils import OP, DICT, is_tool
-from .dicts import webster, cambridge, dicts
-from .__init__ import __version__
+from __init__ import __version__
+from cache import delete_from_cache, list_cache
+from webster import search_webster, get_webster_wod, get_webster_wod_list
+from camb import search_cambridge
+from utils import get_cache_selection, get_cache_selection_by_fzf
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -183,78 +179,32 @@ def print_help(parser, parser_lw, parser_sw, parser_wod):
     sys.exit()
 
 
-def delete(word):
-    deleted, data = delete_word(word)
-
-    if deleted and data is not None:
-        for i in data:
-            if "cambridge" in i[1]:
-                print(f'{OP.DELETED.name} "{word}" from {DICT.CAMBRIDGE.name} in cache successfully')
-            else:
-                print(f'{OP.DELETED.name} "{word}" from {DICT.MERRIAM_WEBSTER.name} in cache successfully')
-    else:
-        print(f'{OP.NOT_FOUND.name} "{word}" in cache')
-
-
 def list_words(args):
-    # The subparser i.e. the sub-command isn't in the namespace of args
-
     if args.delete:
         to_delete = args.delete
         words = " ".join(to_delete)
         for w in words.split(","):
             i = w.strip()
             if i:
-                delete(i)
+                delete_from_cache(i)
 
-    elif args.random:
-        result = get_response_words(is_random=True)
-        if not result[0]:
-            logger.error("You may haven't searched any word yet")
-        else:
-            data = result[1]
-            list_notice = "Select to print the item's meaning; [ESC] to quit out."
-            if not is_tool("fzf"):
-                print()
-                dicts.list_items(data, "cache_list")
-                print()
-            else:
-                dicts.list_items_fzf(data, "cache_list", list_notice, None, None, False)
-
+    if args.random:
+        method = "random"
+    elif args.time:
+        method = "by_time"
     else:
-        result = get_response_words(is_random=False)
-        if not result[0]:
-            logger.error("You may haven't searched any word yet")
+        method = "by_alpha"
 
-        else:
-            data = result[1]
-            list_notice = "Select to print the item's meaning; [ESC] to quit out."
-            if args.time:
-                if not is_tool("fzf"):
-                    data.sort(reverse=False, key=lambda tup: tup[2])
-                    print()
-                    dicts.list_items(data, "cache_list")
-                    print()
-                else:
-                    data.sort(reverse=True, key=lambda tup: tup[2])
-                    dicts.list_items_fzf(data, "cache_list", list_notice, None, None, False)
-            else:
-                data.sort()
-                if not is_tool("fzf"):
-                    print()
-                    dicts.list_items(data, "cache_list")
-                    print()
-                else:
-                    dicts.list_items_fzf(data, "cache_list", list_notice, None, None, False)
+    has_fzf, data = list_cache(method)
+    select_word = get_cache_selection_by_fzf(data) if has_fzf else get_cache_selection(data, method)
+
+    if len(select_word) > 1 and not select_word.isnumeric():
+        search_webster(select_word)
+    else:
+        sys.exit()
 
 
 def search_word(args):
-    """
-    The function is triggered when a user searches a word or phrase on terminal.
-    First checks the args having "verbose" in it or not, if so, the debug mode will be turned on.
-    Then it checks which dictionary is intended, and then calls respective dictionary function.
-    """
-
     if args.debug:
         logging.getLogger(__package__).setLevel(logging.DEBUG)
 
@@ -265,7 +215,6 @@ def search_word(args):
         print("You didn't input any word or phrase.")
         sys.exit(3)
 
-    # boolean types
     is_webster = args.webster
     is_fresh = args.fresh
     is_ch = args.chinese
@@ -275,15 +224,8 @@ def search_word(args):
         print("Webster Dictionary doesn't support English to other language. Try again without -c(--chinese) option")
         sys.exit(3)
 
-    if is_webster:
-        webster.search_webster(input_word, is_fresh, no_suggestions, None)
-    else:
-        cambridge.search_cambridge(input_word, is_fresh, is_ch, no_suggestions, None)
+    search_webster(input_word, is_fresh, no_suggestions, None) if is_webster else search_cambridge(input_word, is_fresh, is_ch, no_suggestions, None)
 
 
 def wod(args):
-    if args.list:
-        webster.get_wod_list()
-
-    else:
-        webster.get_wod()
+    get_webster_wod_list() if args.list else get_webster_wod()

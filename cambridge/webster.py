@@ -736,7 +736,6 @@ def entry_uros(node):
                 c_print(f"#[bold {w_col.wf}]{elm.text}", end = " ")
 
             elif elm.tag == "span" and "fw-bold fl" in attr:
-                next_sibling = elm.getnext()
                 c_print(f"#[{w_col.eh_word_type}]{elm.text}", end = "")
 
             elif "ins" in attr:
@@ -928,7 +927,7 @@ def print_pron(node, header=False):
     count = len(prons)
     if count == 1:
         if sibling is None:
-            if header == True:
+            if header:
                 print(f"|{prons[0]}|", end="\n") # e.g. fortissimo 1 of 2
             else:
                 print(f"|{prons[0]}|", end="")   # e.g. fortissimo 2 of 2
@@ -948,7 +947,7 @@ def print_pron(node, header=False):
                 if sibling is not None:
                     c_print(f"#[{w_col.eh_word_syllables}]{pron}", end=" ")
                 else:
-                    if header == True:
+                    if header:
                         c_print(f"#[{w_col.eh_word_syllables}]{pron}", end="\n")
                     else:
                         c_print(f"#[{w_col.eh_word_syllables}]{pron}", end="")

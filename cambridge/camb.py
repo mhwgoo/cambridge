@@ -32,7 +32,7 @@ def search_cambridge(input_word, is_fresh=False, is_ch=False, no_suggestions=Fal
         if res_url is None:
             logger.debug(f'{OP.NOT_FOUND.name} "{input_word}" in cache')
             fresh_run(input_word, is_ch, no_suggestions, req_url)
-        elif not DICT.CAMBRIDGE.name.lower() in res_url:
+        elif DICT.CAMBRIDGE.name.lower() not in res_url:
             webster.search_webster(input_word, False, no_suggestions, None, res_url)
         else:
             cache_run(res_url)

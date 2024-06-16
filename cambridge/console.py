@@ -1,7 +1,5 @@
 import os
-import sys
 import re
-from enum import Enum
 
 from .color import COLOR_EFFECT
 

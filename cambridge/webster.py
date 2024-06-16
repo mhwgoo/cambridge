@@ -5,7 +5,7 @@ from .console import c_print
 from .utils import fetch, get_request_url, decode_url, OP, DICT, has_tool, get_suggestion, get_suggestion_by_fzf, get_wod_selection, get_wod_selection_by_fzf
 from .log import logger
 from .cache import check_cache, save_to_cache, get_cache
-import camb
+from . import camb
 
 import color as w_col
 

@@ -28,9 +28,16 @@ I'm a terminal person tired of pulling out a GUI app or browser, inputting words
 10. well tuned to dark, light, blueish, grayish, `gruvbox` terminal colorschemes
 
 ## Install & Uninstall
-```python
-pip install cambridge # install
-pip uninstall cambridge && rm -rf $HOME/.cache/cambridge # uninstall and remove cache
+```bash
+pip install cambridge
+pip uninstall -r requirements.txt -y
+rm -rf $HOME/.cache/cambridge
+rm -rf $HOME/.cache/fakeua
+
+# within the project
+make install
+make uninstall
+make clean_cache
 ```
 
 ## Usages

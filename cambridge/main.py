@@ -4,9 +4,6 @@ def main():
         if args is not None:
             args.func(args)
 
-        if con:
-            con.close()
-
     except KeyboardInterrupt:
         print("\nStopped by user")
 
@@ -23,4 +20,3 @@ if __name__ == "__main__":
 
 else:
     from .args import parse_args
-    from .cache import con

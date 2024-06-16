@@ -6,8 +6,7 @@ from .utils import fetch, get_request_url, decode_url, OP, DICT, has_tool, get_s
 from .log import logger
 from .cache import check_cache, save_to_cache, get_cache
 from . import camb
-
-import color as w_col
+from . import color as w_col
 
 WEBSTER_BASE_URL = "https://www.merriam-webster.com"
 WEBSTER_DICT_BASE_URL = WEBSTER_BASE_URL + "/dictionary/"

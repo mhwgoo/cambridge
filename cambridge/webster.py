@@ -1,10 +1,10 @@
 import sys
 from lxml import etree # type: ignore
 
-from console import c_print
-from utils import fetch, get_request_url, decode_url, OP, DICT, has_tool, get_suggestion, get_suggestion_by_fzf, get_wod_selection, get_wod_selection_by_fzf
-from log import logger
-from cache import check_cache, save_to_cache, get_cache
+from .console import c_print
+from .utils import fetch, get_request_url, decode_url, OP, DICT, has_tool, get_suggestion, get_suggestion_by_fzf, get_wod_selection, get_wod_selection_by_fzf
+from .log import logger
+from .cache import check_cache, save_to_cache, get_cache
 import camb
 
 import color as w_col
@@ -25,8 +25,8 @@ search_pattern = """
 parser = etree.HTMLParser(remove_comments=True)
 
 word_entries = set() # A page may have multiple word entries, e.g. "give away", "giveaway"
-word_forms = set()      # A word may have multiple word forms, e.g. "ran", "running", "run", "flies"
-word_types = set()      # A word's word types, e.g. "preposition", "adjective"
+word_forms = set()   # A word may have multiple word forms, e.g. "ran", "running", "run", "flies"
+word_types = set()   # A word's word types, e.g. "preposition", "adjective"
 
 
 def search_webster(input_word, is_fresh=False, no_suggestions=False, req_url=None, res_url_from_cache=None):

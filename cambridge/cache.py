@@ -3,8 +3,8 @@ import datetime
 import sqlite3
 from pathlib import Path
 
-from log import logger
-from utils import OP, DICT, has_tool
+from .log import logger
+from .utils import OP, DICT, has_tool
 
 dir = Path.home() / ".cache" / "cambridge"
 dir.mkdir(parents=True, exist_ok=True)

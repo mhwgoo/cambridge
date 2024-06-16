@@ -2,12 +2,12 @@ import sys
 import argparse
 import logging
 
-from __init__ import __version__
-from cache import delete_from_cache, list_cache
-from webster import search_webster, get_webster_wod, get_webster_wod_list
-from camb import search_cambridge
-from utils import get_cache_selection, get_cache_selection_by_fzf
-from log import logger
+from .__init__ import __version__
+from .cache import delete_from_cache, list_cache
+from .webster import search_webster, get_webster_wod, get_webster_wod_list
+from .camb import search_cambridge
+from .utils import get_cache_selection, get_cache_selection_by_fzf
+from .log import logger
 
 def parse_args():
     parser = argparse.ArgumentParser(

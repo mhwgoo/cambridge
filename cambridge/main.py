@@ -17,11 +17,11 @@ if __name__ == "__main__":
 
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-    from args import parse_args
-    from cache import con
+    from cambridge.args import parse_args
+    from cambridge.cache import DB
+
+    main()
 
 else:
     from .args import parse_args
     from .cache import con
-
-main()

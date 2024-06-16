@@ -5,8 +5,8 @@ from urllib import parse
 from enum import Enum
 from fake_user_agent import user_agent
 
-from log import logger
-from console import c_print
+from .log import logger
+from .console import c_print
 
 from typing import Optional, Literal
 Initiator = Literal["wod_calendar", "spell_check", "cache_list", "redirect_list"]

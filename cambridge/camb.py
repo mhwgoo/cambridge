@@ -2,10 +2,10 @@ import sys
 import re
 from bs4 import BeautifulSoup
 
-from console import c_print
-from log import logger
-from utils import fetch, get_request_url, parse_response_url, replace_all, OP, DICT, has_tool, get_suggestion, get_suggestion_by_fzf
-from cache import check_cache, save_to_cache, get_cache
+from .console import c_print
+from .log import logger
+from .utils import fetch, get_request_url, parse_response_url, replace_all, OP, DICT, has_tool, get_suggestion, get_suggestion_by_fzf
+from .cache import check_cache, save_to_cache, get_cache
 import webster
 
 CAMBRIDGE_URL = "https://dictionary.cambridge.org"

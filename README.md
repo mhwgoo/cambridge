@@ -6,10 +6,10 @@ By default, it is English to English translation. For English to Chinese, add '-
 Also supports the Merriam-Webster Dictionary. Webster has no foreign language translation in itself.
 
 ## Screenshots
-#### Look up Cambridge Dictionary
+#### Look up Cambridge Dictionary (screenshot on DARK terminal background)
 ![look up a word in Cambridge Dictionary](/screenshots/cambridge.png)
 
-#### Look up Merriam-Webster Dictionary
+#### Look up Merriam-Webster Dictionary (screenshot on LIGHT terminal background)
 ![look up a word in Merriam-Webster Dictionary](/screenshots/webster.png)
 
 ## Why This

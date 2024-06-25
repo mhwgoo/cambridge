@@ -34,6 +34,10 @@ class DICT(Enum):
     MERRIAM_WEBSTER = 2
 
 
+def get_dict_name_by_url(url):
+    return DICT.CAMBRIDGE.name if DICT.CAMBRIDGE.name.lower() in url else DICT.MERRIAM_WEBSTER.name
+
+
 def call_on_error(error, url, attempt, op):
     attempt += 1
     logger.debug(f"{op} {url} {attempt} times")

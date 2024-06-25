@@ -340,7 +340,7 @@ def dtText(node, ancestor_attr):
         elif text == " see also ":
             print_meaning_keyword(text.strip().upper())
         elif text == " see " or text == " compare ":
-            print_meaning_keyword("->" + text.strip().upper())
+            print_meaning_keyword("-> " + text.strip().upper())
         elif u_words and text in u_words:
             text_new = text.upper()
             print_meaning_content(text_new, end="")
@@ -438,7 +438,7 @@ def extra(node, ancestor_attr):
         text_new = text.strip("\n").strip()
         if text_new:
             if text_new == "called also" or text_new == "compare":
-                print_meaning_badge("->" + text_new)
+                print_meaning_keyword("-> " + text_new.upper())
             elif u_words and text in u_words:
                 text_new = text_new.upper()
                 print_meaning_content(text_new, end="")
@@ -466,7 +466,7 @@ def unText_simple(node, ancestor_attr, num_label_count=1, has_badge=True):
     node_pre_attr = node_pre.get("class")
 
     if "mdash" in node_pre_attr:
-        print_meaning_arrow("->" + text)
+        print_meaning_arrow("-> " + text)
     else:
         print_meaning_badge(text)
 
@@ -986,7 +986,10 @@ def print_class_ins(node):
         attr = child.get("class")
         if attr is not None:
             if attr == "il  il-badge badge mw-badge-gray-100":
-                print_header_badge(child.text.strip(), end=" ")
+                if node.getprevious() is not None:
+                    print_header_badge(child.text, end=" ")
+                else:
+                    print_header_badge(child.text.strip(), end=" ")
             elif attr == "prt-a":
                 print_pron(child)
             elif attr == "il ":

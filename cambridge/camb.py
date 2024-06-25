@@ -127,7 +127,6 @@ def fresh_run(input_word, is_ch, no_suggestions, req_url):
                 print()
 
                 save_to_cache(input_word, res_word, res_url, str(first_dict))
-                sys.exit()
 
 
 def parse_head_title(block):

@@ -20,6 +20,12 @@ env:
 clean_env:
 	@rm -rf venv
 
+release:
+	flit publish
+	python3 -m pip install cambridge
+	python3 -m pip freeze > requirements.txt
+	@grep cambridge requirements.txt || echo "Not found cambridge in requirements.txt" && git push
+
 .PHONY: clean
 clean:
 	@rm -rf cambridge/__pycache__

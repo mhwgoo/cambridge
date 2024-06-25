@@ -40,7 +40,7 @@ meaning_letter = "#757575"
 meaning_link = "#4A7D95"
 meaning_content = "#4A7D95"
 meaning_badge = badge
-meaning_arrow = "#757575"
+meaning_arrow = meaning_content 
 meaning_keyword = "#757575"
 meaning_sentence = "#757575"
 
@@ -53,24 +53,24 @@ ph_title = "#2E8B57"
 ph_item = "#4A7D95"
 
 # 3. Webster synonyms
-syn_title = "#757575"
+syn_title = ph_title
 syn_item = "#4A7D95"
 syn_em = "#2E8B57"
 # syn_label = "#0F3850"
 syn_label = "#757575"
 
 # 4. Webster examples on the web
-eg_title = syn_title
+eg_title = ph_title
 eg_sentence = "#757575"
 eg_word = "#2E8B57"
 
 # 5. Webster related phrases
-rph_title = syn_title
+rph_title = ph_title
 rph_em = "#2E8B57"
 rph_item = "#4A7D95"
 
 # 6. Webster nearby entries
-nearby_title = syn_title
+nearby_title = ph_title
 nearby_em = "#2E8B57"
 nearby_word = "#757575"
 nearby_item = "#4A7D95"
@@ -79,8 +79,8 @@ nearby_item = "#4A7D95"
 dict_name = "#757575"
 
 # 8. Webster Word of the Day
-wod_title = "#2E8B57"
+wod_title = ph_title
 wod_type = eh_word_type
 wod_syllables = eh_word_syllables
-wod_subtitle = syn_title
+wod_subtitle = wod_title
 wod_sent = meaning_sentence

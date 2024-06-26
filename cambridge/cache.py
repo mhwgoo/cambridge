@@ -3,7 +3,7 @@ import sqlite3
 from pathlib import Path
 
 from .log import logger
-from .utils import OP, DICT, has_tool, get_dict_name_by_url
+from .utils import OP, has_tool, get_dict_name_by_url
 
 dir = Path.home() / ".cache" / "cambridge"
 dir.mkdir(parents=True, exist_ok=True)

@@ -209,9 +209,6 @@ def synonyms(node):
                         c_print(f"#[{w_col.syn_item}]{syn}", end=" ")
 
 
-# NOTE:
-# Wester scrapes the web for examples in the way that it only finds the exact match of the word.
-# If the word is a verb, only gets the word without tenses; if the word is a noun, only its single form.
 def examples(node):
     time = 0
 
@@ -322,6 +319,7 @@ def get_word_cases(node):
             elif "uppercase" in attr:
                 u_words.append(i.text)
     return l_words, u_words
+
 
 def dtText(node, ancestor_attr):
     texts = list(node.itertext())
@@ -701,7 +699,7 @@ def entry_header_content(node):
 
 
 def entry_attr(node):
-    """Print the pronounciation. e.g. val·​ue |ˈval-(ˌ)yü|"""
+    """Print the pronounciation. e.g. val·ue |ˈval-(ˌ)yü|"""
 
     for elm in node.iterchildren():
         if "col word-syllables-prons-header-content" in elm.attrib["class"]:

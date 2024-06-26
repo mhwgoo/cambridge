@@ -14,6 +14,7 @@ check:
 	ruff check cambridge
 	@echo "\n===> running check by pyright"
 	pyright cambridge
+	@echo ""
 
 env:
 	python3 -m venv venv

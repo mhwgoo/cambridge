@@ -492,10 +492,10 @@ def parse_dict_body(block):
                         if attr and attr == ["def-block", "ddef_block"]:
                             parse_def(child)
 
-                        if attr and "synonym" in attr:
+                        elif attr and "synonym" in attr:
                             parse_synonym(child)
 
-                        if attr and (attr == ["pr", "phrase-block", "dphrase-block", "lmb-25"] or attr == ["pr", "phrase-block", "dphrase-block"]):
+                        elif attr and (attr == ["pr", "phrase-block", "dphrase-block", "lmb-25"] or attr == ["pr", "phrase-block", "dphrase-block"]):
                             parse_ptitle(child)
 
                             for i in child.find_all("div", "def-block ddef_block"):

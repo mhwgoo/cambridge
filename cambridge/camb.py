@@ -374,12 +374,16 @@ def print_tag(node):
 
         if has_class and i.attrs["class"] == ['x-h', 'dx-h']:
             c_print("#[#757575]" + "  • " + i.text, end="")
+        if has_class and i.attrs["class"] ==  ['x-p', 'dx-p']:
+            c_print("#[#757575]" + "  • " + i.text, end="")
         elif parent_has_class and parent.attrs["class"] == ['x-h', 'dx-h']:
+            continue
+        elif parent_has_class and parent.attrs["class"] == ['x-lab', 'dx-lab']:
+            continue
+        elif parent_has_class and parent.attrs["class"] == ['x-p', 'dx-p']:
             continue
         elif has_class and i.attrs["class"] == ['x-lab', 'dx-lab']:
             c_print("#[#757575]" + " [" + i.text + "]", end="")
-        elif parent_has_class and parent.attrs["class"] == ['x-lab', 'dx-lab']:
-            continue
         elif has_class and i.attrs["class"] == ['x-pos', 'dx-pos']:
             print(" " + i.text, end="")
         else:

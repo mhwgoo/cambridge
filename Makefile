@@ -23,7 +23,7 @@ clean_env:
 
 release:
 	flit publish
-	python3 -m pip install cambridge
+	python3 -m pip install cambridge --upgrade
 	python3 -m pip freeze > requirements.txt
 	@grep cambridge requirements.txt || echo "Not found cambridge in requirements.txt"
 

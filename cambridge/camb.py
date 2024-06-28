@@ -369,23 +369,20 @@ def print_tag(node):
         parent = i.find_parent()
         parent_has_class = parent.has_attr("class")
 
-        # bs4 treats `class="x-h dx-h"` as a dict, key is 'class', value is ['x-h', 'dx-h']
-        # which is counterintuitive, especially with the whole class value as a list.
-
         if has_class and i.attrs["class"] == ['x-h', 'dx-h']:
             c_print("#[#757575]" + "  • " + i.text, end="")
-        if has_class and i.attrs["class"] ==  ['x-p', 'dx-p']:
+        elif has_class and i.attrs["class"] ==  ['x-p', 'dx-p']:
             c_print("#[#757575]" + "  • " + i.text, end="")
-        elif parent_has_class and parent.attrs["class"] == ['x-h', 'dx-h']:
-            continue
-        elif parent_has_class and parent.attrs["class"] == ['x-lab', 'dx-lab']:
-            continue
-        elif parent_has_class and parent.attrs["class"] == ['x-p', 'dx-p']:
-            continue
         elif has_class and i.attrs["class"] == ['x-lab', 'dx-lab']:
             c_print("#[#757575]" + " [" + i.text + "]", end="")
         elif has_class and i.attrs["class"] == ['x-pos', 'dx-pos']:
             print(" " + i.text, end="")
+        elif parent_has_class and parent.attrs["class"] == ['x-h', 'dx-h']:
+            continue
+        elif parent_has_class and parent.attrs["class"] == ['x-p', 'dx-p']:
+            continue
+        elif parent_has_class and parent.attrs["class"] == ['x-lab', 'dx-lab']:
+            continue
         else:
             c_print("#[#757575]" + " " + i.text, end="")
     print()

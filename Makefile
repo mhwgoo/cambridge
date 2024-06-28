@@ -10,9 +10,9 @@ gen:
 	python3 -m pip freeze > requirements.txt
 
 check:
-	@echo "\n===> running check by ruff"
+	@echo "\n===> running Python linter - ruff"
 	ruff check cambridge
-	@echo "\n===> running check by pyright"
+	@echo "\n===> running static type checker - pyright"
 	pyright cambridge
 	@echo ""
 

@@ -5,7 +5,7 @@ beautifulsoup4==4.12.3
 cambridge==3.12.2
 certifi==2024.6.2
 charset-normalizer==3.3.2
-fake_user_agent==2.1.9
+fake_user_agent==2.2.0
 frozenlist==1.4.1
 idna==3.7
 lxml==5.2.2

@@ -511,7 +511,16 @@ def sense(node, attr, parent_attr, ancestor_attr, num_label_count=1):
             else:
                 c_print(f"  #[bold {w_col.meaning_letter}]{sn}", end = " ")
 
-        sense_content = children[1] # class "sense-content w-100"
+        if node.tag == "span": # e.g. "knife and fork"
+            if children[1].attrib["class"] == "if":
+                print_class_if(children[1].text)
+
+            sense_content = None
+
+            if len(children) > 2 and "badge mw-badge-gray-100" in children[2].attrib["class"]:
+                print_meaning_badge(children[2].text.strip(), end="\n")
+        else:
+            sense_content = children[1]
 
     # meaning with only (2)
     elif attr == "sense has-num-only has-subnum-only":
@@ -534,20 +543,23 @@ def sense(node, attr, parent_attr, ancestor_attr, num_label_count=1):
         sense_content = children[1]
 
     # "sense-content w-100"
-    tags(sense_content, attr, num_label_count)
+    if sense_content is not None:
+        tags(sense_content, attr, num_label_count)
 
 
 def sb_entry(node, parent_attr, num_label_count=1):
     child = node.getchildren()[0]
     attr = node.attrib["class"]         # "sb-0 sb-entry"
-    child_attr = child.attrib["class"]  # "sense has-sn" or "pseq no-subnum"
+    child_attr = child.attrib["class"]  # "sense has-sn" or "pseq no-subnum" or "sen has-sn"
     if "pseq" in child_attr:
         elms = child.getchildren()[0].getchildren()
         for e in elms:
             e_attr = e.attrib["class"]  # "sense has-sn"
-            sense(e, e_attr, attr, parent_attr, num_label_count)     # e.g. sense(child, "sense has-sn", "sb-0 sb-entry", "....", 1)
+            sense(e, e_attr, attr, parent_attr, num_label_count)
     elif "sense" in child_attr and child.tag != "span":
         sense(child, child_attr, attr, parent_attr, num_label_count) # e.g. sense(child, "sense has-sn", "sb-0 sb-entry, "sb has-num has-let ms-lg-4 ms-3 w-100", 1)
+    elif "sen" in child_attr and child.tag == "span": # e.g. "knife and fork"
+        sense(child, child_attr, attr, parent_attr, num_label_count)
 
 
 def tags(node, ancestor_attr, num_label_count):

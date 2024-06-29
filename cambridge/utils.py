@@ -49,13 +49,15 @@ def call_on_error(error, url, attempt, op):
 
 def fetch(url):
     with requests.Session() as session:
+        logger.debug(f"{OP.FETCHING.name} {url}")
         session.trust_env = False # not to use proxy
+
         ua = user_agent()
+        logger.debug(f"Got User-Agent: {ua}")
         headers = {"User-Agent": ua}
         session.headers.update(headers)
-        attempt = 0
 
-        logger.debug(f"{OP.FETCHING.name} {url}")
+        attempt = 0
         while True:
             try:
                 r = session.get(url, timeout=9.05)
@@ -144,7 +146,7 @@ def list_items(data, initiator: Optional[Initiator] = None):
     for index, entry in enumerate(data):
         if initiator == "cache_list":
             word = entry[0]
-            dict_name = "CAMBRIDGE" if "cambridge" in entry[1] else "WEBSTER"
+            dict_name = get_dict_name_by_url(entry[1])
             print_word_per_line(index, word, dict_name)
         elif initiator == "wod_calendar":
             date_string = data[entry].split("/")[-1]
@@ -164,12 +166,11 @@ def has_tool(name):
 
 
 def get_suggestion_notice(dict_name, has_fzf):
-    is_cambridge = (dict_name == DICT.CAMBRIDGE.name)
-    flip_dict = DICT.MERRIAM_WEBSTER.name if is_cambridge else DICT.CAMBRIDGE.name
+    flip_dict = DICT.MERRIAM_WEBSTER.name if (dict_name == DICT.CAMBRIDGE.name) else DICT.CAMBRIDGE.name
     if has_fzf:
-        return "Select to print the suggestion's meaning; [NUMBER] to switch to " + flip_dict + "; Input a new word; [ESC] to quit out."
+        return f"[ENTER] to print the selected suggestion's meaning; Any [NUMBER] to switch to {flip_dict}, or a new word to search; [ESC] to quit out."
     else:
-        return "[NUMBER] to print the suggestion's meaning; [ENTER] to switch to " + flip_dict + "; Input a new word; [ANY OTHER KEY] to quit out: "
+        return f"[ENTER] to switch to {flip_dict}; [NUMBER] to print the selected suggestion's meaning, or a new word to search; Any Other [KEY] to quit out: "
 
 
 def get_suggestion(suggestions, dict_name):

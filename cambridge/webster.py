@@ -564,6 +564,8 @@ def sb_entry(node, parent_attr, num_label_count=1):
 
 def tags(node, ancestor_attr, num_label_count):
     has_badge = True
+    has_et = False
+    has_dtText = False
 
     for elm in node.iterdescendants():
         elm_attr = elm.get("class")
@@ -574,6 +576,7 @@ def tags(node, ancestor_attr, num_label_count):
 
             elif elm_attr == "et":
                 et(elm)
+                has_et = True
 
             elif elm_attr == "il ":
                 print_meaning_badge(elm.text.strip(), end=" ")
@@ -606,6 +609,7 @@ def tags(node, ancestor_attr, num_label_count):
 
             elif elm_attr == "dtText":
                 dtText(elm, ancestor_attr) # only meaning text
+                has_dtText = True
 
             elif elm_attr == "sub-content-thread":
                 sub_content_thread(elm, ancestor_attr, num_label_count) # example under the meaning
@@ -620,7 +624,8 @@ def tags(node, ancestor_attr, num_label_count):
             elif "prons-entries-list" in elm_attr:
                 print_pron(elm)
 
-    print()
+    if not has_et or (has_et and has_dtText): # e.g. invest <span class="et">: [Medieval Latin investire, from Latin, to clothe]
+        print()
 
 
 def vg_sseq_entry_item(node):
@@ -646,14 +651,11 @@ def vg_sseq_entry_item(node):
                 # print class "sb-0 sb-entry", "sb-1 sb-entry" ...
                 sb_entry(c, attr, num_label_count)
 
-def et(node):
-    for t in node.itertext():
-        print(t.strip("\n"), end= "")
 
-    if node.getnext() is None:
-        print()
-    else:
-        print("", end=" ")
+def et(node):
+    text = "".join(node.itertext()).strip("\n")
+    print(text, end=" ")
+
 
 def vg(node):
     """Print one entry(e.g. 1 of 3)'s all meanings. e.g. 1 :the monetary worth of something 2 :a fair return... 3 :..."""

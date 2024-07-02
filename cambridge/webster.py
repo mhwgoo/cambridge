@@ -368,7 +368,7 @@ def ex_sent(node, ancestor_attr, num_label_count=1):
     if ancestor_attr:
         format_basedon_ancestor(ancestor_attr, prefix="\n")
     else:
-        print("")
+        print()
 
     if num_label_count == 2:
         print(" ", end="")
@@ -763,7 +763,6 @@ def entry_uros(node):
                     sub_attr = i.get("class")
                     if sub_attr is not None and sub_attr == "sub-content-thread":
                         sub_content_thread(i, "")
-                print()
 
             elif "prons-entries-list" in attr:
                 print_pron(elm)

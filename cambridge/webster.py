@@ -28,7 +28,7 @@ word_forms = set()   # A word may have multiple word forms, e.g. "ran", "running
 word_types = set()   # A word's word types, e.g. "preposition", "adjective"
 
 
-def search_webster(input_word, is_fresh=False, no_suggestions=False, req_url=None, res_url_from_cache=None):
+async def search_webster(session, input_word, is_fresh=False, no_suggestions=False, req_url=None, res_url_from_cache=None):
     if res_url_from_cache is not None:
         cache_run(res_url_from_cache)
         sys.exit()
@@ -37,14 +37,14 @@ def search_webster(input_word, is_fresh=False, no_suggestions=False, req_url=Non
         req_url = get_request_url(WEBSTER_DICT_BASE_URL, input_word, DICT.MERRIAM_WEBSTER.name)
 
     if is_fresh:
-        fresh_run(input_word, no_suggestions, req_url)
+        await fresh_run(session, input_word, no_suggestions, req_url)
     else:
         res_url = check_cache(input_word, req_url)
         if res_url is None:
             logger.debug(f'{OP.NOT_FOUND.name} "{input_word}" in cache')
-            fresh_run(input_word, no_suggestions, req_url)
+            await fresh_run(session, input_word, no_suggestions, req_url)
         elif DICT.CAMBRIDGE.name.lower() in res_url:
-            camb.search_cambridge(input_word, False, False, no_suggestions, None, res_url)
+            await camb.search_cambridge(session, input_word, False, False, no_suggestions, None, res_url)
         else:
             cache_run(res_url)
 
@@ -59,9 +59,9 @@ def cache_run(res_url_from_cache):
     c_print(f'\n#[#757575]{OP.FOUND.name} "{res_word}" from {DICT.MERRIAM_WEBSTER.name} in cache. You can add "-f" to fetch the {DICT.CAMBRIDGE.name} dictionary')
 
 
-def fresh_run(input_word, no_suggestions, req_url):
-        response = fetch(req_url)
-        res_url = response.url
+async def fresh_run(session, input_word, no_suggestions, req_url):
+        response = await fetch(session, req_url)
+        res_url = str(response.real_url)
 
         # By default Requests will perform location redirection for all verbs except HEAD.
         # https://requests.readthedocs.io/en/latest/user/quickstart/#redirection-and-history
@@ -69,14 +69,15 @@ def fresh_run(input_word, no_suggestions, req_url):
         # if status == 301:
         #     loc = res.headers["location"]
         #     new_url = WEBSTER_BASE_URL + loc
-        #     new_res = fetch(new_url, session)
+        #     new_res = await fetch(session, new_url)
 
-        status = response.status_code
+        status = response.status
+        text = await response.text()
         if status == 200:
             logger.debug(f'{OP.FOUND.name} "{input_word}" in {DICT.MERRIAM_WEBSTER.name} at {res_url}')
 
             logger.debug(f"{OP.PARSING.name} {res_url}")
-            tree = etree.HTML(response.text, parser)
+            tree = etree.HTML(text, parser)
 
             partial_match = tree.xpath('//p[contains(@class,"partial")]')
             if partial_match:
@@ -89,10 +90,10 @@ def fresh_run(input_word, no_suggestions, req_url):
                     sys.exit()
                 elif select_word == "":
                     logger.debug(f'{OP.SWITCHED.name} to {DICT.CAMBRIDGE.name}')
-                    camb.search_cambridge(input_word, True, False, no_suggestions, None)
+                    await camb.search_cambridge(session, input_word, True, False, no_suggestions, None)
                 else:
                     logger.debug(f'{OP.SELECTED.name} "{select_word}"')
-                    search_webster(select_word, False, no_suggestions, None)
+                    await search_webster(session, select_word, False, no_suggestions, None)
             else:
                 sub_tree = tree.xpath('//*[@id="left-content"]')[0]
                 nodes = sub_tree.xpath(search_pattern)
@@ -121,7 +122,7 @@ def fresh_run(input_word, no_suggestions, req_url):
                 sys.exit(-1)
 
             logger.debug(f"{OP.PARSING.name} out suggestions at {res_url}")
-            tree = etree.HTML(response.text, parser)
+            tree = etree.HTML(text, parser)
             result = tree.xpath('//div[@class="widget spelling-suggestion"]')
             if len(result) == 0:
                 logger.error(f"No suggestions found in {DICT.MERRIAM_WEBSTER.name}")
@@ -144,10 +145,10 @@ def fresh_run(input_word, no_suggestions, req_url):
                 sys.exit()
             elif select_word == "":
                 logger.debug(f'{OP.SWITCHED.name} to {DICT.CAMBRIDGE.name}')
-                camb.search_cambridge(input_word, True, False, no_suggestions, None)
+                await camb.search_cambridge(session, input_word, True, False, no_suggestions, None)
             else:
                 logger.debug(f'{OP.SELECTED.name} "{select_word}"')
-                search_webster(select_word, False, no_suggestions, None)
+                await search_webster(session, select_word, False, no_suggestions, None)
 
         else:
             logger.error(f'Something went wrong when fetching {req_url} with STATUS: {status}')
@@ -1172,7 +1173,7 @@ def parse_and_print_wod(res_url, res_text):
     print()
 
 
-def parse_and_print_wod_calendar(res_url, res_text):
+async def parse_and_print_wod_calendar(session, res_url, res_text):
     logger.debug(f"{OP.PARSING.name} {res_url}")
 
     parser = etree.HTMLParser(remove_comments=True)
@@ -1187,23 +1188,26 @@ def parse_and_print_wod_calendar(res_url, res_text):
     select_word = get_wod_selection_by_fzf(data) if has_tool("fzf") else get_wod_selection(data)
     if select_word in data.keys():
         url = WEBSTER_BASE_URL + data[select_word]
-        get_webster_wod_past(url)
+        await get_webster_wod_past(session, url)
     elif select_word is not None and len(select_word) > 1 and not select_word.isnumeric():
-        search_webster(select_word)
+        await search_webster(session, select_word)
     else:
         sys.exit()
 
 
-def get_webster_wod():
-    response = fetch(WEBSTER_WORD_OF_THE_DAY_URL)
-    parse_and_print_wod(response.url, response.text)
+async def get_webster_wod(session):
+    resp = await fetch(session, WEBSTER_WORD_OF_THE_DAY_URL)
+    result = await resp.text()
+    parse_and_print_wod(resp.url, result)
 
 
-def get_webster_wod_past(req_url):
-    response = fetch(req_url)
-    parse_and_print_wod(response.url, response.text)
+async def get_webster_wod_past(session, req_url):
+    resp = await fetch(session, req_url)
+    result = await resp.text()
+    parse_and_print_wod(resp.url, result)
 
 
-def get_webster_wod_list():
-    response = fetch(WEBSTER_WORD_OF_THE_DAY_URL_CALENDAR)
-    parse_and_print_wod_calendar(response.url, response.text)
+async def get_webster_wod_list(session):
+    resp = await fetch(session, WEBSTER_WORD_OF_THE_DAY_URL_CALENDAR)
+    result = await resp.text()
+    await parse_and_print_wod_calendar(session, resp.url, result)

@@ -1,27 +1,41 @@
-def main():
+async def main():
     try:
-        args = parse_args()
-        if args is not None:
-            args.func(args)
+        async with aiohttp.ClientSession() as session:
+            args = parse_args(session)
+            args_dict = vars(args) # transfrom namespace object into a dict
 
-            # Connection object used as context manager only commits or rollbacks transactions,
-            # so the connection object should be closed manually
-            con.close()
+            if args_dict.get("word_or_phrase") is not None:
+                await search_word(args)
+            elif args_dict.get("subparser_name") is not None and args_dict.get("subparser_name") == "l":
+                await list_words(args)
+            elif args_dict.get("subparser_name") is not None and args_dict.get("subparser_name") == "wod":
+                await wod(args)
+
+    except asyncio.exceptions.CancelledError:
+        print("\nStopped by user")
+        sys.exit()
 
     except KeyboardInterrupt:
         print("\nStopped by user")
 
+    con.close()
+
 if __name__ == "__main__":
     import os
     import sys
+    import asyncio
+    import aiohttp
 
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-    from cambridge.args import parse_args
+    from cambridge.args import parse_args, search_word, list_words, wod
     from cambridge.cache import con
 
-    main()
+    asyncio.run(main())
 
 else:
-    from .args import parse_args
+    import asyncio
+    import aiohttp
+
+    from .args import parse_args, search_word, list_words, wod
     from .cache import con

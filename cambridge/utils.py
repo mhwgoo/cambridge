@@ -1,9 +1,9 @@
 import sys
 import subprocess
-import requests
+from aiohttp import ServerTimeoutError
 from urllib import parse
 from enum import Enum
-from fake_user_agent import user_agent
+from fake_user_agent import aio_user_agent
 
 from .log import logger
 from .console import c_print
@@ -42,48 +42,30 @@ def call_on_error(error, url, attempt, op):
     attempt += 1
     logger.debug(f"{op} {url} {attempt} times")
     if attempt == 3:
-        print(f"Maximum {op} reached: {error}")
+        print(f"Maximum {op} reached: {error.__class__.__name__}: {error}")
         sys.exit(2)
     return attempt
 
 
-def fetch(url):
-    with requests.Session() as session:
-        logger.debug(f"{OP.FETCHING.name} {url}")
-        session.trust_env = False # not to use proxy
+async def fetch(session, url):
+    logger.debug(f"{OP.FETCHING.name} {url}")
+    attempt = 0
 
-        ua = user_agent()
-        logger.debug(f"Got User-Agent: {ua}")
-        headers = {"User-Agent": ua}
-        session.headers.update(headers)
-
-        attempt = 0
-        while True:
-            try:
-                r = session.get(url, timeout=9.05)
-                # Only when calling raise_for_status, will requests raise HTTPError if any.
-                # See: https://blog.csdn.net/Odaokai/article/details/100133503
-                # for webster, only when status code is 404, can we know to redirect to spellcheck page, so you can't exit on 404
-                if r.status_code >= 500:
-                    r.raise_for_status()
-
-            except requests.exceptions.HTTPError as e:
-                attempt = call_on_error(e, url, attempt, OP.RETRY_FETCHING.name)
-                continue
-            except requests.exceptions.ConnectTimeout as e:
-                attempt = call_on_error(e, url, attempt, OP.RETRY_FETCHING.name)
-                continue
-            except requests.exceptions.ConnectionError as e:
-                attempt = call_on_error(e, url, attempt, OP.RETRY_FETCHING.name)
-                continue
-            except requests.exceptions.ReadTimeout as e:
-                attempt = call_on_error(e, url, attempt, OP.RETRY_FETCHING.name)
-                continue
-            except Exception as e:
-                attempt = call_on_error(e, url, attempt, OP.RETRY_FETCHING.name)
-                continue
-            else:
-                return r
+    ua = await aio_user_agent()
+    logger.debug(f"Got User-Agent: {ua}")
+    while True:
+        try:
+            resp = await session.get(url, headers={"User-Agent": ua}, timeout=8)
+            if resp.status >= 500: # for webster, 404 is normal
+                resp.raise_for_status()
+        except ServerTimeoutError as error:
+            attempt = call_on_error(error, url, attempt, "FETCHING")
+            continue
+        except Exception as error:
+            logger.debug(f'FETCHING {url} failed: {error.__class__.__name__}: {error}')
+            sys.exit(2)
+        else:
+            return resp
 
 
 def replace_all(string):

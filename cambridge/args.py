@@ -9,7 +9,7 @@ from .camb import search_cambridge
 from .utils import get_cache_selection, get_cache_selection_by_fzf
 from .log import logger
 
-def parse_args():
+def parse_args(session):
     parser = argparse.ArgumentParser(
         description="Terminal Version of Cambridge Dictionary by default. Also supports Merriam-Webster Dictionary."
     )
@@ -20,6 +20,8 @@ def parse_args():
         action="store_true",
         help="print the current version of the program",
     )
+
+    parser.set_defaults(session=session)
 
     # Add sub-command capability that can identify different sub-command name
     sub_parsers = parser.add_subparsers(dest="subparser_name")
@@ -162,6 +164,7 @@ def parse_args():
 
         to_search = " ".join(word)
         to_parse.append(to_search)
+        parser_sw.set_defaults(session=session)
         args= parser_sw.parse_args(to_parse)
         return args
 
@@ -180,7 +183,7 @@ def print_help(parser, parser_lw, parser_sw, parser_wod):
     sys.exit()
 
 
-def list_words(args):
+async def list_words(args):
     if args.delete:
         to_delete = args.delete
         words = " ".join(to_delete)
@@ -201,12 +204,12 @@ def list_words(args):
     select_word = get_cache_selection_by_fzf(data) if has_fzf else get_cache_selection(data, method)
 
     if select_word is not None and len(select_word) > 1 and not select_word.isnumeric():
-        search_webster(select_word)
+        await search_webster(args.session, select_word)
     else:
         sys.exit()
 
 
-def search_word(args):
+async def search_word(args):
     if args.debug:
         logger.setLevel(logging.DEBUG)
 
@@ -224,8 +227,15 @@ def search_word(args):
         print("Webster Dictionary doesn't support English to other language. Try again without -c(--chinese) option")
         sys.exit(3)
 
-    search_webster(input_word, is_fresh, no_suggestions, None) if is_webster else search_cambridge(input_word, is_fresh, is_ch, no_suggestions, None)
+    session = args.session
+    if is_webster:
+        await search_webster(session, input_word, is_fresh, no_suggestions, None)
+    else:
+        await search_cambridge(session, input_word, is_fresh, is_ch, no_suggestions, None)
 
 
-def wod(args):
-    get_webster_wod_list() if args.list else get_webster_wod()
+async def wod(args):
+    if args.list:
+        await get_webster_wod_list(args.session)
+    else:
+        await get_webster_wod(args.session)

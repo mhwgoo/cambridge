@@ -16,7 +16,7 @@ CAMBRIDGE_SPELLCHECK_URL = CAMBRIDGE_URL + "/spellcheck/english/?q="
 CAMBRIDGE_SPELLCHECK_URL_CN = CAMBRIDGE_URL + "/spellcheck/english-chinese-simplified/?q="
 
 
-def search_cambridge(input_word, is_fresh=False, is_ch=False, no_suggestions=False, req_url=None, res_url_from_cache=None):
+async def search_cambridge(session, input_word, is_fresh=False, is_ch=False, no_suggestions=False, req_url=None, res_url_from_cache=None):
     if res_url_from_cache is not None:
         cache_run(res_url_from_cache)
         sys.exit()
@@ -26,14 +26,14 @@ def search_cambridge(input_word, is_fresh=False, is_ch=False, no_suggestions=Fal
         req_url = get_request_url(url, input_word, DICT.CAMBRIDGE.name)
 
     if is_fresh:
-        fresh_run(input_word, is_ch, no_suggestions, req_url)
+        await fresh_run(session, input_word, is_ch, no_suggestions, req_url)
     else:
         res_url = check_cache(input_word, req_url)
         if res_url is None:
             logger.debug(f'{OP.NOT_FOUND.name} "{input_word}" in cache')
-            fresh_run(input_word, is_ch, no_suggestions, req_url)
+            await fresh_run(session, input_word, is_ch, no_suggestions, req_url)
         elif DICT.CAMBRIDGE.name.lower() not in res_url:
-            webster.search_webster(input_word, False, no_suggestions, None, res_url)
+            await webster.search_webster(session, input_word, False, no_suggestions, None, res_url)
         else:
             cache_run(res_url)
 
@@ -54,9 +54,9 @@ def cache_run(res_url_from_cache):
     c_print(f'\n#[#757575]{OP.FOUND.name} "{res_word}" from {DICT.CAMBRIDGE.name} in cache. You can add "-f -w" to fetch the {DICT.MERRIAM_WEBSTER.name} dictionary')
 
 
-def fresh_run(input_word, is_ch, no_suggestions, req_url):
-        response = fetch(req_url)
-        res_url = response.url
+async def fresh_run(session, input_word, is_ch, no_suggestions, req_url):
+        response = await fetch(session, req_url)
+        res_url = str(response.real_url)
 
         if "spellcheck" in res_url:
             logger.debug(f'{OP.NOT_FOUND.name} "{input_word}" at {req_url}')
@@ -66,10 +66,11 @@ def fresh_run(input_word, is_ch, no_suggestions, req_url):
 
             spell_base_url = CAMBRIDGE_SPELLCHECK_URL_CN if is_ch else CAMBRIDGE_SPELLCHECK_URL
             spell_req_url = get_request_url(spell_base_url, input_word, DICT.CAMBRIDGE.name)
-            spell_res = fetch(spell_req_url)
+            spell_res = await fetch(session, spell_req_url)
+            spell_res_text = await spell_res.text()
 
             logger.debug(f"{OP.PARSING.name} out suggestions at {spell_res.url}")
-            soup = BeautifulSoup(spell_res.text, "lxml")
+            soup = BeautifulSoup(spell_res_text, "lxml")
             node = soup.find("div", "hfl-s lt2b lmt-10 lmb-25 lp-s_r-20")
             suggestions = []
 
@@ -89,17 +90,18 @@ def fresh_run(input_word, is_ch, no_suggestions, req_url):
                 sys.exit()
             elif select_word == "":
                 logger.debug(f'{OP.SWITCHED.name} to {DICT.MERRIAM_WEBSTER.name}')
-                webster.search_webster(input_word, True, no_suggestions, None)
+                await webster.search_webster(session, input_word, True, no_suggestions, None)
             else:
                 logger.debug(f'{OP.SELECTED.name} "{select_word}"')
-                search_cambridge(select_word, False, False, no_suggestions, None)
+                await search_cambridge(session, select_word, False, False, no_suggestions, None)
 
         else:
             res_url = parse_response_url(res_url)
             logger.debug(f'{OP.FOUND.name} "{input_word}" in {DICT.CAMBRIDGE.name} at {res_url}')
 
             logger.debug(f"{OP.PARSING.name} {res_url}")
-            soup = BeautifulSoup(response.text, "lxml")
+            res_text = await response.text()
+            soup = BeautifulSoup(res_text, "lxml")
 
             temp = soup.find("title").text.split("-")[0].strip() # type: ignore
             if "|" in temp:

@@ -12,7 +12,7 @@ home-page = "https://github.com/KateWang2016/cambridge"
 requires-python = ">=3.5"
 
 requires = [
-    "requests",
+    "aiohttp",
     "beautifulsoup4",
     "fake-user-agent",
     "lxml"

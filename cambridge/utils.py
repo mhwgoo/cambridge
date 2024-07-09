@@ -1,6 +1,7 @@
 import sys
 import subprocess
-from aiohttp import ServerTimeoutError, ServerDisconnectedError
+from asyncio import TimeoutError
+from aiohttp import ServerDisconnectedError
 from urllib import parse
 from enum import Enum
 from fake_user_agent import aio_user_agent
@@ -38,11 +39,16 @@ def get_dict_name_by_url(url):
     return DICT.CAMBRIDGE.name if DICT.CAMBRIDGE.name.lower() in url else DICT.MERRIAM_WEBSTER.name
 
 
+def quit_on_error(path, error, op):
+    logger.error(f'{op} <{path}> failed: [{error.__class__.__name__}] {error}')
+    sys.exit(2)
+
+
 def call_on_error(error, url, attempt, op):
     attempt += 1
     logger.debug(f"{op} {url} {attempt} times")
     if attempt == 3:
-        print(f"Maximum {op} reached: {error.__class__.__name__}: {error}")
+        print(f"Maximum {op} reached: [{error.__class__.__name__}] {error}")
         sys.exit(2)
     return attempt
 
@@ -55,17 +61,15 @@ async def fetch(session, url):
     logger.debug(f"Got User-Agent: {ua}")
     while True:
         try:
-            resp = await session.get(url, headers={"User-Agent": ua}, timeout=8)
-            if resp.status >= 500: # for webster, 404 is normal
-                resp.raise_for_status()
-        except ServerTimeoutError as error:
-            attempt = call_on_error(error, url, attempt, "FETCHING")
+            resp = await session.get(url, headers={"User-Agent": ua}, timeout=5)
+        except TimeoutError as error:
+            attempt = call_on_error(error, url, attempt, OP.FETCHING.name)
             continue
         except ServerDisconnectedError as error:
-            attempt = call_on_error(error, url, attempt, "FETCHING")
+            attempt = call_on_error(error, url, attempt, OP.FETCHING.name)
             continue
         except Exception as error:
-            logger.error(f'FETCHING {url} failed: {error.__class__.__name__}: {error}')
+            logger.error(f'{OP.FETCHING.name} {url} failed: [{error.__class__.__name__}] {error}')
             sys.exit(2)
         else:
             return resp

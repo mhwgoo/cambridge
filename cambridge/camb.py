@@ -1,10 +1,11 @@
 import sys
 import re
 from bs4 import BeautifulSoup
+from asyncio import TimeoutError
 
 from .console import c_print
 from .log import logger
-from .utils import fetch, get_request_url, parse_response_url, replace_all, OP, DICT, has_tool, get_suggestion, get_suggestion_by_fzf
+from .utils import fetch, get_request_url, parse_response_url, replace_all, OP, DICT, has_tool, get_suggestion, get_suggestion_by_fzf, quit_on_error
 from .cache import check_cache, save_to_cache, get_cache
 from . import webster
 
@@ -99,8 +100,15 @@ async def fresh_run(session, input_word, is_ch, no_suggestions, req_url):
             res_url = parse_response_url(res_url)
             logger.debug(f'{OP.FOUND.name} "{input_word}" in {DICT.CAMBRIDGE.name} at {res_url}')
 
+            #NOTE
+            try:
+                res_text = await response.text()
+            except TimeoutError as error:
+                quit_on_error(res_url, error, OP.FETCHING.name)
+            except Exception as error:
+                quit_on_error(res_url, error, OP.FETCHING.name)
+
             logger.debug(f"{OP.PARSING.name} {res_url}")
-            res_text = await response.text()
             soup = BeautifulSoup(res_text, "lxml")
 
             temp = soup.find("title").text.split("-")[0].strip() # type: ignore

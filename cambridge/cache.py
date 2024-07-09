@@ -163,7 +163,7 @@ def delete_from_cache(word):
     try:
         result = delete_entry_from_table(word)
     except sqlite3.Error as error:
-        logger.error(f'{OP.CANCELLED.name} deleting "{word}" from cache: {error.__class__.__name__}: {error}\n')
+        logger.error(f'{OP.CANCELLED.name} deleting "{word}" from cache: [{error.__class__.__name__}] {error}\n')
         sys.exit(4)
     else:
         if result is None:
@@ -179,7 +179,7 @@ def list_cache(method):
     try:
         data = get_entries_from_table(is_random)
     except sqlite3.Error as error:
-        logger.error(f'{OP.CANCELLED.name} listing cache: {error.__class__.__name__}: {error}\n')
+        logger.error(f'{OP.CANCELLED.name} listing cache: [{error.__class__.__name__}] {error}\n')
         sys.exit(4)
     else:
         if data is None:
@@ -202,7 +202,7 @@ def check_cache(input_word, req_url):
     try:
         data = check_word_in_table(input_word, req_url)
     except sqlite3.Error as error:
-        logger.error(f'{OP.CANCELLED.name} searching "{input_word}" in cache: {error.__class__.__name__}: {error}\n')
+        logger.error(f'{OP.CANCELLED.name} searching "{input_word}" in cache: [{error.__class__.__name__}] {error}\n')
         sys.exit(4)
     else:
         # considering user might input plural nouns, or verbs with tenses
@@ -243,7 +243,7 @@ def save_to_cache(input_word, response_word, response_url, response_text):
         """
 
     except sqlite3.Error as error:
-        logger.error(f'{OP.CANCELLED.name} caching "{input_word}": {error.__class__.__name__}: {error}\n')
+        logger.error(f'{OP.CANCELLED.name} caching "{input_word}": [{error.__class__.__name__}] {error}\n')
         sys.exit(4)
 
     else:

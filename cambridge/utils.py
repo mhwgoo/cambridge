@@ -1,6 +1,6 @@
 import sys
 import subprocess
-from aiohttp import ServerTimeoutError
+from aiohttp import ServerTimeoutError, ServerDisconnectedError
 from urllib import parse
 from enum import Enum
 from fake_user_agent import aio_user_agent
@@ -61,8 +61,11 @@ async def fetch(session, url):
         except ServerTimeoutError as error:
             attempt = call_on_error(error, url, attempt, "FETCHING")
             continue
+        except ServerDisconnectedError as error:
+            attempt = call_on_error(error, url, attempt, "FETCHING")
+            continue
         except Exception as error:
-            logger.debug(f'FETCHING {url} failed: {error.__class__.__name__}: {error}')
+            logger.error(f'FETCHING {url} failed: {error.__class__.__name__}: {error}')
             sys.exit(2)
         else:
             return resp

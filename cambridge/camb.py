@@ -17,11 +17,7 @@ CAMBRIDGE_SPELLCHECK_URL = CAMBRIDGE_URL + "/spellcheck/english/?q="
 CAMBRIDGE_SPELLCHECK_URL_CN = CAMBRIDGE_URL + "/spellcheck/english-chinese-simplified/?q="
 
 
-async def search_cambridge(session, input_word, is_fresh=False, is_ch=False, no_suggestions=False, req_url=None, res_url_from_cache=None):
-    if res_url_from_cache is not None:
-        cache_run(res_url_from_cache)
-        sys.exit()
-
+async def search_cambridge(session, input_word, is_fresh=False, is_ch=False, no_suggestions=False, req_url=None):
     if req_url is None:
         url = CAMBRIDGE_CN_SEARCH_URL if is_ch else CAMBRIDGE_EN_SEARCH_URL
         req_url = get_request_url(url, input_word, DICT.CAMBRIDGE.name)
@@ -34,12 +30,12 @@ async def search_cambridge(session, input_word, is_fresh=False, is_ch=False, no_
             logger.debug(f'{OP.NOT_FOUND.name} "{input_word}" in cache')
             await fresh_run(session, input_word, is_ch, no_suggestions, req_url)
         elif DICT.CAMBRIDGE.name.lower() not in res_url:
-            await webster.search_webster(session, input_word, False, no_suggestions, None, res_url)
+            await webster.cache_run(res_url)
         else:
-            cache_run(res_url)
+            await cache_run(res_url)
 
 
-def cache_run(res_url_from_cache):
+async def cache_run(res_url_from_cache):
     res_word, res_text = get_cache(res_url_from_cache)
     logger.debug(f'{OP.FOUND.name} "{res_word}" from {DICT.CAMBRIDGE.name} in cache')
     logger.debug(f"{OP.PARSING.name} {res_url_from_cache}")
@@ -115,9 +111,7 @@ async def fresh_run(session, input_word, is_ch, no_suggestions, req_url):
                 except asyncio.TimeoutError as error:
                     attempt = cancel_on_error(res_url, error, attempt, OP.FETCHING.name, asyncio.current_task())
                     continue
-                #FIXME
                 except Exception as error:
-                    print(asyncio.current_task().get_coro())
                     cancel_on_error_without_retry(res_url, error, OP.FETCHING.name, asyncio.current_task())
                 else:
                     break

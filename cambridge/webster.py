@@ -28,28 +28,24 @@ word_forms = set()   # A word may have multiple word forms, e.g. "ran", "running
 word_types = set()   # A word's word types, e.g. "preposition", "adjective"
 
 
-async def search_webster(session, input_word, is_fresh=False, no_suggestions=False, req_url=None, res_url_from_cache=None):
-    if res_url_from_cache is not None:
-        cache_run(res_url_from_cache)
-        sys.exit()
+async def search_webster(session, input_word, is_fresh=False, no_suggestions=False, req_url=None):
+        if req_url is None:
+            req_url = get_request_url(WEBSTER_DICT_BASE_URL, input_word, DICT.MERRIAM_WEBSTER.name)
 
-    if req_url is None:
-        req_url = get_request_url(WEBSTER_DICT_BASE_URL, input_word, DICT.MERRIAM_WEBSTER.name)
-
-    if is_fresh:
-        await fresh_run(session, input_word, no_suggestions, req_url)
-    else:
-        res_url = check_cache(input_word, req_url)
-        if res_url is None:
-            logger.debug(f'{OP.NOT_FOUND.name} "{input_word}" in cache')
+        if is_fresh:
             await fresh_run(session, input_word, no_suggestions, req_url)
-        elif DICT.CAMBRIDGE.name.lower() in res_url:
-            await camb.search_cambridge(session, input_word, False, False, no_suggestions, None, res_url)
         else:
-            cache_run(res_url)
+            res_url = check_cache(input_word, req_url)
+            if res_url is None:
+                logger.debug(f'{OP.NOT_FOUND.name} "{input_word}" in cache')
+                await fresh_run(session, input_word, no_suggestions, req_url)
+            elif DICT.CAMBRIDGE.name.lower() in res_url:
+                await camb.cache_run(res_url)
+            else:
+                await cache_run(res_url)
 
 
-def cache_run(res_url_from_cache):
+async def cache_run(res_url_from_cache):
     res_word, res_text = get_cache(res_url_from_cache)
     logger.debug(f'{OP.FOUND.name} "{res_word}" from {DICT.MERRIAM_WEBSTER.name} in cache')
     logger.debug(f"{OP.PARSING.name} {res_url_from_cache}")

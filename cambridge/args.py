@@ -1,6 +1,7 @@
 import sys
 import argparse
 import logging
+import asyncio
 
 from .__init__ import __version__
 from .cache import delete_from_cache, list_cache
@@ -203,7 +204,7 @@ async def list_words(args):
     has_fzf, data = list_cache(method)
     select_word = get_cache_selection_by_fzf(data) if has_fzf else get_cache_selection(data, method)
 
-    if select_word is not None and len(select_word) > 1 and not select_word.isnumeric():
+    if len(select_word) > 1 and not select_word.isnumeric():
         await search_webster(args.session, select_word)
     else:
         sys.exit()
@@ -213,25 +214,30 @@ async def search_word(args):
     if args.debug:
         logger.setLevel(logging.DEBUG)
 
+    if args.webster and args.chinese:
+        print("Webster Dictionary doesn't support English to other language. Try again without -c(--chinese) option")
+        sys.exit(3)
+
     input_word = args.word_or_phrase[0].strip(".").strip(",").strip()
     if not input_word:
         print("You didn't input any word or phrase.")
         sys.exit(3)
 
-    is_webster = args.webster
-    is_fresh = args.fresh
-    is_ch = args.chinese
-    no_suggestions = args.nosuggestions
-
-    if is_webster and is_ch:
-        print("Webster Dictionary doesn't support English to other language. Try again without -c(--chinese) option")
-        sys.exit(3)
-
-    session = args.session
-    if is_webster:
-        await search_webster(session, input_word, is_fresh, no_suggestions, None)
+    if "," not in input_word:
+        if args.webster:
+            await search_webster(args.session, input_word, args.fresh, args.nosuggestions, None)
+        else:
+            await search_cambridge(args.session, input_word, args.fresh, args.chinese, args.nosuggestions, None)
     else:
-        await search_cambridge(session, input_word, is_fresh, is_ch, no_suggestions, None)
+        tasks = []
+        for w in input_word.split(","):
+            i = w.strip(".").strip()
+            if i:
+                if args.webster:
+                    tasks.append(search_webster(args.session, i, args.fresh, args.nosuggestions, None))
+                else:
+                    tasks.append(search_cambridge(args.session, i, args.fresh, args.chinese, args.nosuggestions, None))
+        await asyncio.gather(*tasks)
 
 
 async def wod(args):

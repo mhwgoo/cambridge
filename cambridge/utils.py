@@ -1,7 +1,6 @@
 import sys
 import subprocess
-from asyncio import TimeoutError
-from aiohttp import ServerDisconnectedError
+import asyncio
 from urllib import parse
 from enum import Enum
 from fake_user_agent import aio_user_agent
@@ -23,11 +22,12 @@ class OP(Enum):
     NOT_FOUND       = 7,
     CACHED          = 8,
     CANCELLED       = 9,
-    DELETED         = 10,
-    UPDATED         = 11,
-    SWITCHED        = 12,
-    SEARCHING       = 13
-    SELECTED        = 14
+    CANCELLING      = 10,
+    DELETED         = 11,
+    UPDATED         = 12,
+    SWITCHED        = 13,
+    SEARCHING       = 14,
+    SELECTED        = 15
 
 
 class DICT(Enum):
@@ -40,17 +40,34 @@ def get_dict_name_by_url(url):
 
 
 def quit_on_error(path, error, op):
-    logger.error(f'{op} <{path}> failed: [{error.__class__.__name__}] {error}')
+    print(f'{op} <{path}> failed: [{error.__class__.__name__}] {error}')
     sys.exit(2)
 
 
-def call_on_error(error, url, attempt, op):
+def quit_on_no_result(dict_name, is_spellcheck=False):
+    w = "result" if not is_spellcheck else "suggestions"
+    print(f"No {w} found in {dict_name}")
+    sys.exit(1)
+
+
+def cancel_on_error(path, error, attempt, op, task):
     attempt += 1
-    logger.debug(f"{op} {url} {attempt} times")
+    logger.debug(f"{op} {path} {attempt} times")
+
     if attempt == 3:
-        print(f"Maximum {op} reached: [{error.__class__.__name__}] {error}")
-        sys.exit(2)
+        print(f'Maximum {op} reached.')
+        print(f'{OP.CANCELLING.name} on {op} <{path}>: [{error.__class__.__name__}] {error}')
+        print(repr(task))
+        if task is not None:
+            task.cancel()
+        else:
+            sys.exit(2)
     return attempt
+
+
+def cancel_on_error_without_retry(path, error, op, task):
+    print(f'{op} on {path} failed: [{error.__class__.__name__}] {error}')
+    asyncio.current_task().cancel()
 
 
 async def fetch(session, url):
@@ -62,15 +79,11 @@ async def fetch(session, url):
     while True:
         try:
             resp = await session.get(url, headers={"User-Agent": ua}, timeout=5)
-        except TimeoutError as error:
-            attempt = call_on_error(error, url, attempt, OP.FETCHING.name)
-            continue
-        except ServerDisconnectedError as error:
-            attempt = call_on_error(error, url, attempt, OP.FETCHING.name)
+        except asyncio.TimeoutError as error:
+            attempt = cancel_on_error(url, error, attempt, OP.FETCHING.name, asyncio.current_task())
             continue
         except Exception as error:
-            logger.error(f'{OP.FETCHING.name} {url} failed: [{error.__class__.__name__}] {error}')
-            sys.exit(2)
+            cancel_on_error_without_retry(url, error, OP.FETCHING.name, asyncio.current_task())
         else:
             return resp
 
@@ -175,7 +188,7 @@ def get_suggestion(suggestions, dict_name):
     elif key == "":
         return ""
     else:
-        return None
+        sys.exit()
 
 
 def get_suggestion_by_fzf(suggestions, dict_name):
@@ -190,7 +203,7 @@ def get_suggestion_by_fzf(suggestions, dict_name):
     elif p2.returncode == 0 and select_word != "":
         return select_word
     else:
-        return None
+        sys.exit()
 
 
 def get_wod_selection(data):
@@ -213,7 +226,7 @@ def get_wod_selection_by_fzf(data):
     if p2.returncode == 0 and select_word != "":
         return select_word
     else:
-        return None
+        sys.exit()
 
 
 def get_cache_selection(data, method):
@@ -239,7 +252,7 @@ def get_cache_selection_by_fzf(data):
     if p2.returncode == 0 and select_word != "":
         return select_word
     else:
-        return None
+        sys.exit()
 
 
 def profile(func):

@@ -12,11 +12,13 @@ async def main():
                 await wod(args)
 
     except asyncio.exceptions.CancelledError:
-        print("\nStopped by user")
-        sys.exit()
+        print("Task cancelled.")
 
     except KeyboardInterrupt:
-        print("\nStopped by user")
+        print("\nStopped by user.")
+
+    except SystemExit:
+        pass
 
     con.close()
 

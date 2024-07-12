@@ -2,7 +2,7 @@ import sys
 from lxml import etree # type: ignore
 
 from .console import c_print
-from .utils import fetch, get_request_url, decode_url, OP, DICT, has_tool, get_suggestion, get_suggestion_by_fzf, get_wod_selection, get_wod_selection_by_fzf
+from .utils import fetch, get_request_url, decode_url, OP, DICT, has_tool, get_suggestion, get_suggestion_by_fzf, get_wod_selection, get_wod_selection_by_fzf, quit_on_no_result
 from .log import logger
 from .cache import check_cache, save_to_cache, get_cache
 from . import camb
@@ -86,9 +86,7 @@ async def fresh_run(session, input_word, no_suggestions, req_url):
 
                 logger.debug(f"{OP.PRINTING.name} out suggestions at {res_url}")
                 select_word = get_suggestion_by_fzf(suggestions, DICT.MERRIAM_WEBSTER.name) if has_tool("fzf") else get_suggestion(suggestions, DICT.MERRIAM_WEBSTER.name)
-                if select_word is None:
-                    sys.exit()
-                elif select_word == "":
+                if select_word == "":
                     logger.debug(f'{OP.SWITCHED.name} to {DICT.CAMBRIDGE.name}')
                     await camb.search_cambridge(session, input_word, True, False, no_suggestions, None)
                 else:
@@ -98,16 +96,14 @@ async def fresh_run(session, input_word, no_suggestions, req_url):
                 sub_tree = tree.xpath('//*[@id="left-content"]')[0]
                 nodes = sub_tree.xpath(search_pattern)
                 if len(nodes) == 0:
-                    logger.error(f"No result found in {DICT.MERRIAM_WEBSTER.name}")
-                    sys.exit(1)
+                    quit_on_no_result(DICT.MERRIAM_WEBSTER.name, is_spellcheck=Fasle)
 
                 # Response word within res_url is not same with what apppears on the web page. e.g. "set in stone"
                 result = sub_tree.xpath('//*[@id="left-content"]/div[contains(@id, "-entry-1")]/div[1]/div/div[1]/h1/text()') \
                        or sub_tree.xpath('//*[@id="left-content"]/div[contains(@id, "-entry-1")]/div[1]/div/div/h1/span/text()')
 
                 if len(result) == 0:
-                    logger.error(f"No result found in {DICT.MERRIAM_WEBSTER.name}")
-                    sys.exit(1)
+                    quit_on_no_result(DICT.MERRIAM_WEBSTER.name, is_spellcheck=Fasle)
 
                 parse_and_print(nodes, res_url, new_line=True)
 
@@ -125,8 +121,7 @@ async def fresh_run(session, input_word, no_suggestions, req_url):
             tree = etree.HTML(text, parser)
             result = tree.xpath('//div[@class="widget spelling-suggestion"]')
             if len(result) == 0:
-                logger.error(f"No suggestions found in {DICT.MERRIAM_WEBSTER.name}")
-                sys.exit(1)
+                quit_on_no_result(DICT.MERRIAM_WEBSTER.name, is_spellcheck=True)
 
             nodes = result[0]
             suggestions = []
@@ -141,9 +136,7 @@ async def fresh_run(session, input_word, no_suggestions, req_url):
 
             logger.debug(f"{OP.PRINTING.name} out suggestions at {res_url}")
             select_word = get_suggestion_by_fzf(suggestions, DICT.MERRIAM_WEBSTER.name) if has_tool("fzf") else get_suggestion(suggestions, DICT.MERRIAM_WEBSTER.name)
-            if select_word is None:
-                sys.exit()
-            elif select_word == "":
+            if select_word == "":
                 logger.debug(f'{OP.SWITCHED.name} to {DICT.CAMBRIDGE.name}')
                 await camb.search_cambridge(session, input_word, True, False, no_suggestions, None)
             else:
@@ -151,7 +144,7 @@ async def fresh_run(session, input_word, no_suggestions, req_url):
                 await search_webster(session, select_word, False, no_suggestions, None)
 
         else:
-            logger.error(f'Something went wrong when fetching {req_url} with STATUS: {status}')
+            print(f'Something went wrong when fetching {req_url} with STATUS: {status}')
             sys.exit(2)
 
 
@@ -1189,7 +1182,7 @@ async def parse_and_print_wod_calendar(session, res_url, res_text):
     if select_word in data.keys():
         url = WEBSTER_BASE_URL + data[select_word]
         await get_webster_wod_past(session, url)
-    elif select_word is not None and len(select_word) > 1 and not select_word.isnumeric():
+    elif len(select_word) > 1 and not select_word.isnumeric():
         await search_webster(session, select_word)
     else:
         sys.exit()

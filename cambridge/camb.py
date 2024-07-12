@@ -1,11 +1,11 @@
 import sys
 import re
 from bs4 import BeautifulSoup
-from asyncio import TimeoutError
+import asyncio
 
 from .console import c_print
 from .log import logger
-from .utils import fetch, get_request_url, parse_response_url, replace_all, OP, DICT, has_tool, get_suggestion, get_suggestion_by_fzf, quit_on_error
+from .utils import fetch, get_request_url, parse_response_url, replace_all, OP, DICT, has_tool, get_suggestion, get_suggestion_by_fzf, cancel_on_error, quit_on_no_result
 from .cache import check_cache, save_to_cache, get_cache
 from . import webster
 
@@ -68,7 +68,18 @@ async def fresh_run(session, input_word, is_ch, no_suggestions, req_url):
             spell_base_url = CAMBRIDGE_SPELLCHECK_URL_CN if is_ch else CAMBRIDGE_SPELLCHECK_URL
             spell_req_url = get_request_url(spell_base_url, input_word, DICT.CAMBRIDGE.name)
             spell_res = await fetch(session, spell_req_url)
-            spell_res_text = await spell_res.text()
+
+            attempt = 0
+            while True:
+                try:
+                    spell_res_text = await spell_res.text()
+                except asyncio.TimeoutError as error:
+                    attempt = cancel_on_error(spell_req_url, error, attempt, OP.FETCHING.name, asyncio.current_task())
+                    continue
+                except Exception as error:
+                    cancel_on_error_without_retry(spell_req_url, error, OP.FETCHING.name, asyncio.current_task())
+                else:
+                    break
 
             logger.debug(f"{OP.PARSING.name} out suggestions at {spell_res.url}")
             soup = BeautifulSoup(spell_res_text, "lxml")
@@ -76,8 +87,7 @@ async def fresh_run(session, input_word, is_ch, no_suggestions, req_url):
             suggestions = []
 
             if not node:
-                logger.error(f"No suggestions found in {DICT.CAMBRIDGE.name}")
-                sys.exit(1)
+                quit_on_no_result(DICT.CAMBRIDGE.name, is_spellcheck=True)
 
             for ul in node.find_all("ul", "hul-u"): # type: ignore
                 if "We have these words with similar spellings or pronunciations:" in ul.find_previous_sibling().text:
@@ -87,9 +97,7 @@ async def fresh_run(session, input_word, is_ch, no_suggestions, req_url):
 
             logger.debug(f"{OP.PRINTING.name} out suggestions at {spell_res.url}")
             select_word = get_suggestion_by_fzf(suggestions, DICT.CAMBRIDGE.name) if has_tool("fzf") else get_suggestion(suggestions, DICT.CAMBRIDGE.name)
-            if select_word is None:
-                sys.exit()
-            elif select_word == "":
+            if select_word == "":
                 logger.debug(f'{OP.SWITCHED.name} to {DICT.MERRIAM_WEBSTER.name}')
                 await webster.search_webster(session, input_word, True, no_suggestions, None)
             else:
@@ -100,13 +108,19 @@ async def fresh_run(session, input_word, is_ch, no_suggestions, req_url):
             res_url = parse_response_url(res_url)
             logger.debug(f'{OP.FOUND.name} "{input_word}" in {DICT.CAMBRIDGE.name} at {res_url}')
 
-            #NOTE
-            try:
-                res_text = await response.text()
-            except TimeoutError as error:
-                quit_on_error(res_url, error, OP.FETCHING.name)
-            except Exception as error:
-                quit_on_error(res_url, error, OP.FETCHING.name)
+            attempt = 0
+            while True:
+                try:
+                    res_text = await response.text()
+                except asyncio.TimeoutError as error:
+                    attempt = cancel_on_error(res_url, error, attempt, OP.FETCHING.name, asyncio.current_task())
+                    continue
+                #FIXME
+                except Exception as error:
+                    print(asyncio.current_task().get_coro())
+                    cancel_on_error_without_retry(res_url, error, OP.FETCHING.name, asyncio.current_task())
+                else:
+                    break
 
             logger.debug(f"{OP.PARSING.name} {res_url}")
             soup = BeautifulSoup(res_text, "lxml")
@@ -121,13 +135,11 @@ async def fresh_run(session, input_word, is_ch, no_suggestions, req_url):
 
             first_dict = soup.find("div", "pr dictionary") or soup.find("div", "pr di superentry")
             if first_dict is None:
-                logger.error(f"No result found in {DICT.CAMBRIDGE.name}")
-                sys.exit(1)
+                quit_on_no_result(DICT.CAMBRIDGE.name, is_spellcheck=False)
 
             blocks = first_dict.find_all("div", ["pr entry-body__el", "entry-body__el clrd js-share-holder", "pr idiom-block"]) # type: ignore
             if len(blocks) == 0:
-                logger.error(f"No result found in {DICT.CAMBRIDGE.name}")
-                sys.exit(1)
+                quit_on_no_result(DICT.CAMBRIDGE.name, is_spellcheck=False)
             else:
                 logger.debug(f"{OP.PRINTING.name} the parsed result of {res_url}")
                 for block in blocks:

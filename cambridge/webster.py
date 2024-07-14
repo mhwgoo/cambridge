@@ -51,7 +51,7 @@ async def cache_run(res_url_from_cache):
     logger.debug(f"{OP.PARSING.name} {res_url_from_cache}")
     tree = etree.HTML(res_text, parser)
     nodes = tree.xpath(search_pattern)
-    parse_and_print(nodes, res_url_from_cache, new_line=False)
+    await parse_and_print(nodes, res_url_from_cache, new_line=False)
     c_print(f'\n#[#757575]{OP.FOUND.name} "{res_word}" from {DICT.MERRIAM_WEBSTER.name} in cache. You can add "-f" to fetch the {DICT.CAMBRIDGE.name} dictionary')
 
 
@@ -101,11 +101,11 @@ async def fresh_run(session, input_word, no_suggestions, req_url):
                 if len(result) == 0:
                     quit_on_no_result(DICT.MERRIAM_WEBSTER.name, is_spellcheck=Fasle)
 
-                parse_and_print(nodes, res_url, new_line=True)
+                await parse_and_print(nodes, res_url, new_line=True)
 
                 sub_text = etree.tostring(sub_tree).decode('utf-8')
                 # logger.debug(f'START CACHING: input_word is "{input_word}"; res_word is "{res_word}"; res_url is "{res_url}"')
-                save_to_cache(input_word, result[0], res_url, sub_text)
+                await save_to_cache(input_word, result[0], res_url, sub_text)
 
         elif status == 404:
             logger.debug(f'{OP.NOT_FOUND.name} "{input_word}" at {res_url}')
@@ -1020,7 +1020,7 @@ def print_dict_name():
     c_print(f"#[{w_col.dict_name}]{dict_name}", justify="right")
 
 
-def parse_and_print(nodes, res_url, new_line=False):
+async def parse_and_print(nodes, res_url, new_line=False):
     logger.debug(f"{OP.PRINTING.name} the parsed result of {res_url}")
 
     for node in nodes:

@@ -142,7 +142,7 @@ async def fresh_run(session, input_word, is_ch, no_suggestions, req_url):
 
                 print()
 
-                save_to_cache(input_word, res_word, res_url, str(first_dict))
+                await save_to_cache(input_word, res_word, res_url, str(first_dict))
 
 
 def parse_head_title(block):

@@ -174,20 +174,13 @@ def synonyms(node):
     print()
 
     for elm in node.iterdescendants():
-        try:
-            has_title = (elm.tag == "h2") # "Synonyms"
-            has_label = (elm.tag == "p") and (elm.attrib["class"] == "function-label") # "Noun"
-            has_syn = (elm.tag == "ul") # synonym list
-        except KeyError:
-            continue
-        else:
-            if has_title:
-                c_print(f"#[bold {w_col.syn_title}]{elm.text}", end=" ")
+            if elm.tag == "h2":  # "Synonyms"
+                c_print(f"#[bold {w_col.syn_title}]{elm.text}", end="\n")
 
-            elif has_label:
-                c_print(f"\n#[{w_col.syn_label}]{elm.text}")
+            if elm.tag == "p" and elm.attrib["class"] == "function-label": # "Noun"
+                c_print(f"#[{w_col.syn_label}]{elm.text}")
 
-            elif has_syn:
+            if elm.tag == "ul": # synonym list
                 children = elm.getchildren()
                 total_num = len(children)
 
@@ -196,7 +189,7 @@ def synonyms(node):
                     if index != (total_num - 1):
                         c_print(f"#[{w_col.syn_item}]{syn},", end=" ")
                     else:
-                        c_print(f"#[{w_col.syn_item}]{syn}", end=" ")
+                        c_print(f"#[{w_col.syn_item}]{syn}", end="\n")
 
 
 def examples(node):
@@ -210,7 +203,7 @@ def examples(node):
             continue
         else:
             if is_title:
-                c_print(f"\n#[{w_col.eg_title} bold]{elm.text}", end="")
+                c_print(f"#[{w_col.eg_title} bold]{elm.text}", end="")
             if has_aq:
                 texts = list(elm.itertext())
 
@@ -286,16 +279,13 @@ def related_phrases(node):
     pr_sec = children[2]
     phrases = [] # li tags, each tag has one phrase
     for i in pr_sec.iterdescendants():
-        if i.tag == "li":
-            phrases.append(i)
-
-    for phrase in phrases:
-        ts = list(phrase.itertext())
-        ts = "". join(ts).strip("\n").strip()
-        if phrase != phrases[-1]:
-            c_print(f"#[{w_col.rph_item}]{ts},", end=" ")
-        else:
-            c_print(f"#[{w_col.rph_item}]{ts}", end="")
+        if i.tag == "li" and "related-phrases-list-item" in i.get("class"):
+            ts = "". join(list(i.itertext())).strip("\n").strip()
+            if ts not in phrases:
+                phrases.append(ts)
+    for index, phrase in enumerate(phrases):
+        text = phrase + ", " if index != len(phrases) -1  else phrase
+        c_print(f"#[{w_col.rph_item}]{text}", end="")
 
 
 def get_word_cases(node):
@@ -312,6 +302,7 @@ def get_word_cases(node):
 
 
 def dtText(node, ancestor_attr):
+    """Print the meaning text starting with `:`. E.g. one of the word replenish's meaning texts `: to fill or build up again`"""
     texts = list(node.itertext())
 
     l_words = get_word_cases(node)[0]
@@ -321,37 +312,29 @@ def dtText(node, ancestor_attr):
         format_basedon_ancestor(ancestor_attr, prefix="\n")
 
     for index, text in enumerate(texts):
-        if text == " " and index == 0:
-            continue
-        if text == ": ":
-            print_meaning_content(text, end="")
-        elif text == " see also ":
-            print_meaning_keyword(text.strip().upper())
-        elif text == " see " or text == " compare ":
-            print_meaning_keyword("-> " + text.strip().upper())
-        elif u_words and text in u_words:
-            text_new = text.upper()
-            print_meaning_content(text_new, end="")
-        elif l_words and text in l_words:
-            text_new = (" " + text)
-            print_meaning_content(text_new, end="")
-        else:
-            print_meaning_content(text, end="")
+        if text.strip("\n").strip():
+            if text == ": ":
+                print_meaning_content(text, end="")
+            elif text == " see also ":
+                print_meaning_keyword(text.strip().upper())
+            elif text == " see " or text == " compare ":
+                print_meaning_keyword("-> " + text.strip().upper())
+            elif u_words and text in u_words:
+                text_new = text.upper()
+                print_meaning_content(text_new, end="")
+            elif l_words and text in l_words:
+                text_new = (" " + text)
+                print_meaning_content(text_new, end="")
+            elif index == len(texts) - 1:
+                print_meaning_content(text.strip(), end="")
+            else:
+                print_meaning_content(text, end="")
 
-    print("", end = " ")
 
-
-def print_mw(text, has_tail, tag):
-    if tag == "hl":
-        if has_tail is True:
-            c_print(f"#[{w_col.meaning_sentence} bold]{text}", end = "")
-        else:
-            c_print(f"#[{w_col.meaning_sentence} bold]{text}", end = " ")
-    if tag == "normal":
-        if has_tail is True:
-            c_print(f"#[{w_col.meaning_sentence}]{text}", end = "")
-        else:
-            c_print(f"#[{w_col.meaning_sentence}]{text}", end = " ")
+def print_mw(text, nospace, tag):
+    end = "" if nospace else " "
+    bold = "" if tag == "normal" else "bold"
+    c_print(f"#[{w_col.meaning_sentence}{bold}]{text}", end=end)
 
 
 def ex_sent(node, ancestor_attr, num_label_count=1):
@@ -382,8 +365,12 @@ def ex_sent(node, ancestor_attr, num_label_count=1):
         text = t.strip("\n").strip()
         if text:
             if t in hl_words:
-                hl_has_tail = ((index != (count - 1)) and (texts[index + 1].strip("\n").strip()) and (not texts[index + 1].strip("\n").strip()[0].isalnum()))
-                print_mw(text, hl_has_tail, "hl")
+                if index == count - 1 or (index == count-2 and texts[count-1].strip("\n").strip() == "") :
+                    print_mw(text, True, "hl")
+                elif texts[index + 1].strip("\n").strip() and (not texts[index + 1].strip("\n").strip()[0].isalnum()):
+                    print_mw(text, True, "hl")
+                else:
+                    print_mw(text, False, "hl")
             elif t in ems:
                 if index != 0 and texts[index - 1].endswith(" "):
                     print("", end = " ")
@@ -391,8 +378,14 @@ def ex_sent(node, ancestor_attr, num_label_count=1):
                 if index != (count - 1) and texts[index + 1].startswith(" "):
                     print("", end = " ")
             else:
-                normal_has_tail = (index != (count - 1) and (texts[index + 1] in ems))
-                print_mw(text, normal_has_tail, "normal")
+                if index == count - 1 or (index == count-2 and texts[count-1].strip("\n").strip() == "") :
+                    print_mw(text, True, "normal")
+                elif texts[index + 1] in ems:
+                    print_mw(text, True, "normal")
+                elif texts[index + 1] in hl_words and t[-1] == '"':
+                    print_mw(text, True, "normal")
+                else:
+                    print_mw(text, False, "normal")
 
 
 def sub_content_thread(node, ancestor_attr, num_label_count=1):
@@ -452,11 +445,8 @@ def unText_simple(node, ancestor_attr, num_label_count=1, has_badge=True):
 
     node_pre = node.getprevious()
     node_pre_attr = node_pre.get("class")
-
-    if "mdash" in node_pre_attr:
-        print_meaning_arrow("-> " + text)
-    else:
-        print_meaning_badge(text)
+    arrow = "-> " if "mdash" in node_pre_attr else ""
+    print_meaning_arrow(arrow + text, end="")
 
 
 def sense(node, attr, parent_attr, ancestor_attr, num_label_count=1):
@@ -491,15 +481,15 @@ def sense(node, attr, parent_attr, ancestor_attr, num_label_count=1):
         if "has-subnum" in ancestor_attr and "sb-0" in parent_attr:
             c_print(f"#[bold {w_col.meaning_letter}]{sn}", end = " ")
         else:
-            if num_label_count == 2:
-                    print(" ", end="")
-
             if "letter-only" in ancestor_attr:
                 if "sb-0" not in parent_attr:
                     print("  ", end="")
                 c_print(f"#[bold {w_col.meaning_letter}]{sn}", end = " ")
             else:
-                c_print(f"  #[bold {w_col.meaning_letter}]{sn}", end = " ")
+                if num_label_count == 2 and sn == "a":
+                    c_print(f" #[bold {w_col.meaning_letter}]{sn}", end = " ")
+                else:
+                    c_print(f"  #[bold {w_col.meaning_letter}]{sn}", end = " ")
 
         if node.tag == "span": # e.g. "knife and fork"
             if children[1].attrib["class"] == "if":
@@ -556,13 +546,17 @@ def tags(node, ancestor_attr, num_label_count):
     has_badge = True
     has_et = False
     has_dtText = False
+    no_print = False
 
     for elm in node.iterdescendants():
         elm_attr = elm.get("class")
         if elm_attr is not None:
             if "badge" in elm_attr and "pron" not in elm_attr:
                 text = "".join(list(elm.itertext())).strip()
-                print_meaning_badge(text)
+                if elm.getnext() is not None:
+                    print_meaning_badge(text, end=" ")
+                else:
+                    print_meaning_badge(text, end="")
 
             elif elm_attr == "et":
                 et(elm)
@@ -600,6 +594,9 @@ def tags(node, ancestor_attr, num_label_count):
             elif elm_attr == "dtText":
                 dtText(elm, ancestor_attr) # only meaning text
                 has_dtText = True
+                elm_next = elm.getnext()
+                if elm_next is not None and elm_next.get("class") == "uns":
+                    print(" ", end="")
 
             elif elm_attr == "sub-content-thread":
                 sub_content_thread(elm, ancestor_attr, num_label_count) # example under the meaning
@@ -614,7 +611,9 @@ def tags(node, ancestor_attr, num_label_count):
             elif "prons-entries-list" in elm_attr:
                 print_pron(elm)
 
-    if not has_et or (has_et and has_dtText): # e.g. invest <span class="et">: [Medieval Latin investire, from Latin, to clothe]
+            elif elm_attr == "sn sense-2":
+                no_print = True
+    if (not has_et and not no_print) or (has_et and has_dtText): # e.g. invest <span class="et">: [Medieval Latin investire, from Latin, to clothe]
         print()
 
 
@@ -627,8 +626,8 @@ def vg_sseq_entry_item(node):
         attr = child.attrib["class"]
         # print number label if any
         if attr == "vg-sseq-entry-item-label":
-            c_print(f"#[bold {w_col.meaning_num}]{child.text}", end=" ")
-            num_label_count = len(child.text)
+            c_print(f"#[bold {w_col.meaning_num}]{child.text}", end="")
+            num_label_count = int(child.text)
 
         # print meaning content
         elif "ms-lg-4 ms-3 w-100" in attr:
@@ -637,6 +636,7 @@ def vg_sseq_entry_item(node):
                 cc_attr = cc.get("class")
                 if cc_attr is not None and cc_attr == "sen has-num-only":
                     tags(cc, cc_attr, num_label_count)
+                    continue # !!! very important, or sb_entry() will run the node "sb-0 sb-entry" containing "sen has-num-only" once again
 
                 # print class "sb-0 sb-entry", "sb-1 sb-entry" ...
                 sb_entry(c, attr, num_label_count)
@@ -667,7 +667,7 @@ def vg(node):
             e = child.getchildren()[0]
             e_attr = e.get("class")
             if e_attr is not None and "badge" in e_attr:
-                print_meaning_badge(e.text)
+                print_meaning_badge(e.text, end="")
             else:
                 c_print(f"#[bold]{e.text}")
 
@@ -738,7 +738,9 @@ def entry_uros(node):
                 c_print(f"#[bold {w_col.wf}]{elm.text}", end = " ")
 
             elif elm.tag == "span" and "fw-bold fl" in attr:
-                c_print(f"#[{w_col.eh_word_type}]{elm.text}", end = "")
+                elm_next = elm.getnext()
+                end = "\n" if elm_next is not None and elm_next.get("class") == "ins" else ""
+                c_print(f"#[{w_col.eh_word_type}]{elm.text}", end=end)
 
             elif "ins" in attr:
                 print("", end="")
@@ -769,7 +771,7 @@ def entry_uros(node):
                             for i in child:
                                 print_class_va(i.text)
                         else:
-                            print_class_va(c.text)
+                            print_class_va(c.text, end="")
                     elif "prons-entries-list" in attr_c:
                         continue
 
@@ -799,7 +801,7 @@ def print_vrs(node):
                             for i in child:
                                 print_class_va(i.text)
                         else:
-                            print_class_va(child.text)
+                            print_class_va(child.text, end="")
                     elif "prons-entries-list" in attr:
                         print_pron(child)
                     else:
@@ -963,15 +965,15 @@ def print_or_badge(text):
     c_print(f"#[{w_col.or_badge}]{text}", end = "")
 
 
-def print_class_if(text, before_semicolon=False, before_il=False):
-    if before_semicolon or before_il:
+def print_class_if(text, before_semicolon=False, before_il=False, has_next_sibling=True):
+    if before_semicolon or before_il or not has_next_sibling:
         c_print(f"#[bold]{text}", end="")
     else:
         c_print(f"#[bold]{text}", end=" ")
 
 
-def print_class_va(text):
-    c_print(f"#[bold]{text}", end=" ")
+def print_class_va(text, end= " "):
+    c_print(f"#[bold]{text}", end=end)
 
 
 def print_class_sgram(node):
@@ -1000,7 +1002,7 @@ def print_class_ins(node):
             elif attr == "if":
                 next_sibling = child.getnext()
                 if next_sibling is None:
-                    print_class_if(child.text, before_semicolon=False)
+                    print_class_if(child.text, has_next_sibling=False)
                 else:
                     sub_attr = next_sibling.get("class")
                     if sub_attr == "sep-semicolon":

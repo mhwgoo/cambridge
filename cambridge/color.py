@@ -40,7 +40,7 @@ meaning_letter = "#757575"
 meaning_link = "#4A7D95"
 meaning_content = "#4A7D95"
 meaning_badge = badge
-meaning_arrow = meaning_content 
+meaning_arrow = "#BC8F8F"
 meaning_keyword = "#757575"
 meaning_sentence = "#757575"
 

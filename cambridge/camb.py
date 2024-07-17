@@ -2,10 +2,11 @@ import sys
 import re
 from bs4 import BeautifulSoup
 import asyncio
+import aiohttp
 
 from .console import c_print
 from .log import logger
-from .utils import fetch, get_request_url, parse_response_url, replace_all, OP, DICT, has_tool, get_suggestion, get_suggestion_by_fzf, cancel_on_error, quit_on_no_result
+from .utils import fetch, get_request_url, parse_response_url, replace_all, OP, DICT, has_tool, get_suggestion, get_suggestion_by_fzf, cancel_on_error, quit_on_no_result, cancel_on_error_without_retry
 from .cache import check_cache, save_to_cache, get_cache
 from . import webster
 
@@ -63,17 +64,23 @@ async def fresh_run(session, input_word, is_ch, no_suggestions, req_url):
 
             spell_base_url = CAMBRIDGE_SPELLCHECK_URL_CN if is_ch else CAMBRIDGE_SPELLCHECK_URL
             spell_req_url = get_request_url(spell_base_url, input_word, DICT.CAMBRIDGE.name)
-            spell_res = await fetch(session, spell_req_url)
 
             attempt = 0
             while True:
                 try:
-                    spell_res_text = await spell_res.text()
-                except asyncio.TimeoutError as error:
+                    if session.closed:
+                        async with aiohttp.ClientSession() as session:
+                            spell_res = await fetch(session, spell_req_url)
+                            spell_res_text = await spell_res.text()
+                    else:
+                        spell_res = await fetch(session, spell_req_url)
+                        spell_res_text = await spell_res.text()
+                except (asyncio.TimeoutError, aiohttp.ClientConnectionError, aiohttp.ServerDisconnectedError) as error:
                     attempt = cancel_on_error(spell_req_url, error, attempt, OP.FETCHING.name, asyncio.current_task())
                     continue
                 except Exception as error:
                     cancel_on_error_without_retry(spell_req_url, error, OP.FETCHING.name, asyncio.current_task())
+                    break
                 else:
                     break
 
@@ -107,12 +114,24 @@ async def fresh_run(session, input_word, is_ch, no_suggestions, req_url):
             attempt = 0
             while True:
                 try:
-                    res_text = await response.text()
+                    if session.closed:
+                        async with aiohttp.ClientSession() as session:
+                            response = await fetch(session, req_url)
+                            res_text = await response.text()
+                    else:
+                        res_text = await response.text()
                 except asyncio.TimeoutError as error:
+                    attempt = cancel_on_error(res_url, error, attempt, OP.FETCHING.name, asyncio.current_task())
+                    continue
+                except aiohttp.ClientConnectionError as error: # If session is closed, and you go on connecting, ClientConnectionError will be throwed.
+                    attempt = cancel_on_error(res_url, error, attempt, OP.FETCHING.name, asyncio.current_task())
+                    continue
+                except aiohttp.ServerDisconnectedError as error:
                     attempt = cancel_on_error(res_url, error, attempt, OP.FETCHING.name, asyncio.current_task())
                     continue
                 except Exception as error:
                     cancel_on_error_without_retry(res_url, error, OP.FETCHING.name, asyncio.current_task())
+                    break
                 else:
                     break
 
@@ -185,7 +204,8 @@ def print_pron(block, area):
     w_pron = block.find("span", "pron dpron")
     if w_pron is not None:
         w_pron_text = replace_all(w_pron.text).replace("/", "|")
-        c_print(f"#[bold]{area} #[/bold]" + w_pron_text, end=" ")
+        end= "" if block.find_next_sibling() is None else " "
+        c_print(f"#[bold]{area} #[/bold]" + w_pron_text, end=end)
 
 
 def parse_head_pron(head):
@@ -263,7 +283,11 @@ def parse_dict_head(block):
         if len(spellvar) != 0:
             parse_head_spellvar(spellvar)
 
-        print()
+        posgram = head.find("div", "posgram dpos-g hdib lmr-5")
+        if posgram is not None and posgram.find_next_sibling() is None:
+            pass
+        else:
+            print()
 
     else:
         c_print("#[bold blue]" + word)
@@ -477,7 +501,7 @@ def parse_sole_idiom(block):
     idiom_sole_meaning = block.find("div", "def ddef_d db")
 
     if idiom_sole_meaning is not None:
-        print("\033[34m" + idiom_sole_meaning.text + "\033[0m")
+        print("\033[34m" + idiom_sole_meaning.text.strip() + "\033[0m")
     parse_example(block)
     parse_see_also(block)
 

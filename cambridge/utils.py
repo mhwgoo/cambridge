@@ -56,8 +56,7 @@ def cancel_on_error(path, error, attempt, op, task):
 
     if attempt == 3:
         print(f'Maximum {op} reached.')
-        print(f'{OP.CANCELLING.name} on {op} <{path}>: [{error.__class__.__name__}] {error}')
-        print(repr(task))
+        print(f'{op} on {path} failed: [{error.__class__.__name__}] {error}')
         if task is not None:
             task.cancel()
         else:
@@ -67,7 +66,10 @@ def cancel_on_error(path, error, attempt, op, task):
 
 def cancel_on_error_without_retry(path, error, op, task):
     print(f'{op} on {path} failed: [{error.__class__.__name__}] {error}')
-    asyncio.current_task().cancel()
+    if task is not None:
+        task.cancel()
+    else:
+        sys.exit(2)
 
 
 async def fetch(session, url):
@@ -78,7 +80,7 @@ async def fetch(session, url):
     logger.debug(f"Got User-Agent: {ua}")
     while True:
         try:
-            resp = await session.get(url, headers={"User-Agent": ua}, timeout=5)
+            resp = await session.get(url, headers={"User-Agent": ua}, timeout=5, ssl=False)
         except asyncio.TimeoutError as error:
             attempt = cancel_on_error(url, error, attempt, OP.FETCHING.name, asyncio.current_task())
             continue

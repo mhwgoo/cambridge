@@ -174,13 +174,13 @@ def synonyms(node):
     print()
 
     for elm in node.iterdescendants():
-            if elm.tag == "h2":  # "Synonyms"
+            if elm.tag == "h2":
                 c_print(f"#[bold {w_col.syn_title}]{elm.text}", end="\n")
 
-            if elm.tag == "p" and elm.attrib["class"] == "function-label": # "Noun"
+            if elm.tag == "p" and elm.attrib["class"] == "function-label":
                 c_print(f"#[{w_col.syn_label}]{elm.text}")
 
-            if elm.tag == "ul": # synonym list
+            if elm.tag == "ul":
                 children = elm.getchildren()
                 total_num = len(children)
 
@@ -197,7 +197,7 @@ def examples(node):
 
     for elm in node.iterdescendants():
         try:
-            is_title = ("ex-header function-label" in elm.attrib["class"]) # Recent Examples on the Web
+            is_title = ("ex-header function-label" in elm.attrib["class"])
             has_aq = (elm.attrib["class"] == "t has-aq")
         except KeyError:
             continue
@@ -277,7 +277,7 @@ def related_phrases(node):
                 c_print(f"#[{w_col.rph_title} bold]{t}", end="")
 
     pr_sec = children[2]
-    phrases = [] # li tags, each tag has one phrase
+    phrases = []
     for i in pr_sec.iterdescendants():
         if i.tag == "li" and "related-phrases-list-item" in i.get("class"):
             ts = "". join(list(i.itertext())).strip("\n").strip()
@@ -337,14 +337,11 @@ def print_mw(text, nospace, tag):
     c_print(f"#[{w_col.meaning_sentence}{bold}]{text}", end=end)
 
 
-def ex_sent(node, ancestor_attr, num_label_count=1):
+def ex_sent(node, ancestor_attr):
     if ancestor_attr:
         format_basedon_ancestor(ancestor_attr, prefix="\n")
     else:
         print()
-
-    if num_label_count == 2:
-        print(" ", end="")
 
     c_print(f"#[{w_col.accessory}]|", end="")
 
@@ -388,13 +385,13 @@ def ex_sent(node, ancestor_attr, num_label_count=1):
                     print_mw(text, False, "normal")
 
 
-def sub_content_thread(node, ancestor_attr, num_label_count=1):
+def sub_content_thread(node, ancestor_attr):
     children = node.getchildren()
     for child in children:
         attr = child.attrib["class"]
 
         if ("ex-sent" in attr) and ("aq has-aq" not in attr):
-            ex_sent(child, ancestor_attr, num_label_count)
+            ex_sent(child, ancestor_attr)
 
         elif "vis" in attr:
             elms = child.getchildren()
@@ -402,7 +399,7 @@ def sub_content_thread(node, ancestor_attr, num_label_count=1):
                 elm = e.getchildren()[0]
                 elm_attr = elm.attrib["class"]
                 if ("ex-sent" in elm_attr) and ("aq has-aq" not in elm_attr):
-                    ex_sent(elm, ancestor_attr, num_label_count)
+                    ex_sent(elm, ancestor_attr)
 
 
 def extra(node, ancestor_attr):
@@ -487,7 +484,7 @@ def sense(node, attr, parent_attr, ancestor_attr, num_label_count=1):
                 c_print(f"#[bold {w_col.meaning_letter}]{sn}", end = " ")
             else:
                 if num_label_count == 2 and sn == "a":
-                    c_print(f" #[bold {w_col.meaning_letter}]{sn}", end = " ")
+                    c_print(f"#[bold {w_col.meaning_letter}]{sn}", end = " ")
                 else:
                     c_print(f"  #[bold {w_col.meaning_letter}]{sn}", end = " ")
 
@@ -599,7 +596,7 @@ def tags(node, ancestor_attr, num_label_count):
                     print(" ", end="")
 
             elif elm_attr == "sub-content-thread":
-                sub_content_thread(elm, ancestor_attr, num_label_count) # example under the meaning
+                sub_content_thread(elm, ancestor_attr) # example under the meaning
                 has_badge = False
 
             elif elm_attr == "ca":
@@ -626,7 +623,7 @@ def vg_sseq_entry_item(node):
         attr = child.attrib["class"]
         # print number label if any
         if attr == "vg-sseq-entry-item-label":
-            c_print(f"#[bold {w_col.meaning_num}]{child.text}", end="")
+            c_print(f"#[bold {w_col.meaning_num}]{child.text}", end=" ")
             num_label_count = int(child.text)
 
         # print meaning content
@@ -799,7 +796,7 @@ def print_vrs(node):
                     elif attr == "va":
                         if child.text is None:
                             for i in child:
-                                print_class_va(i.text)
+                                print_class_va(i.text, end="")
                         else:
                             print_class_va(child.text, end="")
                     elif "prons-entries-list" in attr:

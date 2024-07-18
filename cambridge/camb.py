@@ -65,17 +65,12 @@ async def fresh_run(session, input_word, is_ch, no_suggestions, req_url):
             spell_base_url = CAMBRIDGE_SPELLCHECK_URL_CN if is_ch else CAMBRIDGE_SPELLCHECK_URL
             spell_req_url = get_request_url(spell_base_url, input_word, DICT.CAMBRIDGE.name)
 
+            spell_res = await fetch(session, spell_req_url)
             attempt = 0
             while True:
                 try:
-                    if session.closed:
-                        async with aiohttp.ClientSession() as session:
-                            spell_res = await fetch(session, spell_req_url)
-                            spell_res_text = await spell_res.text()
-                    else:
-                        spell_res = await fetch(session, spell_req_url)
-                        spell_res_text = await spell_res.text()
-                except (asyncio.TimeoutError, aiohttp.ClientConnectionError, aiohttp.ServerDisconnectedError) as error:
+                    spell_res_text = await spell_res.text()
+                except asyncio.TimeoutError as error:
                     attempt = cancel_on_error(spell_req_url, error, attempt, OP.FETCHING.name, asyncio.current_task())
                     continue
                 except Exception as error:
@@ -114,22 +109,11 @@ async def fresh_run(session, input_word, is_ch, no_suggestions, req_url):
             attempt = 0
             while True:
                 try:
-                    if session.closed:
-                        async with aiohttp.ClientSession() as session:
-                            response = await fetch(session, req_url)
-                            res_text = await response.text()
-                    else:
-                        res_text = await response.text()
+                    res_text = await response.text()
                 except asyncio.TimeoutError as error:
                     attempt = cancel_on_error(res_url, error, attempt, OP.FETCHING.name, asyncio.current_task())
                     continue
-                except aiohttp.ClientConnectionError as error: # If session is closed, and you go on connecting, ClientConnectionError will be throwed.
-                    attempt = cancel_on_error(res_url, error, attempt, OP.FETCHING.name, asyncio.current_task())
-                    continue
-                except aiohttp.ServerDisconnectedError as error:
-                    attempt = cancel_on_error(res_url, error, attempt, OP.FETCHING.name, asyncio.current_task())
-                    continue
-                except Exception as error:
+                except Exception as error: # If session is closed, and you go on connecting, ClientConnectionError will be throwed.
                     cancel_on_error_without_retry(res_url, error, OP.FETCHING.name, asyncio.current_task())
                     break
                 else:
@@ -311,14 +295,30 @@ def parse_ptitle(block):
         print(f"\033[34;1m  {p_title}\033[0m")
 
 
-def parse_def_info(def_block):
-    """ def info tags like 'B1 [ C or U ]' """
+def parse_meaning(def_block, is_pmeaning=False):
+    if is_pmeaning:
+        print("  ", end="")
 
+    meaning_b = def_block.find("div", "def ddef_d db")
+    usage_b = meaning_b.find("span", "lab dlab")
+    if usage_b is not None:
+        usage = replace_all(usage_b.text)
+        meaning_words = replace_all(meaning_b.text).split(usage)[-1].replace(":", "")
+        print("\033[34;1m: \033[0m" + "[" + usage + "] " + "\033[34m" + meaning_words.strip() + "\033[0m", end="")
+    else:
+        meaning_words = replace_all(meaning_b.text).replace(":", "")
+        print("\033[34;1m: \033[0m" + "\033[34m" + meaning_words + "\033[0m", end="")
+
+    # e.g. def info tags like 'B1 [ C or U ]'
     def_info = replace_all(def_block.find("span", "def-info ddef-info").text).replace(" or ", "/")
-    return def_info
+    if def_info:
+        if not def_info.startswith("("):
+            print(" [" + def_info + "]", end="")
+        else:
+            print(" " + def_info, end="")
 
-
-def print_meaning_lan(meaning_lan):
+    # print the meaning's specific language translation if any
+    meaning_lan = def_block.find("span", "trans dtrans dtrans-se break-cj")
     if meaning_lan is not None:
         meaning_lan_words = meaning_lan.text.replace(";", "；").replace(",", "，")
         if not meaning_lan_words.startswith("（"):
@@ -326,37 +326,6 @@ def print_meaning_lan(meaning_lan):
         print("\033[34m" + meaning_lan_words + "\033[0m")
     else:
         print()
-
-
-def print_meaning(meaning_b, usage_b, is_pmeaning):
-    if is_pmeaning:
-        print("  ", end="")
-
-    if usage_b is not None:
-        usage = replace_all(usage_b.text)
-        meaning_words = replace_all(meaning_b.text).split(usage)[-1].replace(":", "")
-        print("\033[34;1m: \033[0m" + "[" + usage + "]" + "\033[34m" + meaning_words + "\033[0m", end="")
-    else:
-        meaning_words = replace_all(meaning_b.text).replace(":", "")
-        print("\033[34;1m: \033[0m" + "\033[34m" + meaning_words + "\033[0m", end="")
-
-
-def parse_meaning(def_block, is_pmeaning=False):
-    meaning_b = def_block.find("div", "def ddef_d db")
-    usage_b = meaning_b.find("span", "lab dlab")
-
-    print_meaning(meaning_b, usage_b, is_pmeaning)
-
-    def_info = parse_def_info(def_block)
-    if def_info:
-        if not def_info.startswith("("):
-            print(" [" + def_info + "]", end="")
-        else:
-            print(" " + def_info, end="")
-
-    # Print the meaning's specific language translation if any
-    meaning_lan = def_block.find("span", "trans dtrans dtrans-se break-cj")
-    print_meaning_lan(meaning_lan)
 
 
 def print_example_tag(tag_block):

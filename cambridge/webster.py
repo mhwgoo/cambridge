@@ -672,10 +672,6 @@ def vg(node):
                 print()
 
 
-def print_word(text):
-    c_print(f"#[{w_col.eh_h1_word} bold]{text}", end=" ")
-
-
 def entry_header_content(node):
     """Print entry header content. e.g. value 1 of 3 noun"""
 
@@ -684,7 +680,8 @@ def entry_header_content(node):
             word = "".join(list(elm.itertext()))
             global word_entries
             word_entries.add(word.strip().lower())
-            print_word(word)
+            end = "" if elm.getnext() is None else " "
+            c_print(f"#[{w_col.eh_h1_word} bold]{word}", end=end)
 
         elif elm.tag == "span":
             num = " ".join(list(elm.itertext()))
@@ -865,13 +862,12 @@ def dictionary_entry(node):
                 print_header_badge(badge.text, end="\n")
 
             elif elm_attr == "cxl-ref":
-                text = list(elm.itertext())
-                print_meaning_content(": ", end="")
-                for t in text:
-                    t = t.strip()
-                    if t:
-                        print_meaning_content(t, end=" ")
-                print()
+                texts = list(elm.itertext())
+                text = ":"
+                for t in texts:
+                    if t.strip("\n").strip():
+                        text += " " + t
+                print_meaning_content(text, end="\n")
 
 
 def print_meaning_badge(text, end=" "):

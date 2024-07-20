@@ -193,8 +193,8 @@ def synonyms(node):
 
 
 def examples(node):
+    print()
     time = 0
-
     for elm in node.iterdescendants():
         try:
             is_title = ("ex-header function-label" in elm.attrib["class"])
@@ -945,10 +945,7 @@ def print_pron(node, header=False):
     if count > 1:
         for index, pron in enumerate(prons):
             if index == 0:
-                if before_semicolon or before_or:
-                    print(f"|{pron}|", end="")
-                else:
-                    print(f"|{pron}|", end="  ")
+                print(f"|{pron}|", end=" ")
             elif index == count - 1:
                 if sibling is not None:
                     c_print(f"#[{w_col.eh_word_syllables}]{pron}", end=" ")

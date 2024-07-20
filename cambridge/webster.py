@@ -432,13 +432,14 @@ def extra(node, ancestor_attr):
     print("", end = " ")
 
 
-def unText_simple(node, ancestor_attr, num_label_count=1, has_badge=True):
+def unText_simple(node, ancestor_attr, has_badge=True):
+
     text = "".join(list(node.itertext())).strip()
+
+def print_mw(hl_text, True, "hl")
 
     if not has_badge:
         print()
-        if num_label_count == 2:
-            print(" ", end="")
         format_basedon_ancestor(ancestor_attr, prefix="")
 
     node_pre = node.getprevious()
@@ -604,7 +605,7 @@ def tags(node, ancestor_attr, num_label_count):
                 extra(elm, ancestor_attr)
 
             elif elm_attr == "unText":
-                unText_simple(elm, ancestor_attr, num_label_count, has_badge)
+                unText_simple(elm, ancestor_attr, has_badge)
 
             elif "prons-entries-list" in elm_attr:
                 print_pron(elm)

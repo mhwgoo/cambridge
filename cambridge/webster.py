@@ -326,7 +326,8 @@ def dtText(node, ancestor_attr):
                 text_new = (" " + text)
                 print_meaning_content(text_new, end="")
             elif index == len(texts) - 1:
-                print_meaning_content(text[:-1], end="") # e.g. creative
+                text = text[:-1] if text[-1] == " " else text
+                print_meaning_content(text, end="") # e.g. creative
             else:
                 print_meaning_content(text, end="")
 

@@ -326,7 +326,7 @@ def dtText(node, ancestor_attr):
                 text_new = (" " + text)
                 print_meaning_content(text_new, end="")
             elif index == len(texts) - 1:
-                print_meaning_content(text.strip(), end="")
+                print_meaning_content(text[:-1], end="") # e.g. creative
             else:
                 print_meaning_content(text, end="")
 
@@ -685,7 +685,8 @@ def entry_header_content(node):
 
         elif elm.tag == "span":
             num = " ".join(list(elm.itertext()))
-            print(num, end=" ")
+            end = "" if elm.getnext() is None else " "
+            print(num, end=end)
 
         elif elm.tag == "h2":
             type = " ".join(list(elm.itertext()))

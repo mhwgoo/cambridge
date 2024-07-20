@@ -56,7 +56,7 @@ def cancel_on_error(path, error, attempt, op, task):
 
     if attempt == 3:
         print(f'Maximum {op} reached.')
-        print(f'{op} on {path} failed: [{error.__class__.__name__}] {error}')
+        print(f'{op} on {path} failed: [{error.__class__.__name__}] {repr(error)}')
         if task is not None:
             task.cancel()
         else:

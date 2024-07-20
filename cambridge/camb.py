@@ -208,8 +208,9 @@ def parse_head_tense(block):
         for index, sub in enumerate(sub_blocks):
             tenses = sub.find_all("b", "inf dinf")
             if len(tenses) != 0:
-                for tense in tenses:
-                    c_print("#[bold]" + tense.text + "#[/bold]", end=" ")
+                for i, tense in enumerate(tenses):
+                    end = "" if i == len(tenses) - 1 else " "
+                    c_print("#[bold]" + tense.text + "#[/bold]", end=end)
             if index == 0 and len(sub_blocks) > 1:
                 print("|", end=" ")
 

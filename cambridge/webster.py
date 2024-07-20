@@ -288,19 +288,6 @@ def related_phrases(node):
         c_print(f"#[{w_col.rph_item}]{text}", end="")
 
 
-def get_word_cases(node):
-    l_words = []
-    u_words = []
-    for i in node.iterdescendants():
-        attr = i.get("class")
-        if attr is not None:
-            if "lowercase" in attr:
-                l_words.append(i.text)
-            elif "uppercase" in attr:
-                u_words.append(i.text)
-    return l_words, u_words
-
-
 def dtText(node, ancestor_attr):
     """Print the meaning text starting with `:`. E.g. one of the word replenish's meaning texts `: to fill or build up again`"""
     texts = list(node.itertext())
@@ -338,14 +325,20 @@ def print_mw(text, nospace, tag):
     c_print(f"#[{w_col.meaning_sentence}{bold}]{text}", end=end)
 
 
-def ex_sent(node, ancestor_attr):
-    if ancestor_attr:
-        format_basedon_ancestor(ancestor_attr, prefix="\n")
-    else:
-        print()
+def get_word_cases(node):
+    l_words = []
+    u_words = []
+    for i in node.iterdescendants():
+        attr = i.get("class")
+        if attr is not None:
+            if "lowercase" in attr:
+                l_words.append(i.text)
+            elif "uppercase" in attr:
+                u_words.append(i.text)
+    return l_words, u_words
 
-    c_print(f"#[{w_col.accessory}]|", end="")
 
+def get_word_faces(node):
     hl_words = []
     ems = []
     for i in node.iterdescendants():
@@ -355,6 +348,19 @@ def ex_sent(node, ancestor_attr):
                 ems.append(i.text)
             elif i.tag == "span" and "mw" in attr:
                 hl_words.append(i.text)
+    return hl_words, ems
+
+
+def ex_sent(node, ancestor_attr):
+    if ancestor_attr:
+        format_basedon_ancestor(ancestor_attr, prefix="\n")
+    else:
+        print()
+
+    c_print(f"#[{w_col.accessory}]|", end="")
+
+    hl_words = get_word_faces(node)[0]
+    ems = get_word_faces(node)[1]
 
     texts = list(node.itertext())
     count = len(texts)
@@ -433,11 +439,6 @@ def extra(node, ancestor_attr):
 
 
 def unText_simple(node, ancestor_attr, has_badge=True):
-
-    text = "".join(list(node.itertext())).strip()
-
-def print_mw(hl_text, True, "hl")
-
     if not has_badge:
         print()
         format_basedon_ancestor(ancestor_attr, prefix="")
@@ -445,7 +446,17 @@ def print_mw(hl_text, True, "hl")
     node_pre = node.getprevious()
     node_pre_attr = node_pre.get("class")
     arrow = "-> " if "mdash" in node_pre_attr else ""
-    print_meaning_arrow(arrow + text, end="")
+
+    hl_words, _ = get_word_faces(node)
+    text = "".join(list(node.itertext())).strip()
+
+    if hl_words:
+        hl_word = hl_words[0]
+        #TODO / should only reset the current effect (bold), not including w_col.meaning_arrow
+        text = text.replace(hl_word, f"#[bold]{hl_word}#[/bold]#[{w_col.meaning_arrow}]")
+        c_print(f"#[{w_col.meaning_arrow}]{arrow + text}", end="")
+    else:
+        c_print(f"#[{w_col.meaning_arrow}]{arrow + text}", end="")
 
 
 def sense(node, attr, parent_attr, ancestor_attr, num_label_count=1):
@@ -879,10 +890,6 @@ def print_meaning_badge(text, end=" "):
 
 def print_header_badge(text, end=" "):
     c_print(f"#[{w_col.meaning_badge}]{text}", end=end)
-
-
-def print_meaning_arrow(text, end=" "):
-    c_print(f"#[{w_col.meaning_arrow}]{text}", end=end)
 
 
 def print_meaning_keyword(text, end=" "):

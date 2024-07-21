@@ -1,6 +1,5 @@
 import sys
 import argparse
-import logging
 import asyncio
 
 from .__init__ import __version__
@@ -8,7 +7,6 @@ from .cache import delete_from_cache, list_cache
 from .webster import search_webster, get_webster_wod, get_webster_wod_list
 from .camb import search_cambridge
 from .utils import get_cache_selection, get_cache_selection_by_fzf
-from .log import logger
 
 def parse_args(session):
     parser = argparse.ArgumentParser(
@@ -23,6 +21,12 @@ def parse_args(session):
     )
 
     parser.set_defaults(session=session)
+
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="turn on debug mode",
+    )
 
     # Add sub-command capability that can identify different sub-command name
     sub_parsers = parser.add_subparsers(dest="subparser_name")
@@ -71,14 +75,6 @@ def parse_args(session):
         "word_or_phrase",
         nargs="+",
         help="look up a word/phrase in Cambridge Dictionary; e.g. camb <word/phrase>",
-    )
-
-    # Add an optional argument for s command
-    parser_sw.add_argument(
-        "-d",
-        "--debug",
-        action="store_true",
-        help="look up a word/phrase in debug mode",
     )
 
     # Add an optional argument for s command
@@ -142,11 +138,11 @@ def parse_args(session):
         print("cambridge " + __version__)
         sys.exit()
 
-    elif sys.argv[1] == "l" or sys.argv[1] == "wod":
+    elif "l" in sys.argv or "wod" in sys.argv:
         args = parser.parse_args()
         return args
 
-    else: # only for command "s"
+    else:
         to_parse = []
         word = []
         for i in sys.argv[1 : ]:
@@ -188,10 +184,12 @@ async def list_words(args):
     if args.delete:
         to_delete = args.delete
         words = " ".join(to_delete)
+        tasks = []
         for w in words.split(","):
             i = w.strip()
             if i:
-                delete_from_cache(i)
+                tasks.append(delete_from_cache(i))
+        await asyncio.gather(*tasks)
         sys.exit()
 
     if args.random:
@@ -211,9 +209,6 @@ async def list_words(args):
 
 
 async def search_word(args):
-    if args.debug:
-        logger.setLevel(logging.DEBUG)
-
     if args.webster and args.chinese:
         print("Webster Dictionary doesn't support English to other language. Try again without -c(--chinese) option")
         sys.exit(3)

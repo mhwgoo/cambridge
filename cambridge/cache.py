@@ -159,7 +159,7 @@ def delete_entry_from_table(word):
         return res_url
 
 
-def delete_from_cache(word):
+async def delete_from_cache(word):
     try:
         result = delete_entry_from_table(word)
     except sqlite3.Error as error:

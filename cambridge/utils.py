@@ -255,38 +255,3 @@ def get_cache_selection_by_fzf(data):
         return select_word
     else:
         sys.exit()
-
-
-def profile(func):
-    import io
-    import cProfile
-    import pstats
-
-    def inner(*args, **kwargs):
-        pr = cProfile.Profile()
-        pr.enable()
-        retval = func(*args, **kwargs)
-        pr.disable()
-        s = io.StringIO()
-        sortby = "cumulative"
-        ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-        ps.print_stats()
-        print(s.getvalue())
-        return retval
-
-    return inner
-
-
-def timer(func):
-    import time
-    from functools import wraps
-
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        start_at = time.time()
-        f = func(*args, **kwargs)
-        time_taken = round((time.time() - start_at), 2)
-        print("\nTime taken: {} seconds".format(time_taken))
-        return f
-
-    return wrapper

@@ -3,6 +3,7 @@ async def main():
         async with aiohttp.ClientSession() as session:
             args = parse_args(session)
             args_dict = vars(args) # transfrom namespace object into a dict
+            #print(args)
 
             if args_dict.get("debug"):
                 logger.setLevel(logging.DEBUG)

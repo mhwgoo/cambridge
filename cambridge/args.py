@@ -138,31 +138,33 @@ def parse_args(session):
         print("cambridge " + __version__)
         sys.exit()
 
-    elif "l" in sys.argv or "wod" in sys.argv:
+    elif "l" in sys.argv[1 : ] or "wod" in sys.argv[1 : ]:
+        """
+        args from running `python3 main.py --debug l -r`:
+        Namespace(version=False, debug=True, subparser_name='l', session=<aiohttp.client.ClientSession object at 0x10717a1e0>,
+          delete=None, time=False, random=True, func=<function list_words at 0x1072a6980>)
+        """
         args = parser.parse_args()
         return args
 
     else:
         to_parse = []
-        word = []
-        for i in sys.argv[1 : ]:
-            if i.startswith("-") and i[1] in ["-", "h", "d", "f", "w", "c", "n"]:
-                to_parse.append(i)
-            # NOTE
-            # Python stdlib `parser.parse_args()` does not allow the value of an argument to start with "-", e.g. camb -w "-let"
-            # Without the following workaround, Python interpreter will terminate the program  with the error:
-            # `main.py s: error: the following arguments are required: word_or_phrase`
-            # However, in terms of word lookup, you sometimes just want to know the meaning of a specific suffix like "-let"
-            # Luckily, search without "-", the result of which can also contain the meaning of "-let" suffix
-            elif i.startswith("-"):
-                word.append(i[1 : ])
-            else:
-                word.append(i)
+        word = ""
 
-        to_search = " ".join(word)
-        to_parse.append(to_search)
+        #print(sys.argv)
+        for i in sys.argv[1 : ]:
+            if i[0] != "-" and i[1] != "-":
+                word += " " + i
+            elif i == "--debug":
+                parser_sw.set_defaults(debug=True)
+            else:
+                to_parse.append(i)
+
+        to_parse.append(word.strip())
+
         parser_sw.set_defaults(session=session)
         args= parser_sw.parse_args(to_parse)
+
         return args
 
 

@@ -35,7 +35,7 @@ async def search_webster(session, input_word, is_fresh=False, no_suggestions=Fal
         if is_fresh:
             await fresh_run(session, input_word, no_suggestions, req_url)
         else:
-            res_url = check_cache(input_word, req_url)
+            res_url = await check_cache(input_word, req_url)
             if res_url is None:
                 logger.debug(f'{OP.NOT_FOUND.name} "{input_word}" in cache')
                 await fresh_run(session, input_word, no_suggestions, req_url)
@@ -46,7 +46,7 @@ async def search_webster(session, input_word, is_fresh=False, no_suggestions=Fal
 
 
 async def cache_run(res_url_from_cache):
-    res_word, res_text = get_cache(res_url_from_cache)
+    res_word, res_text = await get_cache(res_url_from_cache)
     logger.debug(f'{OP.FOUND.name} "{res_word}" from {DICT.MERRIAM_WEBSTER.name} in cache')
     logger.debug(f"{OP.PARSING.name} {res_url_from_cache}")
     tree = etree.HTML(res_text, parser)

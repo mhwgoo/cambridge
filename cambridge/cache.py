@@ -196,7 +196,7 @@ def list_cache(method):
         return (has_fzf, data)
 
 
-def check_cache(input_word, req_url):
+async def check_cache(input_word, req_url):
     logger.debug(f'{OP.SEARCHING.name} "{input_word}" in cache')
 
     try:
@@ -221,7 +221,7 @@ def check_cache(input_word, req_url):
         return data[0]
 
 
-def get_cache(response_url):
+async def get_cache(response_url):
     result = get_entry_from_table(response_url)
     if result is None:
         logger.error(f'The function argument "{response_url}" must actually come from the cache.')

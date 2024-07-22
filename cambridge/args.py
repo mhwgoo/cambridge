@@ -148,6 +148,10 @@ def parse_args(session):
         return args
 
     else:
+        # python3 main.py amass, flippant, tapestry --debug -w
+        # ['main.py', 'amass,', 'flippant,', 'tapestry', '--debug', '-w']
+        # Namespace(word_or_phrase=['amass, flippant, tapestry'], webster=True, fresh=False, chinese=False, nosuggestions=False, func=<function search_word at 0x10dd1a840>, debug=True, session=<aiohttp.client.ClientSession object at 0x10d913d40>)
+
         to_parse = []
         word = ""
 

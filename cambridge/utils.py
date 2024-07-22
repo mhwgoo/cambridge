@@ -56,7 +56,7 @@ def cancel_on_error(path, error, attempt, op, task):
 
     if attempt == 3:
         print(f'Maximum {op} reached.')
-        print(f'{op} on {path} failed: [{error.__class__.__name__}] {repr(error)}')
+        print(f'{op} on {path} failed: [{error.__class__.__name__}]')
         if task is not None:
             task.cancel()
         else:
@@ -65,7 +65,7 @@ def cancel_on_error(path, error, attempt, op, task):
 
 
 def cancel_on_error_without_retry(path, error, op, task):
-    print(f'{op} on {path} failed: [{error.__class__.__name__}] {error}')
+    print(f'{op} on {path} failed: [{error.__class__.__name__}]')
     if task is not None:
         task.cancel()
     else:
@@ -73,11 +73,10 @@ def cancel_on_error_without_retry(path, error, op, task):
 
 
 async def fetch(session, url):
-    logger.debug(f"{OP.FETCHING.name} {url}")
     attempt = 0
-
     ua = await aio_user_agent()
     logger.debug(f"Got User-Agent: {ua}")
+    logger.debug(f"{OP.FETCHING.name} {url}")
     while True:
         try:
             resp = await session.get(url, headers={"User-Agent": ua}, timeout=5, ssl=False)

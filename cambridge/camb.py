@@ -26,7 +26,7 @@ async def search_cambridge(session, input_word, is_fresh=False, is_ch=False, no_
     if is_fresh:
         await fresh_run(session, input_word, is_ch, no_suggestions, req_url)
     else:
-        res_url = check_cache(input_word, req_url)
+        res_url = await check_cache(input_word, req_url)
         if res_url is None:
             logger.debug(f'{OP.NOT_FOUND.name} "{input_word}" in cache')
             await fresh_run(session, input_word, is_ch, no_suggestions, req_url)
@@ -37,7 +37,7 @@ async def search_cambridge(session, input_word, is_fresh=False, is_ch=False, no_
 
 
 async def cache_run(res_url_from_cache):
-    res_word, res_text = get_cache(res_url_from_cache)
+    res_word, res_text = await get_cache(res_url_from_cache)
     logger.debug(f'{OP.FOUND.name} "{res_word}" from {DICT.CAMBRIDGE.name} in cache')
     logger.debug(f"{OP.PARSING.name} {res_url_from_cache}")
 
@@ -122,13 +122,7 @@ async def fresh_run(session, input_word, is_ch, no_suggestions, req_url):
             logger.debug(f"{OP.PARSING.name} {res_url}")
             soup = BeautifulSoup(res_text, "lxml")
 
-            temp = soup.find("title").text.split("-")[0].strip() # type: ignore
-            if "|" in temp:
-                res_word = temp.split("|")[0].strip().lower()
-            elif "in Simplified Chinese" in temp:
-                res_word = temp.split("in Simplified Chinese")[0].strip().lower()
-            else:
-                res_word = temp.lower()
+            res_word = soup.find("span", "hw dhw").text.strip("\n").strip()
 
             first_dict = soup.find("div", "pr dictionary") or soup.find("div", "pr di superentry")
             if first_dict is None:

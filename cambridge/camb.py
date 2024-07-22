@@ -178,23 +178,14 @@ def parse_dict_head(block):
             end = "" if posgram.find_next_sibling() is None else "\n"
             c_print(f"\n#[bold blue]{word}#[/bold blue] #[bold yellow]{w_type}#[/bold yellow]", end=end)
 
-
-        #uk_dpron = head.find("span", re.compile("(uk|us) dpron-i"))
-        uk_dpron = head.find("span", "uk dpron-i")
-        if uk_dpron is not None:
-            w_pron = uk_dpron.find("span", "pron dpron")
-            if w_pron is not None:
-                w_pron_text = w_pron.text.strip("\n").strip().replace("/", "|")
-                end= "" if uk_dpron.find_next_sibling() is None else " "
-                c_print(f"#[bold]UK #[/bold]" + w_pron_text, end=end)
-
-        us_dpron = head.find("span", "us dpron-i")
-        if us_dpron is not None:
-            w_pron = us_dpron.find("span", "pron dpron")
-            if w_pron is not None:
-                w_pron_text = w_pron.text.strip("\n").strip().replace("/", "|")
-                end= "" if us_dpron.find_next_sibling() is None else " "
-                c_print(f"#[bold]US #[/bold]" + w_pron_text, end=end)
+        prons = head.find_all("span", "pron dpron")
+        if len(prons) != 0:
+            for pron in prons:
+                pron_text = pron.text.strip("\n").strip().replace("/", "|")
+                parent = pron.find_parent()
+                end= "" if parent.find_next_sibling() is None else " "
+                area = parent.find("span", "region dreg").text
+                c_print(f"#[bold]{area} #[/bold]" + pron_text, end=end)
 
         spell_block = head.find_all("span", "spellvar dspellvar")
         if spell_block is not None:
@@ -439,10 +430,6 @@ def parse_dict_body(block):
 
     if len(subblocks) != 0:
         for subblock in subblocks:
-            # Comment out because h3 block seems superfluous.
-            # if subblock.find("h3", "dsense_h"):
-            #     parse_def_title(subblock)
-
             sense = subblock.find("div", "sense-body dsense_b")
             if sense is not None:
                 for child in sense.children:

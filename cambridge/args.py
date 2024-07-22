@@ -72,7 +72,8 @@ def parse_args(session):
 
     # Add positional arguments with n args for s command
     parser_sw.add_argument(
-        "word_or_phrase",
+        "-s",
+        "--search",
         nargs="+",
         help="look up a word/phrase in Cambridge Dictionary; e.g. camb <word/phrase>",
     )
@@ -81,7 +82,7 @@ def parse_args(session):
     parser_sw.add_argument(
         "-w",
         "--webster",
-        action="store_true",
+        nargs="+",
         help="look up a word/phrase in Merriam-Webster Dictionary",
     )
 
@@ -97,7 +98,8 @@ def parse_args(session):
     parser_sw.add_argument(
         "-c",
         "--chinese",
-        action="store_true",
+        nargs="+",
+        default=None,
         help="look up a word/phrase in Cambridge Dictionary with Chinese translation",
     )
 
@@ -139,36 +141,34 @@ def parse_args(session):
         sys.exit()
 
     elif "l" in sys.argv[1 : ] or "wod" in sys.argv[1 : ]:
-        """
-        args from running `python3 main.py --debug l -r`:
-        Namespace(version=False, debug=True, subparser_name='l', session=<aiohttp.client.ClientSession object at 0x10717a1e0>,
-          delete=None, time=False, random=True, func=<function list_words at 0x1072a6980>)
-        """
         args = parser.parse_args()
         return args
 
     else:
-        # python3 main.py amass, flippant, tapestry --debug -w
-        # ['main.py', 'amass,', 'flippant,', 'tapestry', '--debug', '-w']
-        # Namespace(word_or_phrase=['amass, flippant, tapestry'], webster=True, fresh=False, chinese=False, nosuggestions=False, func=<function search_word at 0x10dd1a840>, debug=True, session=<aiohttp.client.ClientSession object at 0x10d913d40>)
+        argv_list = sys.argv[1 : ]
+        w_index = None 
+        c_index = None 
+        for index, word in enumerate(argv_list):
+            if word[0] != "-" and w_index is None and c_index is None:
+                argv_list.insert(0, "-s")
+                break
+            elif word.startswith("-w"):
+                w_index = index
+            elif word.startswith("-c"):
+                c_index = index
+            else:
+                continue
 
+        #print(argv_list)
         to_parse = []
-        word = ""
-
-        #print(sys.argv)
-        for i in sys.argv[1 : ]:
-            if i[0] != "-" and i[1] != "-":
-                word += " " + i
-            elif i == "--debug":
+        for word in argv_list:
+            if word == "--debug":
                 parser_sw.set_defaults(debug=True)
             else:
-                to_parse.append(i)
-
-        to_parse.append(word.strip())
+                to_parse.append(word)
 
         parser_sw.set_defaults(session=session)
         args= parser_sw.parse_args(to_parse)
-
         return args
 
 
@@ -215,30 +215,31 @@ async def list_words(args):
 
 
 async def search_word(args):
-    if args.webster and args.chinese:
-        print("Webster Dictionary doesn't support English to other language. Try again without -c(--chinese) option")
-        sys.exit(3)
-
-    input_word = args.word_or_phrase[0].strip(".").strip(",").strip()
-    if not input_word:
+    if not args.search and not args.webster and not args.chinese:
         print("You didn't input any word or phrase.")
         sys.exit(3)
 
-    if "," not in input_word:
-        if args.webster:
-            await search_webster(args.session, input_word, args.fresh, args.nosuggestions, None)
-        else:
-            await search_cambridge(args.session, input_word, args.fresh, args.chinese, args.nosuggestions, None)
-    else:
-        tasks = []
-        for w in input_word.split(","):
+    tasks = []
+    if args.search:
+        cambridge_words = " ".join(args.search)
+        for w in cambridge_words.split(","):
             i = w.strip(".").strip()
             if i:
-                if args.webster:
-                    tasks.append(search_webster(args.session, i, args.fresh, args.nosuggestions, None))
-                else:
-                    tasks.append(search_cambridge(args.session, i, args.fresh, args.chinese, args.nosuggestions, None))
-        await asyncio.gather(*tasks)
+                tasks.append(search_cambridge(args.session, i, args.fresh, False, args.nosuggestions, None))
+    if args.webster:
+        webster_words = " ".join(args.webster)
+        for w in webster_words.split(","):
+            i = w.strip(".").strip()
+            if i:
+                tasks.append(search_webster(args.session, i, args.fresh, args.nosuggestions, None))
+    if args.chinese:
+        words = " ".join(args.chinese)
+        for w in words.split(","):
+            i = w.strip(".").strip()
+            if i:
+                tasks.append(search_cambridge(args.session, i, args.fresh, True, args.nosuggestions, None))
+
+    await asyncio.gather(*tasks)
 
 
 async def wod(args):

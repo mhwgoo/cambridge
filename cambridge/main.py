@@ -3,7 +3,7 @@ async def main():
         async with aiohttp.ClientSession() as session:
             args = parse_args(session)
             args_dict = vars(args) # transfrom namespace object into a dict
-            #print(args)
+            print(args)
 
             if args_dict.get("debug"):
                 logger.setLevel(logging.DEBUG)
@@ -23,6 +23,9 @@ async def main():
 
     except SystemExit:
         pass
+
+    except Exception as error:
+        logger.error(f'[{error.__class__.__name__}] {error}\n')
 
     con.close()
 

@@ -148,136 +148,84 @@ async def fresh_run(session, input_word, is_ch, no_suggestions, req_url):
                 await save_to_cache(input_word, res_word, res_url, str(first_dict))
 
 
-def parse_head_title(block):
-    word = block.find("div", "di-title").text
-    return word
-
-
-def parse_head_info(block):
-    info = block.find_all("span", ["pos dpos", "lab dlab", "v dv lmr-0"])
-
-    if len(info) != 0:
-        temp = [i.text for i in info]
-        type = temp[0]
-        text = " ".join(temp[1:])
-        return (type, text)
-    return None
-
-
-def parse_head_type(head):
-    anc = head.find("span", "anc-info-head danc-info-head")
-    posgram = head.find("div", "posgram dpos-g hdib lmr-5")
-    dpos = head.find("span", attrs={"title": "A word that describes an action, condition or experience."})
-
-    w_type = ""
-    if anc is not None:
-        # e.g. "phrasal verb with sneak" superfluous
-        # w_type = anc.text
-        if dpos is not None:
-            w_type += dpos.text
-            dgram = dpos.find_next_sibling("span", "gram dgram")
-            if dgram is not None:
-                w_type += " " + dgram.text
-        w_type = replace_all(w_type)
-    elif posgram is not None:
-        w_type = replace_all(posgram.text)
-    return w_type
-
-
-def print_pron(block, area):
-    w_pron = block.find("span", "pron dpron")
-    if w_pron is not None:
-        w_pron_text = replace_all(w_pron.text).replace("/", "|")
-        end= "" if block.find_next_sibling() is None else " "
-        c_print(f"#[bold]{area} #[/bold]" + w_pron_text, end=end)
-
-
-def parse_head_pron(head):
-    uk_dpron = head.find("span", "uk dpron-i")
-    if uk_dpron is not None:
-        print_pron(uk_dpron, "UK")
-
-    us_dpron = head.find("span", "us dpron-i")
-    if us_dpron is not None:
-        print_pron(us_dpron, "US")
-
-
-def parse_head_tense(block):
-    sub_blocks = block.find_all("span", "inf-group dinfg")
-    if len(sub_blocks) != 0:
-        for index, sub in enumerate(sub_blocks):
-            tenses = sub.find_all("b", "inf dinf")
-            if len(tenses) != 0:
-                for i, tense in enumerate(tenses):
-                    end = "" if i == len(tenses) - 1 else " "
-                    c_print("#[bold]" + tense.text + "#[/bold]", end=end)
-            if index == 0 and len(sub_blocks) > 1:
-                print("|", end=" ")
-
-
-def parse_head_domain(block):
-    domain = replace_all(block.text)
-    print(domain, end="  ")
-
-
-def parse_head_var(head):
-    var_dvar = head.find("span", "var dvar")
-    if var_dvar is not None:
-        w_var = replace_all(var_dvar.text)
-        print(w_var, end="  ")
-
-    var_dvar_sib = head.find_next_sibling("span", "var dvar")
-    if var_dvar_sib is not None:
-        w_var = replace_all(var_dvar_sib.text)
-        print(w_var, end="  ")
-
-
-def parse_head_spellvar(block):
-    for i in block:
-        spell_var = replace_all(i.text)
-        print(spell_var, end="  ")
-
-
 def parse_dict_head(block):
     head = block.find("div", "pos-header dpos-h")
-    word = parse_head_title(block)
-    info = parse_head_info(block)
+    word_block = block.find("div", "di-title") or head.find("div", "di-title")
+    word = word_block.text
 
-    if head is not None:
-        w_type = parse_head_type(head)
-
-        if not word:
-            word = parse_head_title(head)
-        if w_type:
-            w_type = w_type.replace(" or ", "/")
+    if head is None:
+        c_print("#[bold blue]" + word)
+        info = block.find_all("span", ["pos dpos", "lab dlab", "v dv lmr-0"])
+        if len(info) != 0:
+            temp = [i.text for i in info]
+            type = temp[0]
+            text = " ".join(temp[1:])
+            print(f"{type} {text}")
+    else:
+        w_type = ""
+        if head.find("span", "anc-info-head danc-info-head") is not None:
+            dpos = head.find("span", attrs={"title": "A word that describes an action, condition or experience."})
+            if dpos is not None:
+                w_type += dpos.text
+                dgram = dpos.find_next_sibling("span", "gram dgram")
+                if dgram is not None:
+                    w_type += " " + dgram.text
+            w_type = w_type.strip("\n").strip().replace(" or ", "/")
             c_print(f"\n#[bold blue]{word}#[/bold blue] #[bold yellow]{w_type}#[/bold yellow]")
+        elif head.find("div", "posgram dpos-g hdib lmr-5") is not None:
+            posgram = head.find("div", "posgram dpos-g hdib lmr-5")
+            w_type = posgram.text.strip("\n").strip().replace(" or ", "/")
+            end = "" if posgram.find_next_sibling() is None else "\n"
+            c_print(f"\n#[bold blue]{word}#[/bold blue] #[bold yellow]{w_type}#[/bold yellow]", end=end)
 
-        parse_head_pron(head)
 
-        irreg = head.find("span", "irreg-infls dinfls")
-        if irreg is not None:
-            parse_head_tense(irreg)
+        #uk_dpron = head.find("span", re.compile("(uk|us) dpron-i"))
+        uk_dpron = head.find("span", "uk dpron-i")
+        if uk_dpron is not None:
+            w_pron = uk_dpron.find("span", "pron dpron")
+            if w_pron is not None:
+                w_pron_text = w_pron.text.strip("\n").strip().replace("/", "|")
+                end= "" if uk_dpron.find_next_sibling() is None else " "
+                c_print(f"#[bold]UK #[/bold]" + w_pron_text, end=end)
+
+        us_dpron = head.find("span", "us dpron-i")
+        if us_dpron is not None:
+            w_pron = us_dpron.find("span", "pron dpron")
+            if w_pron is not None:
+                w_pron_text = w_pron.text.strip("\n").strip().replace("/", "|")
+                end= "" if us_dpron.find_next_sibling() is None else " "
+                c_print(f"#[bold]US #[/bold]" + w_pron_text, end=end)
+
+        spell_block = head.find_all("span", "spellvar dspellvar")
+        if spell_block is not None:
+            print(" ", end="")
+            for i, b in enumerate(spell_block):
+                end = "" if i == len(block) - 1 else " "
+                print(b.text, end=end)
+            print()
+
+        sub_blocks = head.find_all("span", "inf-group dinfg")
+        if len(sub_blocks) != 0:
+            for index, sub in enumerate(sub_blocks):
+                tenses = sub.find_all("b", "inf dinf")
+                if len(tenses) != 0:
+                    for i, tense in enumerate(tenses):
+                        end = "" if i == len(tenses) - 1 else " "
+                        c_print("#[bold]" + tense.text + "#[/bold]", end=end)
+                if index == 0 and len(sub_blocks) > 1:
+                    print("|", end=" ")
 
         domain = head.find("span", "domain ddomain")
         if domain is not None:
-            parse_head_domain(domain)
+            print(block.text.strip("\n").strip(), end="  ")
 
-        parse_head_var(head)
+        var_dvar = head.find("span", "var dvar")
+        if var_dvar is not None:
+            print(var_dvar.text.strip("\n").strip(), end="  ")
 
-        spellvar = head.find_all("span", "spellvar dspellvar")
-        if len(spellvar) != 0:
-            parse_head_spellvar(spellvar)
-
-        posgram = head.find("div", "posgram dpos-g hdib lmr-5")
-        if posgram is not None and posgram.find_next_sibling() is None:
-            pass
-        else:
-            print()
-
-    else:
-        c_print("#[bold blue]" + word)
-        if info:
-            print(f"{info[0]} {info[1]}")
+        var_dvar_sib = head.find_next_sibling("span", "var dvar")
+        if var_dvar_sib is not None:
+            print(var_dvar_sib.text.strip("\n").strip(), end="  ")
 
 
 def parse_def_title(block):

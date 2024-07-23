@@ -47,7 +47,7 @@ async def cache_run(res_url_from_cache):
     logger.debug(f"{OP.PRINTING.name} the parsed result of {res_url_from_cache}")
     blocks = first_dict.find_all("div", ["pr entry-body__el", "entry-body__el clrd js-share-holder", "pr idiom-block"]) # type: ignore
     for block in blocks:
-        parse_dict_head(block)
+        parse_dict_head(block, res_word)
         parse_dict_body(block)
     c_print(f'\n#[#757575]{OP.FOUND.name} "{res_word}" from {DICT.CAMBRIDGE.name} in cache. You can add "-f -w" to fetch the {DICT.MERRIAM_WEBSTER.name} dictionary')
 
@@ -122,7 +122,7 @@ async def fresh_run(session, input_word, is_ch, no_suggestions, req_url):
             logger.debug(f"{OP.PARSING.name} {res_url}")
             soup = BeautifulSoup(res_text, "lxml")
 
-            res_word = soup.find("span", "hw dhw").text.strip("\n").strip()
+            hword = soup.find("div", "di-title").text.strip("\n").strip()
 
             first_dict = soup.find("div", "pr dictionary") or soup.find("div", "pr di superentry")
             if first_dict is None:
@@ -134,21 +134,19 @@ async def fresh_run(session, input_word, is_ch, no_suggestions, req_url):
             else:
                 logger.debug(f"{OP.PRINTING.name} the parsed result of {res_url}")
                 for block in blocks:
-                    parse_dict_head(block)
+                    parse_dict_head(block, hword)
                     parse_dict_body(block)
 
                 print()
 
-                await save_to_cache(input_word, res_word, res_url, str(first_dict))
+                await save_to_cache(input_word, hword, res_url, str(first_dict))
 
 
-def parse_dict_head(block):
+def parse_dict_head(block, hword):
     head = block.find("div", "pos-header dpos-h")
-    word_block = block.find("div", "di-title") or head.find("div", "di-title")
-    word = word_block.text
 
     if head is None:
-        c_print("#[bold blue]" + word)
+        c_print("#[bold blue]" + hword)
         info = block.find_all("span", ["pos dpos", "lab dlab", "v dv lmr-0"])
         if len(info) != 0:
             temp = [i.text for i in info]
@@ -165,12 +163,12 @@ def parse_dict_head(block):
                 if dgram is not None:
                     w_type += " " + dgram.text
             w_type = w_type.strip("\n").strip().replace(" or ", "/")
-            c_print(f"\n#[bold blue]{word}#[/bold blue] #[bold yellow]{w_type}#[/bold yellow]")
+            c_print(f"\n#[bold blue]{hword}#[/bold blue] #[bold yellow]{w_type}#[/bold yellow]")
         elif head.find("div", "posgram dpos-g hdib lmr-5") is not None:
             posgram = head.find("div", "posgram dpos-g hdib lmr-5")
             w_type = posgram.text.strip("\n").strip().replace(" or ", "/")
             end = "" if posgram.find_next_sibling() is None else "\n"
-            c_print(f"\n#[bold blue]{word}#[/bold blue] #[bold yellow]{w_type}#[/bold yellow]", end=end)
+            c_print(f"\n#[bold blue]{hword}#[/bold blue] #[bold yellow]{w_type}#[/bold yellow]", end=end)
 
         prons = head.find_all("span", "pron dpron")
         if len(prons) != 0:

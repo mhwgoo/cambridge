@@ -23,9 +23,6 @@ async def main():
     except SystemExit:
         pass
 
-    except Exception as error:
-        logger.error(f'[{error.__class__.__name__}] {error}\n')
-
     con.close()
 
 if __name__ == "__main__":

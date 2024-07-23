@@ -85,6 +85,7 @@ async def fetch(session, url):
             continue
         except Exception as error:
             cancel_on_error_without_retry(url, error, OP.FETCHING.name, asyncio.current_task())
+            break
         else:
             return resp
 

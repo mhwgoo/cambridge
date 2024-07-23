@@ -165,8 +165,22 @@ def parse_dict_head(block, hword):
         elif head.find("div", "posgram dpos-g hdib lmr-5") is not None:
             posgram = head.find("div", "posgram dpos-g hdib lmr-5")
             w_type = posgram.text.strip("\n").strip().replace(" or ", "/")
-            end = "" if posgram.find_next_sibling() is None else "\n"
+            next_sibling = posgram.find_next_sibling()
+            if next_sibling is None:
+                end = ""
+            elif next_sibling is not None and next_sibling.has_attr('class') and next_sibling['class'][0] == "lml--5":
+                end = "  "
+            else:
+                end = "\n"
             c_print(f"\n#[bold blue]{hword}#[/bold blue] #[bold yellow]{w_type}#[/bold yellow]", end=end)
+
+        domain = head.find("span", "domain ddomain")
+        if domain is not None:
+            print(domain.text.strip("\n").strip(), end="  ")
+
+        lab = head.find("span", "lab dlab")
+        if lab is not None:
+            print(lab.text.strip("\n").strip())
 
         prons = head.find_all("span", "pron dpron")
         if len(prons) != 0:
@@ -190,10 +204,6 @@ def parse_dict_head(block, hword):
         if irreg is not None:
             irreg_text = irreg.text.strip("\n").strip()
             c_print("#[bold]" + irreg.text + "#[/bold]")
-
-        domain = head.find("span", "domain ddomain")
-        if domain is not None:
-            print(block.text.strip("\n").strip(), end="  ")
 
         var_dvar = head.find("span", "var dvar")
         if var_dvar is not None:

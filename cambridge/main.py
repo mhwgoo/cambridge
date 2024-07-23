@@ -16,14 +16,14 @@ async def main():
                 await search_word(args)
 
     except asyncio.exceptions.CancelledError:
-        print("Task cancelled.")
-        sys.exit(2)
+        print("Task cancelled.", end=" ")
+        sys.exit("Exit.")
 
     except KeyboardInterrupt:
         print("\nStopped by user.")
 
     except SystemExit:
-        print("\nExit.")
+        pass
 
     con.close()
 

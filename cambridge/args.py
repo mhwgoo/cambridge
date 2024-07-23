@@ -159,7 +159,6 @@ def parse_args(session):
             else:
                 continue
 
-        #print(argv_list)
         to_parse = []
         for word in argv_list:
             if word == "--debug":

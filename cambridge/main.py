@@ -3,17 +3,16 @@ async def main():
         async with aiohttp.ClientSession() as session:
             args = parse_args(session)
             args_dict = vars(args) # transfrom namespace object into a dict
-            print(args)
 
             if args_dict.get("debug"):
                 logger.setLevel(logging.DEBUG)
 
-            if args_dict.get("word_or_phrase") is not None:
-                await search_word(args)
-            elif args_dict.get("subparser_name") is not None and args_dict.get("subparser_name") == "l":
+            if args_dict.get("subparser_name") is not None and args_dict.get("subparser_name") == "l":
                 await list_words(args)
             elif args_dict.get("subparser_name") is not None and args_dict.get("subparser_name") == "wod":
                 await wod(args)
+            else:
+                await search_word(args)
 
     except asyncio.exceptions.CancelledError:
         print("Task cancelled.")

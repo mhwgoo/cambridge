@@ -6,6 +6,7 @@ async def main():
 
             if args_dict.get("debug"):
                 logger.setLevel(logging.DEBUG)
+                logger.debug(args)
 
             if args_dict.get("subparser_name") is not None and args_dict.get("subparser_name") == "l":
                 await list_words(args)
@@ -16,12 +17,13 @@ async def main():
 
     except asyncio.exceptions.CancelledError:
         print("Task cancelled.")
+        sys.exit(2)
 
     except KeyboardInterrupt:
         print("\nStopped by user.")
 
     except SystemExit:
-        pass
+        print("\nExit.")
 
     con.close()
 

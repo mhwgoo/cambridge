@@ -75,7 +75,6 @@ async def fresh_run(session, input_word, is_ch, no_suggestions, req_url):
                     continue
                 except Exception as error:
                     cancel_on_error_without_retry(spell_req_url, error, OP.FETCHING.name, asyncio.current_task())
-                    break
                 else:
                     break
 
@@ -115,14 +114,13 @@ async def fresh_run(session, input_word, is_ch, no_suggestions, req_url):
                     continue
                 except Exception as error: # If session is closed, and you go on connecting, ClientConnectionError will be throwed.
                     cancel_on_error_without_retry(res_url, error, OP.FETCHING.name, asyncio.current_task())
-                    break
                 else:
                     break
 
             logger.debug(f"{OP.PARSING.name} {res_url}")
             soup = BeautifulSoup(res_text, "lxml")
 
-            hword = soup.find("div", "di-title").text.strip("\n").strip()
+            hword = soup.find("b", "tb ttn").text
 
             first_dict = soup.find("div", "pr dictionary") or soup.find("div", "pr di superentry")
             if first_dict is None:
@@ -176,8 +174,9 @@ def parse_dict_head(block, hword):
                 pron_text = pron.text.strip("\n").strip().replace("/", "|")
                 parent = pron.find_parent()
                 end= "" if parent.find_next_sibling() is None else " "
-                area = parent.find("span", "region dreg").text
-                c_print(f"#[bold]{area} #[/bold]" + pron_text, end=end)
+                area = parent.find("span", "region dreg")
+                area_text = area.text if area is not None else ""
+                c_print(f"#[bold]{area_text} #[/bold]" + pron_text, end=end)
 
         spell_block = head.find_all("span", "spellvar dspellvar")
         if spell_block is not None:
@@ -187,16 +186,10 @@ def parse_dict_head(block, hword):
                 print(b.text, end=end)
             print()
 
-        sub_blocks = head.find_all("span", "inf-group dinfg")
-        if len(sub_blocks) != 0:
-            for index, sub in enumerate(sub_blocks):
-                tenses = sub.find_all("b", "inf dinf")
-                if len(tenses) != 0:
-                    for i, tense in enumerate(tenses):
-                        end = "" if i == len(tenses) - 1 else " "
-                        c_print("#[bold]" + tense.text + "#[/bold]", end=end)
-                if index == 0 and len(sub_blocks) > 1:
-                    print("|", end=" ")
+        irreg = head.find("span", "irreg-infls dinfls")
+        if irreg is not None:
+            irreg_text = irreg.text.strip("\n").strip()
+            c_print("#[bold]" + irreg.text + "#[/bold]")
 
         domain = head.find("span", "domain ddomain")
         if domain is not None:

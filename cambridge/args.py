@@ -8,6 +8,7 @@ from .webster import search_webster, get_webster_wod, get_webster_wod_list
 from .camb import search_cambridge
 from .utils import get_cache_selection, get_cache_selection_by_fzf
 
+
 def parse_args(session):
     parser = argparse.ArgumentParser(
         description="Terminal Version of Cambridge Dictionary by default. Also supports Merriam-Webster Dictionary."
@@ -150,7 +151,7 @@ def parse_args(session):
         c_index = None 
         for index, word in enumerate(argv_list):
             if word[0] != "-" and w_index is None and c_index is None:
-                argv_list.insert(0, "-s")
+                argv_list.insert(index, "-s")
                 break
             elif word.startswith("-w"):
                 w_index = index

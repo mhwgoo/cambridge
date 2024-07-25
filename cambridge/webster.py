@@ -27,23 +27,22 @@ word_entries = set() # A page may have multiple word entries, e.g. "give away", 
 word_forms = set()   # A word may have multiple word forms, e.g. "ran", "running", "run", "flies"
 word_types = set()   # A word's word types, e.g. "preposition", "adjective"
 
-#FIXME high
 
 async def search_webster(session, input_word, is_fresh=False, no_suggestions=False, req_url=None):
-        if req_url is None:
-            req_url = get_request_url(WEBSTER_DICT_BASE_URL, input_word, DICT.MERRIAM_WEBSTER.name)
+    if req_url is None:
+        req_url = get_request_url(WEBSTER_DICT_BASE_URL, input_word, DICT.MERRIAM_WEBSTER.name)
 
-        if is_fresh:
+    if is_fresh:
+        await fresh_run(session, input_word, no_suggestions, req_url)
+    else:
+        res_url = await check_cache(input_word, req_url)
+        if res_url is None:
+            logger.debug(f'{OP.NOT_FOUND.name} "{input_word}" in cache')
             await fresh_run(session, input_word, no_suggestions, req_url)
+        elif DICT.CAMBRIDGE.name.lower() in res_url:
+            await camb.cache_run(res_url)
         else:
-            res_url = await check_cache(input_word, req_url)
-            if res_url is None:
-                logger.debug(f'{OP.NOT_FOUND.name} "{input_word}" in cache')
-                await fresh_run(session, input_word, no_suggestions, req_url)
-            elif DICT.CAMBRIDGE.name.lower() in res_url:
-                await camb.cache_run(res_url)
-            else:
-                await cache_run(res_url)
+            await cache_run(res_url)
 
 
 async def cache_run(res_url_from_cache):
@@ -57,79 +56,29 @@ async def cache_run(res_url_from_cache):
 
 
 async def fresh_run(session, input_word, no_suggestions, req_url):
-        response = await fetch(session, req_url)
-        res_url = str(response.real_url)
+    response = await fetch(session, req_url)
+    res_url = str(response.real_url)
 
-        # By default Requests will perform location redirection for all verbs except HEAD.
-        # https://requests.readthedocs.io/en/latest/user/quickstart/#redirection-and-history
-        # You don't need to deal with redirection yourself.
-        # if status == 301:
-        #     loc = res.headers["location"]
-        #     new_url = WEBSTER_BASE_URL + loc
-        #     new_res = await fetch(session, new_url)
+    # By default Requests will perform location redirection for all verbs except HEAD.
+    # https://requests.readthedocs.io/en/latest/user/quickstart/#redirection-and-history
+    # You don't need to deal with redirection yourself.
+    # if status == 301:
+    #     loc = res.headers["location"]
+    #     new_url = WEBSTER_BASE_URL + loc
+    #     new_res = await fetch(session, new_url)
 
-        status = response.status
-        text = await response.text()
-        if status == 200:
-            logger.debug(f'{OP.FOUND.name} "{input_word}" in {DICT.MERRIAM_WEBSTER.name} at {res_url}')
+    status = response.status
+    text = await response.text()
+    if status == 200:
+        logger.debug(f'{OP.FOUND.name} "{input_word}" in {DICT.MERRIAM_WEBSTER.name} at {res_url}')
 
-            logger.debug(f"{OP.PARSING.name} {res_url}")
-            tree = etree.HTML(text, parser)
+        logger.debug(f"{OP.PARSING.name} {res_url}")
+        tree = etree.HTML(text, parser)
 
-            partial_match = tree.xpath('//p[contains(@class,"partial")]')
-            if partial_match:
-                input_word = decode_url(res_url).split("/")[-1]
-                suggestions = tree.xpath('//h2[@class="hword"]/text() | //h2[@class="hword"]/span/text()')
-
-                logger.debug(f"{OP.PRINTING.name} out suggestions at {res_url}")
-                select_word = get_suggestion_by_fzf(suggestions, DICT.MERRIAM_WEBSTER.name) if has_tool("fzf") else get_suggestion(suggestions, DICT.MERRIAM_WEBSTER.name)
-                if select_word == "":
-                    logger.debug(f'{OP.SWITCHED.name} to {DICT.CAMBRIDGE.name}')
-                    await camb.search_cambridge(session, input_word, True, False, no_suggestions, None)
-                else:
-                    logger.debug(f'{OP.SELECTED.name} "{select_word}"')
-                    await search_webster(session, select_word, False, no_suggestions, None)
-            else:
-                sub_tree = tree.xpath('//*[@id="left-content"]')[0]
-                nodes = sub_tree.xpath(search_pattern)
-                if len(nodes) == 0:
-                    quit_on_no_result(DICT.MERRIAM_WEBSTER.name, is_spellcheck=Fasle)
-
-                # Response word within res_url is not same with what apppears on the web page. e.g. "set in stone"
-                result = sub_tree.xpath('//*[@id="left-content"]/div[contains(@id, "-entry-1")]/div[1]/div/div[1]/h1/text()') \
-                       or sub_tree.xpath('//*[@id="left-content"]/div[contains(@id, "-entry-1")]/div[1]/div/div/h1/span/text()')
-
-                if len(result) == 0:
-                    quit_on_no_result(DICT.MERRIAM_WEBSTER.name, is_spellcheck=Fasle)
-
-                await parse_and_print(nodes, res_url, new_line=True)
-
-                sub_text = etree.tostring(sub_tree).decode('utf-8')
-                # logger.debug(f'START CACHING: input_word is "{input_word}"; res_word is "{res_word}"; res_url is "{res_url}"')
-                await save_to_cache(input_word, result[0], res_url, sub_text)
-
-        elif status == 404:
-            logger.debug(f'{OP.NOT_FOUND.name} "{input_word}" at {res_url}')
-
-            if no_suggestions:
-                sys.exit(-1)
-
-            logger.debug(f"{OP.PARSING.name} out suggestions at {res_url}")
-            tree = etree.HTML(text, parser)
-            result = tree.xpath('//div[@class="widget spelling-suggestion"]')
-            if len(result) == 0:
-                quit_on_no_result(DICT.MERRIAM_WEBSTER.name, is_spellcheck=True)
-
-            nodes = result[0]
-            suggestions = []
-            for node in nodes:
-                if node.tag != "h1":
-                    for word in node.itertext():
-                        w = word.strip("\n").strip()
-                        if w.startswith("The"):
-                            continue
-                        else:
-                            suggestions.append(w)
+        partial_match = tree.xpath('//p[contains(@class,"partial")]')
+        if partial_match:
+            input_word = decode_url(res_url).split("/")[-1]
+            suggestions = tree.xpath('//h2[@class="hword"]/text() | //h2[@class="hword"]/span/text()')
 
             logger.debug(f"{OP.PRINTING.name} out suggestions at {res_url}")
             select_word = get_suggestion_by_fzf(suggestions, DICT.MERRIAM_WEBSTER.name) if has_tool("fzf") else get_suggestion(suggestions, DICT.MERRIAM_WEBSTER.name)
@@ -139,10 +88,60 @@ async def fresh_run(session, input_word, no_suggestions, req_url):
             else:
                 logger.debug(f'{OP.SELECTED.name} "{select_word}"')
                 await search_webster(session, select_word, False, no_suggestions, None)
-
         else:
-            print(f'Something went wrong when fetching {req_url} with STATUS: {status}')
-            sys.exit(2)
+            sub_tree = tree.xpath('//*[@id="left-content"]')[0]
+            nodes = sub_tree.xpath(search_pattern)
+            if len(nodes) == 0:
+                quit_on_no_result(DICT.MERRIAM_WEBSTER.name, is_spellcheck=Fasle)
+
+            # Response word within res_url is not same with what apppears on the web page. e.g. "set in stone"
+            result = sub_tree.xpath('//*[@id="left-content"]/div[contains(@id, "-entry-1")]/div[1]/div/div[1]/h1/text()') \
+                   or sub_tree.xpath('//*[@id="left-content"]/div[contains(@id, "-entry-1")]/div[1]/div/div/h1/span/text()')
+
+            if len(result) == 0:
+                quit_on_no_result(DICT.MERRIAM_WEBSTER.name, is_spellcheck=Fasle)
+
+            await parse_and_print(nodes, res_url, new_line=True)
+
+            sub_text = etree.tostring(sub_tree).decode('utf-8')
+            # logger.debug(f'START CACHING: input_word is "{input_word}"; res_word is "{res_word}"; res_url is "{res_url}"')
+            await save_to_cache(input_word, result[0], res_url, sub_text)
+
+    elif status == 404:
+        logger.debug(f'{OP.NOT_FOUND.name} "{input_word}" at {res_url}')
+
+        if no_suggestions:
+            sys.exit(-1)
+
+        logger.debug(f"{OP.PARSING.name} out suggestions at {res_url}")
+        tree = etree.HTML(text, parser)
+        result = tree.xpath('//div[@class="widget spelling-suggestion"]')
+        if len(result) == 0:
+            quit_on_no_result(DICT.MERRIAM_WEBSTER.name, is_spellcheck=True)
+
+        nodes = result[0]
+        suggestions = []
+        for node in nodes:
+            if node.tag != "h1":
+                for word in node.itertext():
+                    w = word.strip("\n").strip()
+                    if w.startswith("The"):
+                        continue
+                    else:
+                        suggestions.append(w)
+
+        logger.debug(f"{OP.PRINTING.name} out suggestions at {res_url}")
+        select_word = get_suggestion_by_fzf(suggestions, DICT.MERRIAM_WEBSTER.name) if has_tool("fzf") else get_suggestion(suggestions, DICT.MERRIAM_WEBSTER.name)
+        if select_word == "":
+            logger.debug(f'{OP.SWITCHED.name} to {DICT.CAMBRIDGE.name}')
+            await camb.search_cambridge(session, input_word, True, False, no_suggestions, None)
+        else:
+            logger.debug(f'{OP.SELECTED.name} "{select_word}"')
+            await search_webster(session, select_word, False, no_suggestions, None)
+
+    else:
+        print(f'Something went wrong when fetching {req_url} with STATUS: {status}')
+        sys.exit(2)
 
 
 def nearby_entries(node):
@@ -449,19 +448,25 @@ def unText_simple(node, ancestor_attr, has_badge=True):
     node_pre_attr = node_pre.get("class")
     arrow = "-> " if "mdash" in node_pre_attr else ""
 
-    hl_words, _ = get_word_faces(node)
+    hl_words, ems = get_word_faces(node)
+    ems_len = len(ems)
     text = "".join(list(node.itertext())).strip()
 
     if hl_words:
         hl_word = hl_words[0]
         #TODO / should only reset the current effect (bold), not including w_col.meaning_arrow
         text = text.replace(hl_word, f"#[bold]{hl_word}#[/bold]#[{w_col.meaning_arrow}]")
-        c_print(f"#[{w_col.meaning_arrow}]{arrow + text}", end="")
-    else:
-        c_print(f"#[{w_col.meaning_arrow}]{arrow + text}", end="")
+    elif ems_len == 1:
+        text = text.replace(em[0], f"#[bold]{em[0]}#[/bold]#[{w_col.meaning_arrow}]")
+    elif ems_len > 1:
+        for em in ems: # making sure "into" will not be formatted again by the subsequent "in"
+            text = text.replace(em + " ", f"#[bold]{em + " "}#[/bold]#[{w_col.meaning_arrow}]")
+            text = text.replace("or " + em, f"#[bold]{"/ " + em}#[/bold]#[{w_col.meaning_arrow}]")
+
+    c_print(f"#[{w_col.meaning_arrow}]{arrow + text}", end="")
 
 
-def sense(node, attr, parent_attr, ancestor_attr, num_label_count=1):
+def sense(node, attr, parent_attr, ancestor_attr, num_label_count):
     """e.g. sense(node, "sense has-sn", "sb-0 sb-entry, "sb has-num has-let ms-lg-4 ms-3 w-100", 1)"""
 
     children = node.getchildren()
@@ -541,7 +546,7 @@ def sense(node, attr, parent_attr, ancestor_attr, num_label_count=1):
         tags(sense_content, attr, num_label_count)
 
 
-def sb_entry(node, parent_attr, num_label_count=1):
+def sb_entry(node, parent_attr, num_label_count):
     child = node.getchildren()[0]
     attr = node.attrib["class"]         # "sb-0 sb-entry"
     child_attr = child.attrib["class"]  # "sense has-sn" or "pseq no-subnum" or "sen has-sn"
@@ -634,14 +639,14 @@ def tags(node, ancestor_attr, num_label_count):
 def vg_sseq_entry_item(node):
     """Print one meaning of one entry(noun entry, adjective entry, or verb entry and so forth). e.g. 1: the monetary worth of something."""
 
-    num_label_count = 0
+    num_label_count = 1
     children = node.getchildren()
     for child in children:
         attr = child.attrib["class"]
         # print number label if any
         if attr == "vg-sseq-entry-item-label":
             c_print(f"#[bold {w_col.meaning_num}]{child.text}", end=" ")
-            num_label_count = len(child.text)
+            num_label_count = len(child.text) # important! making sure two-digit numbering and things under it can vertically align properly.
 
         # print meaning content
         elif "ms-lg-4 ms-3 w-100" in attr:

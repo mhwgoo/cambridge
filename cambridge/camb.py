@@ -47,7 +47,7 @@ async def cache_run(res_url_from_cache):
     logger.debug(f"{OP.PRINTING.name} the parsed result of {res_url_from_cache}")
     blocks = first_dict.find_all("div", ["pr entry-body__el", "entry-body__el clrd js-share-holder", "pr idiom-block"]) # type: ignore
     for block in blocks:
-        parse_dict_head(block, res_word)
+        parse_dict_head(block)
         parse_dict_body(block)
     c_print(f'\n#[#757575]{OP.FOUND.name} "{res_word}" from {DICT.CAMBRIDGE.name} in cache. You can add "-f -w" to fetch the {DICT.MERRIAM_WEBSTER.name} dictionary')
 
@@ -132,7 +132,7 @@ async def fresh_run(session, input_word, is_ch, no_suggestions, req_url):
             else:
                 logger.debug(f"{OP.PRINTING.name} the parsed result of {res_url}")
                 for block in blocks:
-                    parse_dict_head(block, hword)
+                    parse_dict_head(block)
                     parse_dict_body(block)
 
                 print()
@@ -140,18 +140,24 @@ async def fresh_run(session, input_word, is_ch, no_suggestions, req_url):
                 await save_to_cache(input_word, hword, res_url, str(first_dict))
 
 
-def parse_dict_head(block, hword):
+def parse_dict_head(block):
     head = block.find("div", "pos-header dpos-h")
+    word_block = block.find("div", "di-title") or head.find("div", "di-title")
+    hword = word_block.text
 
     if head is None:
-        c_print("#[bold blue]" + hword)
+        c_print("#[bold blue]" + hword, end="")
         info = block.find_all("span", ["pos dpos", "lab dlab", "v dv lmr-0"])
         if len(info) != 0:
             temp = [i.text for i in info]
             type = temp[0]
             text = " ".join(temp[1:])
-            print(f"{type} {text}")
+            print(f" {type} {text}")
+        else:
+            print()
+
     else:
+        var_dvar = head.find("span", "var dvar")
         w_type = ""
         if head.find("span", "anc-info-head danc-info-head") is not None:
             dpos = head.find("span", attrs={"title": "A word that describes an action, condition or experience."})
@@ -170,17 +176,26 @@ def parse_dict_head(block, hword):
                 end = ""
             elif next_sibling is not None and next_sibling.has_attr('class') and next_sibling['class'][0] == "lml--5":
                 end = "  "
+            elif var_dvar is not None:
+                end = "  "
             else:
                 end = "\n"
             c_print(f"\n#[bold blue]{hword}#[/bold blue] #[bold yellow]{w_type}#[/bold yellow]", end=end)
 
-        domain = head.find("span", "domain ddomain")
-        if domain is not None:
-            print(domain.text.strip("\n").strip(), end="  ")
+        if var_dvar is not None:
+            print(var_dvar.text.strip("\n").strip(), end="  ")
+
+        var_dvar_sib = head.find_next_sibling("span", "var dvar")
+        if var_dvar_sib is not None:
+            print(var_dvar_sib.text.strip("\n").strip(), end="  ")
 
         lab = head.find("span", "lab dlab")
         if lab is not None:
             print(lab.text.strip("\n").strip())
+
+        domain = head.find("span", "domain ddomain")
+        if domain is not None:
+            print(domain.text.strip("\n").strip(), end="  ")
 
         prons = head.find_all("span", "pron dpron")
         if len(prons) != 0:
@@ -204,15 +219,6 @@ def parse_dict_head(block, hword):
         if irreg is not None:
             irreg_text = irreg.text.strip("\n").strip()
             c_print("#[bold]" + irreg.text + "#[/bold]")
-
-        var_dvar = head.find("span", "var dvar")
-        if var_dvar is not None:
-            print(var_dvar.text.strip("\n").strip(), end="  ")
-
-        var_dvar_sib = head.find_next_sibling("span", "var dvar")
-        if var_dvar_sib is not None:
-            print(var_dvar_sib.text.strip("\n").strip(), end="  ")
-
 
 def parse_def_title(block):
     d_title = replace_all(block.find("h3", "dsense_h").text)

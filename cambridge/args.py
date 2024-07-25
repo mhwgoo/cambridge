@@ -149,9 +149,11 @@ def parse_args(session):
         argv_list = sys.argv[1 : ]
         w_index = None 
         c_index = None 
+        s_index = None
         for index, word in enumerate(argv_list):
-            if word[0] != "-" and w_index is None and c_index is None:
+            if word[0] != "-" and w_index is None and c_index is None and s_index is None:
                 argv_list.insert(index, "-s")
+                s_index = index
                 break
             elif word.startswith("-w"):
                 w_index = index
@@ -164,6 +166,10 @@ def parse_args(session):
         for word in argv_list:
             if word == "--debug":
                 parser_sw.set_defaults(debug=True)
+            elif word == "--fresh" or word == "-f":
+                parser_sw.set_defaults(fresh=True)
+            elif word == "--nosuggestions" or word == "-n":
+                parser_sw.set_defaults(nosuggestions=True)
             else:
                 to_parse.append(word)
 

@@ -352,11 +352,14 @@ def get_word_faces(node):
     return hl_words, ems
 
 
-def ex_sent(node, ancestor_attr):
+def ex_sent(node, ancestor_attr, num_label_count):
     if ancestor_attr:
         format_basedon_ancestor(ancestor_attr, prefix="\n")
     else:
         print()
+
+    if num_label_count == 2:
+        print(" ", end="")
 
     c_print(f"#[{w_col.accessory}]|", end="")
 
@@ -393,13 +396,13 @@ def ex_sent(node, ancestor_attr):
                     print_mw(text, False, "normal")
 
 
-def sub_content_thread(node, ancestor_attr):
+def sub_content_thread(node, ancestor_attr, num_label_count=1):
     children = node.getchildren()
     for child in children:
         attr = child.attrib["class"]
 
         if ("ex-sent" in attr) and ("aq has-aq" not in attr):
-            ex_sent(child, ancestor_attr)
+            ex_sent(child, ancestor_attr, num_label_count)
 
         elif "vis" in attr:
             elms = child.getchildren()
@@ -407,7 +410,7 @@ def sub_content_thread(node, ancestor_attr):
                 elm = e.getchildren()[0]
                 elm_attr = elm.attrib["class"]
                 if ("ex-sent" in elm_attr) and ("aq has-aq" not in elm_attr):
-                    ex_sent(elm, ancestor_attr)
+                    ex_sent(elm, ancestor_attr, num_label_count)
 
 
 def extra(node, ancestor_attr):
@@ -417,14 +420,12 @@ def extra(node, ancestor_attr):
     u_words = get_word_cases(node)[1]
 
     prev_attr = node.getprevious().get("class")
-    if prev_attr is not None and prev_attr == "sub-content-thread":
-        print()
-
     for text in texts:
         text_new = text.strip("\n").strip()
         if text_new:
             if text_new == "called also" or text_new == "compare":
-                print_meaning_keyword("-> " + text_new.upper())
+                prefix = "\n  " if prev_attr is not None and prev_attr == "sub-content-thread" else " "
+                print_meaning_keyword(prefix + text_new.upper())
             elif u_words and text in u_words:
                 text_new = text_new.upper()
                 print_meaning_content(text_new, end="")
@@ -499,6 +500,8 @@ def sense(node, attr, parent_attr, ancestor_attr, num_label_count=1):
             else:
                 if num_label_count == 2 and sn == "a":
                     c_print(f"#[bold {w_col.meaning_letter}]{sn}", end = " ")
+                elif num_label_count == 2:
+                    c_print(f"   #[bold {w_col.meaning_letter}]{sn}", end = " ")
                 else:
                     c_print(f"  #[bold {w_col.meaning_letter}]{sn}", end = " ")
 
@@ -610,7 +613,7 @@ def tags(node, ancestor_attr, num_label_count):
                     print(" ", end="")
 
             elif elm_attr == "sub-content-thread":
-                sub_content_thread(elm, ancestor_attr) # example under the meaning
+                sub_content_thread(elm, ancestor_attr, num_label_count) # example under the meaning
                 has_badge = False
 
             elif elm_attr == "ca":
@@ -638,7 +641,7 @@ def vg_sseq_entry_item(node):
         # print number label if any
         if attr == "vg-sseq-entry-item-label":
             c_print(f"#[bold {w_col.meaning_num}]{child.text}", end=" ")
-            num_label_count = int(child.text)
+            num_label_count = len(child.text)
 
         # print meaning content
         elif "ms-lg-4 ms-3 w-100" in attr:

@@ -457,11 +457,12 @@ def unText_simple(node, ancestor_attr, has_badge=True):
         #TODO / should only reset the current effect (bold), not including w_col.meaning_arrow
         text = text.replace(hl_word, f"#[bold]{hl_word}#[/bold]#[{w_col.meaning_arrow}]")
     elif ems_len == 1:
-        text = text.replace(em[0], f"#[bold]{em[0]}#[/bold]#[{w_col.meaning_arrow}]")
+        text = text.replace(ems[0], f"#[bold]{ems[0]}#[/bold]#[{w_col.meaning_arrow}]")
     elif ems_len > 1:
         for em in ems: # making sure "into" will not be formatted again by the subsequent "in"
             text = text.replace(em + " ", f"#[bold]{em + " "}#[/bold]#[{w_col.meaning_arrow}]")
             text = text.replace("or " + em, f"#[bold]{"/ " + em}#[/bold]#[{w_col.meaning_arrow}]")
+            text = text.replace("and " + em, f"#[bold]{"/ " + em}#[/bold]#[{w_col.meaning_arrow}]")
 
     c_print(f"#[{w_col.meaning_arrow}]{arrow + text}", end="")
 

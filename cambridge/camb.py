@@ -75,6 +75,7 @@ async def fresh_run(session, input_word, is_ch, no_suggestions, req_url):
                     continue
                 except Exception as error:
                     cancel_on_error_without_retry(spell_req_url, error, OP.FETCHING.name, asyncio.current_task())
+                    break
                 else:
                     break
 
@@ -112,8 +113,11 @@ async def fresh_run(session, input_word, is_ch, no_suggestions, req_url):
                 except asyncio.TimeoutError as error:
                     attempt = cancel_on_error(res_url, error, attempt, OP.FETCHING.name, asyncio.current_task())
                     continue
-                except Exception as error: # If session is closed, and you go on connecting, ClientConnectionError will be throwed.
+                # There is also a scenario that in the process of cancelling, while is still looping, leading to run coroutine with a closed session.
+                # If session is closed, and you go on connecting, ClientConnectionError will be throwed.
+                except Exception as error:
                     cancel_on_error_without_retry(res_url, error, OP.FETCHING.name, asyncio.current_task())
+                    break
                 else:
                     break
 

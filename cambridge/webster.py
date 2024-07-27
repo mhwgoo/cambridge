@@ -470,6 +470,7 @@ def unText_simple(node, ancestor_attr, has_badge=True):
 def sense(node, attr, parent_attr, ancestor_attr, num_label_count):
     """e.g. sense(node, "sense has-sn", "sb-0 sb-entry, "sb has-num has-let ms-lg-4 ms-3 w-100", 1)"""
 
+    sense_content = None
     children = node.getchildren()
 
     # meaning without any sign
@@ -511,14 +512,15 @@ def sense(node, attr, parent_attr, ancestor_attr, num_label_count):
                 else:
                     c_print(f"  #[bold {w_col.meaning_letter}]{sn}", end = " ")
 
-        if node.tag == "span": # e.g. "knife and fork"
-            if children[1].attrib["class"] == "if":
-                print_class_if(children[1].text)
-
-            sense_content = None
-
-            if len(children) > 2 and "badge mw-badge-gray-100" in children[2].attrib["class"]:
-                print_meaning_badge(children[2].text.strip(), end="\n")
+        if node.tag == "span": # e.g. "knife and fork, track intransitive verb 2"
+            # Intentionally take out this part from tags(), don't merge in later.
+            # Because using tags() here conflicts with these same classes elsewhere with different new line or not requirements.
+            # Adding extra checks as to where the node comes from in already complex tags() is not a good idea.
+            for child in children[1 : ]:
+                if child.attrib["class"] == "if":
+                    print_class_if(child.text)
+                elif "badge mw-badge-gray-100" in child.attrib["class"]:
+                    print_meaning_badge(child.text.strip(), end="\n")
         else:
             sense_content = children[1]
 

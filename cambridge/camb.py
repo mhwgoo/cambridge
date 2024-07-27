@@ -164,6 +164,7 @@ def parse_dict_head(block):
         var = head.find("span", "var dvar")
         spellvar = head.find("span", "spellvar dspellvar")
         irreg = head.find("span", "irreg-infls dinfls")
+        lab = head.find("span", "lab dlab")
 
         w_type = ""
         if head.find("span", "anc-info-head danc-info-head") is not None:
@@ -183,21 +184,27 @@ def parse_dict_head(block):
                 end = ""
             elif next_sibling is not None and next_sibling.has_attr('class') and next_sibling['class'][0] == "lml--5":
                 end = "  "
-            elif var is not None or spellvar is not None:
+            elif var is not None or spellvar is not None or lab is not None or irreg is not None:
                 end = "  "
             else:
                 end = "\n"
             c_print(f"\n#[bold blue]{hword}#[/bold blue] #[bold yellow]{w_type}#[/bold yellow]", end=end)
 
         if spellvar is not None:
-            print(spellvar.text.strip("\n").strip())
+            end = "  " if spellvar.find_next_sibling() is not None else "\n"
+            print(spellvar.text.strip("\n").strip(), end=end)
 
         if var is not None:
-            print(var.text.strip("\n").strip(), end="  ")
+            end = "  " if (var.find_next_sibling() is not None or irreg is not None) else "\n"
+            print(var.text.strip("\n").strip(), end=end)
 
-        var_dvar_sib = head.find_next_sibling("span", "var dvar")
-        if var_dvar_sib is not None:
-            print(var_dvar_sib.text.strip("\n").strip(), end="  ")
+        if irreg is not None:
+            print(irreg.text.strip("\n").strip())
+
+        if lab is not None:
+            lab_parent = lab.find_parent()
+            if lab_parent.has_attr('class') and not lab_parent['class'][0] == "inf-group":
+                print(lab.text.strip("\n").strip())
 
         domain = head.find("span", "domain ddomain")
         if domain is not None:
@@ -212,12 +219,8 @@ def parse_dict_head(block):
                 area_text = area.text if area is not None else ""
                 end= "" if parent.find_next_sibling() is None else " "
                 c_print(f"#[bold]{area_text} #[/bold]" + pron_text, end=end)
-            if irreg is None:
-                print()
+        print()
 
-        if irreg is not None:
-            irreg_text = irreg.text.strip("\n").strip()
-            c_print("#[bold]" + irreg.text + "#[/bold]")
 
 def parse_def_title(block):
     d_title = replace_all(block.find("h3", "dsense_h").text)
@@ -339,7 +342,7 @@ def print_tag(node):
 
 def print_synonym(block):
     s_title = block.strong.text.upper()
-    c_print("#[bold #757575]" + "\n  " + s_title)
+    c_print("#[bold #757575]" + "\n" + s_title)
 
     for item in block.find_all("div", ["item lc lc1 lpb-10 lpr-10", "item lc lc1 lc-xs6-12 lpb-10 lpr-10"]):
         print_tag(item)
@@ -358,7 +361,7 @@ def parse_see_also(def_block):
 
     if see_also_block is not None:
         see_also = see_also_block.strong.text.upper()
-        c_print("#[bold #757575]" + "\n  " + see_also)
+        c_print("#[bold #757575]" + "\n" + see_also)
         print_tag(see_also_block)
 
 

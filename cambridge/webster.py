@@ -457,7 +457,10 @@ def unText_simple(node, ancestor_attr, has_badge=True):
         #TODO / should only reset the current effect (bold), not including w_col.meaning_arrow
         text = text.replace(hl_word, f"#[bold]{hl_word}#[/bold]#[{w_col.meaning_arrow}]")
     elif ems_len == 1:
-        text = text.replace(ems[0], f"#[bold]{ems[0]}#[/bold]#[{w_col.meaning_arrow}]")
+        if ems[0] == "with":
+            text = text.replace("with " + ems[0], f"with #[bold]{ems[0]}#[/bold]#[{w_col.meaning_arrow}]")
+        else:
+            text = text.replace(ems[0], f"#[bold]{ems[0]}#[/bold]#[{w_col.meaning_arrow}]")
     elif ems_len > 1:
         for em in ems: # making sure "into" will not be formatted again by the subsequent "in"
             text = text.replace(em + " ", f"#[bold]{em + " "}#[/bold]#[{w_col.meaning_arrow}]")
@@ -518,9 +521,11 @@ def sense(node, attr, parent_attr, ancestor_attr, num_label_count):
             # Adding extra checks as to where the node comes from in already complex tags() is not a good idea.
             for child in children[1 : ]:
                 if child.attrib["class"] == "if":
-                    print_class_if(child.text)
+                    end = "\n" if child.getnext() is None else ""
+                    c_print(f"#[bold]{child.text.strip()}", end=end)
                 elif "badge mw-badge-gray-100" in child.attrib["class"]:
-                    print_meaning_badge(child.text.strip(), end="\n")
+                    end = " " if child.getnext() is not None else "\n"
+                    print_meaning_badge(child.text.strip(), end=end)
         else:
             sense_content = children[1]
 

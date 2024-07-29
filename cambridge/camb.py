@@ -66,6 +66,7 @@ async def fresh_run(session, input_word, is_ch, no_suggestions, req_url):
             spell_req_url = get_request_url(spell_base_url, input_word, DICT.CAMBRIDGE.name)
 
             spell_res = await fetch(session, spell_req_url)
+            spell_res_text = None
             attempt = 0
             while True:
                 try:
@@ -79,33 +80,35 @@ async def fresh_run(session, input_word, is_ch, no_suggestions, req_url):
                 else:
                     break
 
-            logger.debug(f"{OP.PARSING.name} out suggestions at {spell_res.url}")
-            soup = BeautifulSoup(spell_res_text, "lxml")
-            node = soup.find("div", "hfl-s lt2b lmt-10 lmb-25 lp-s_r-20")
-            suggestions = []
+            if spell_res_text is not None:
+                logger.debug(f"{OP.PARSING.name} out suggestions at {spell_res.url}")
+                soup = BeautifulSoup(spell_res_text, "lxml")
+                node = soup.find("div", "hfl-s lt2b lmt-10 lmb-25 lp-s_r-20")
+                suggestions = []
 
-            if not node:
-                quit_on_no_result(DICT.CAMBRIDGE.name, is_spellcheck=True)
+                if not node:
+                    quit_on_no_result(DICT.CAMBRIDGE.name, is_spellcheck=True)
 
-            for ul in node.find_all("ul", "hul-u"): # type: ignore
-                if "We have these words with similar spellings or pronunciations:" in ul.find_previous_sibling().text:
-                    for i in ul.find_all("li"):
-                        sug = replace_all(i.text)
-                        suggestions.append(sug)
+                for ul in node.find_all("ul", "hul-u"): # type: ignore
+                    if "We have these words with similar spellings or pronunciations:" in ul.find_previous_sibling().text:
+                        for i in ul.find_all("li"):
+                            sug = replace_all(i.text)
+                            suggestions.append(sug)
 
-            logger.debug(f"{OP.PRINTING.name} out suggestions at {spell_res.url}")
-            select_word = get_suggestion_by_fzf(suggestions, DICT.CAMBRIDGE.name) if has_tool("fzf") else get_suggestion(suggestions, DICT.CAMBRIDGE.name)
-            if select_word == "":
-                logger.debug(f'{OP.SWITCHED.name} to {DICT.MERRIAM_WEBSTER.name}')
-                await webster.search_webster(session, input_word, True, no_suggestions, None)
-            else:
-                logger.debug(f'{OP.SELECTED.name} "{select_word}"')
-                await search_cambridge(session, select_word, False, False, no_suggestions, None)
+                logger.debug(f"{OP.PRINTING.name} out suggestions at {spell_res.url}")
+                select_word = get_suggestion_by_fzf(suggestions, DICT.CAMBRIDGE.name) if has_tool("fzf") else get_suggestion(suggestions, DICT.CAMBRIDGE.name)
+                if select_word == "":
+                    logger.debug(f'{OP.SWITCHED.name} to {DICT.MERRIAM_WEBSTER.name}')
+                    await webster.search_webster(session, input_word, True, no_suggestions, None)
+                else:
+                    logger.debug(f'{OP.SELECTED.name} "{select_word}"')
+                    await search_cambridge(session, select_word, False, False, no_suggestions, None)
 
         else:
             res_url = parse_response_url(res_url)
             logger.debug(f'{OP.FOUND.name} "{input_word}" in {DICT.CAMBRIDGE.name} at {res_url}')
 
+            res_text = None
             attempt = 0
             while True:
                 try:
@@ -121,27 +124,28 @@ async def fresh_run(session, input_word, is_ch, no_suggestions, req_url):
                 else:
                     break
 
-            logger.debug(f"{OP.PARSING.name} {res_url}")
-            soup = BeautifulSoup(res_text, "lxml")
+            if res_text is not None:
+                logger.debug(f"{OP.PARSING.name} {res_url}")
+                soup = BeautifulSoup(res_text, "lxml")
 
-            hword = soup.find("b", "tb ttn").text
+                hword = soup.find("b", "tb ttn").text
 
-            first_dict = soup.find("div", "pr dictionary") or soup.find("div", "pr di superentry")
-            if first_dict is None:
-                quit_on_no_result(DICT.CAMBRIDGE.name, is_spellcheck=False)
+                first_dict = soup.find("div", "pr dictionary") or soup.find("div", "pr di superentry")
+                if first_dict is None:
+                    quit_on_no_result(DICT.CAMBRIDGE.name, is_spellcheck=False)
 
-            blocks = first_dict.find_all("div", ["pr entry-body__el", "entry-body__el clrd js-share-holder", "pr idiom-block"]) # type: ignore
-            if len(blocks) == 0:
-                quit_on_no_result(DICT.CAMBRIDGE.name, is_spellcheck=False)
-            else:
-                logger.debug(f"{OP.PRINTING.name} the parsed result of {res_url}")
-                for block in blocks:
-                    parse_dict_head(block)
-                    parse_dict_body(block)
+                blocks = first_dict.find_all("div", ["pr entry-body__el", "entry-body__el clrd js-share-holder", "pr idiom-block"]) # type: ignore
+                if len(blocks) == 0:
+                    quit_on_no_result(DICT.CAMBRIDGE.name, is_spellcheck=False)
+                else:
+                    logger.debug(f"{OP.PRINTING.name} the parsed result of {res_url}")
+                    for block in blocks:
+                        parse_dict_head(block)
+                        parse_dict_body(block)
 
-                print()
+                    print()
 
-                await save_to_cache(input_word, hword, res_url, str(first_dict))
+                    await save_to_cache(input_word, hword, res_url, str(first_dict))
 
 
 def parse_dict_head(block):
@@ -164,7 +168,13 @@ def parse_dict_head(block):
         var = head.find("span", "var dvar")
         spellvar = head.find("span", "spellvar dspellvar")
         irreg = head.find("span", "irreg-infls dinfls")
+
+        dlab = None
         lab = head.find("span", "lab dlab")
+        if lab is not None:
+            lab_parent = head.find("span", "lab dlab").find_parent()
+            if lab_parent.has_attr('class') and lab_parent['class'][0] == "pos-header dpos-h":
+                dlab = lab
 
         w_type = ""
         if head.find("span", "anc-info-head danc-info-head") is not None:
@@ -184,27 +194,27 @@ def parse_dict_head(block):
                 end = ""
             elif next_sibling is not None and next_sibling.has_attr('class') and next_sibling['class'][0] == "lml--5":
                 end = "  "
-            elif var is not None or spellvar is not None or lab is not None or irreg is not None:
+            elif var is not None or spellvar is not None or dlab is not None or irreg is not None:
                 end = "  "
             else:
                 end = "\n"
             c_print(f"\n#[bold blue]{hword}#[/bold blue] #[bold yellow]{w_type}#[/bold yellow]", end=end)
 
         if spellvar is not None:
-            end = "  " if spellvar.find_next_sibling() is not None else "\n"
+            next_sibling = spellvar.find_next_sibling()
+            end = "  " if next_sibling is not None and next_sibling.has_attr('class') else "\n"
             print(spellvar.text.strip("\n").strip(), end=end)
 
         if var is not None:
-            end = "  " if (var.find_next_sibling() is not None or irreg is not None) else "\n"
+            next_sibling = spellvar.find_next_sibling()
+            end = "  " if ((next_sibling is not None and next_sibling.has_attr('class')) or irreg is not None) else "\n"
             print(var.text.strip("\n").strip(), end=end)
 
         if irreg is not None:
             print(irreg.text.strip("\n").strip())
 
-        if lab is not None:
-            lab_parent = lab.find_parent()
-            if lab_parent.has_attr('class') and not lab_parent['class'][0] == "inf-group":
-                print(lab.text.strip("\n").strip())
+        if dlab is not None:
+            print(dlab.text.strip("\n").strip())
 
         domain = head.find("span", "domain ddomain")
         if domain is not None:

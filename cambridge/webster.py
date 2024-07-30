@@ -302,10 +302,13 @@ def dtText(node, ancestor_attr):
         if text.strip("\n").strip():
             if text == ": ":
                 print_meaning_content(text, end="")
-            elif text == " see also ":
-                print_meaning_keyword(text.strip().upper())
-            elif text == " see " or text == " compare ":
-                print_meaning_keyword("-> " + text.strip().upper())
+            elif text == " see also " or text == " see " or text == " compare ":
+                parent_attr = node.getparent().get("class")
+                if "dt" in parent_attr or "sdsense" == parent_attr:
+                    print_meaning_keyword("-> " + text.strip().upper())
+                else:
+                    print_meaning_keyword("\n" + text.strip().upper())
+
             elif u_words and text in u_words:
                 text_new = text.upper()
                 print_meaning_content(text_new, end="")
@@ -582,6 +585,8 @@ def tags(node, ancestor_attr, num_label_count):
                 text = "".join(list(elm.itertext())).strip()
                 if elm.getnext() is not None:
                     print_meaning_badge(text, end=" ")
+                elif ancestor_attr == "sen has-num-only":
+                    print_meaning_badge(text, end="\n")
                 else:
                     print_meaning_badge(text, end="")
 

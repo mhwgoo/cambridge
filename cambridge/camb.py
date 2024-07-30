@@ -155,25 +155,29 @@ def parse_dict_head(block):
 
     if head is None:
         c_print("#[bold blue]" + hword, end="")
-        info = block.find_all("span", ["pos dpos", "lab dlab", "v dv lmr-0"])
-        if len(info) != 0:
-            temp = [i.text for i in info]
-            type = temp[0]
-            text = " ".join(temp[1:])
-            print(f" {type} {text}")
+
+        di_info = block.find("span", "di-info")
+        if di_info is not None:
+            info = di_info.find_all("span", ["pos dpos", "lab dlab", "v dv lmr-0"])
+            if len(info) != 0:
+                temp = [i.text for i in info]
+                type = temp[0]
+                text = " ".join(temp[1:])
+                print(f" {type} {text}")
         else:
             print()
 
     else:
-        var = head.find("span", "var dvar")
+        vars = head.find_all("span", "var dvar")
         spellvar = head.find("span", "spellvar dspellvar")
         irreg = head.find("span", "irreg-infls dinfls")
+        domain = head.find("span", "domain ddomain")
 
         dlab = None
         lab = head.find("span", "lab dlab")
         if lab is not None:
             lab_parent = head.find("span", "lab dlab").find_parent()
-            if lab_parent.has_attr('class') and lab_parent['class'][0] == "pos-header dpos-h":
+            if lab_parent.has_attr('class') and lab_parent['class'][0] == "pos-header":
                 dlab = lab
 
         w_type = ""
@@ -194,7 +198,7 @@ def parse_dict_head(block):
                 end = ""
             elif next_sibling is not None and next_sibling.has_attr('class') and next_sibling['class'][0] == "lml--5":
                 end = "  "
-            elif var is not None or spellvar is not None or dlab is not None or irreg is not None:
+            elif len(vars) > 0 or spellvar is not None or domain is not None or dlab is not None or irreg is not None:
                 end = "  "
             else:
                 end = "\n"
@@ -205,20 +209,20 @@ def parse_dict_head(block):
             end = "  " if next_sibling is not None and next_sibling.has_attr('class') else "\n"
             print(spellvar.text.strip("\n").strip(), end=end)
 
-        if var is not None:
-            next_sibling = spellvar.find_next_sibling()
-            end = "  " if ((next_sibling is not None and next_sibling.has_attr('class')) or irreg is not None) else "\n"
-            print(var.text.strip("\n").strip(), end=end)
+        if len(vars) > 0:
+            for var in vars:
+                next_sibling = var.find_next_sibling()
+                end = "  " if ((next_sibling is not None and next_sibling.has_attr('class')) or irreg is not None) else "\n"
+                print(var.text.strip("\n").strip(), end=end)
 
         if irreg is not None:
             print(irreg.text.strip("\n").strip())
 
-        if dlab is not None:
-            print(dlab.text.strip("\n").strip())
-
-        domain = head.find("span", "domain ddomain")
         if domain is not None:
             print(domain.text.strip("\n").strip(), end="  ")
+
+        if dlab is not None:
+            print(dlab.text.strip("\n").strip())
 
         prons = head.find_all("span", "pron dpron")
         if len(prons) != 0:
@@ -256,11 +260,16 @@ def parse_meaning(def_block, is_pmeaning=False):
     usage_b = meaning_b.find("span", "lab dlab")
     if usage_b is not None:
         usage = replace_all(usage_b.text)
-        meaning_words = replace_all(meaning_b.text).split(usage)[-1].replace(":", "")
+        meaning_words = replace_all(meaning_b.text).split(usage)[-1]
+        if meaning_words[-1] == ":":
+            meaning_words = meaning_words[ : -1]
         print("\033[34;1m: \033[0m" + "[" + usage + "] " + "\033[34m" + meaning_words.strip() + "\033[0m", end="")
     else:
-        meaning_words = replace_all(meaning_b.text).replace(":", "")
-        print("\033[34;1m: \033[0m" + "\033[34m" + meaning_words + "\033[0m", end="")
+        meaning_words = replace_all(meaning_b.text)
+        if meaning_words[-1] == ":":
+            meaning_words = meaning_words[ : -1]
+
+        print("\033[34;1m: \033[0m" + "\033[34m" + meaning_words.strip() + "\033[0m", end="")
 
     # e.g. def info tags like 'B1 [ C or U ]'
     def_info = replace_all(def_block.find("span", "def-info ddef-info").text).replace(" or ", "/")

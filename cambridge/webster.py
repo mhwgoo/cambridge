@@ -451,25 +451,17 @@ def unText_simple(node, ancestor_attr, has_badge=True):
     node_pre_attr = node_pre.get("class")
     arrow = "-> " if "mdash" in node_pre_attr else ""
 
-    hl_words, ems = get_word_faces(node)
-    ems_len = len(ems)
-    text = "".join(list(node.itertext())).strip()
+    bolds = get_word_faces(node)
+    text_list = list(node.itertext())
 
-    if hl_words:
-        hl_word = hl_words[0]
-        #TODO / should only reset the current effect (bold), not including w_col.meaning_arrow
-        text = text.replace(hl_word, f"#[bold]{hl_word}#[/bold]#[{w_col.meaning_arrow}]")
-    elif ems_len == 1:
-        if ems[0] == "with":
-            text = text.replace("with " + ems[0], f"with #[bold]{ems[0]}#[/bold]#[{w_col.meaning_arrow}]")
-        else:
-            text = text.replace(ems[0], f"#[bold]{ems[0]}#[/bold]#[{w_col.meaning_arrow}]")
-    elif ems_len > 1:
-        for em in ems: # making sure "into" will not be formatted again by the subsequent "in"
-            text = text.replace(em + " ", f"#[bold]{em + " "}#[/bold]#[{w_col.meaning_arrow}]")
-            text = text.replace("or " + em, f"#[bold]{"/ " + em}#[/bold]#[{w_col.meaning_arrow}]")
-            text = text.replace("and " + em, f"#[bold]{"/ " + em}#[/bold]#[{w_col.meaning_arrow}]")
+    for bold in bolds:
+        if bold:
+            for index, t in enumerate(text_list):
+                if t in bold:
+                    #TODO "/" should only reset the current effect (bold), not including w_col.meaning_arrow
+                    text_list[index] = f"#[bold]{t}#[/bold]#[{w_col.meaning_arrow}]"
 
+    text = "".join(text_list).strip()
     c_print(f"#[{w_col.meaning_arrow}]{arrow + text}", end="")
 
 
@@ -831,7 +823,8 @@ def print_vrs(node):
                             for i in child:
                                 print_class_va(i.text, end="")
                         else:
-                            print_class_va(child.text, end="")
+                            end = " " if child.getnext() is not None else ""
+                            print_class_va(child.text, end=end)
                     elif "prons-entries-list" in attr:
                         print_pron(child)
                     else:
@@ -1007,14 +1000,12 @@ def print_class_sgram(node):
 
 def print_class_ins(node):
     """print node whose class name includes ins, such as 'ins', 'vg-ins'."""
+
     for child in node:
         attr = child.get("class")
         if attr is not None:
             if attr == "il  il-badge badge mw-badge-gray-100":
-                if node.getprevious() is not None:
-                    print_header_badge(child.text, end=" ")
-                else:
-                    print_header_badge(child.text.strip(), end=" ")
+                print_header_badge(child.text.strip(), end=" ") # e.g. "natalism"
             elif attr == "prt-a":
                 print_pron(child)
             elif attr == "il ":

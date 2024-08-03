@@ -106,45 +106,42 @@ async def fresh_run(session, input_word, is_ch, no_suggestions, req_url):
 
         else:
             res_url = parse_response_url(res_url)
-            logger.debug(f'{OP.FOUND.name} "{input_word}" in {DICT.CAMBRIDGE.name} at {res_url}')
-
             res_text = None
             attempt = 0
             while True:
                 try:
                     res_text = await response.text()
                 except asyncio.TimeoutError as error:
-                    attempt = cancel_on_error(res_url, error, attempt, OP.FETCHING.name, asyncio.current_task())
+                    attempt = cancel_on_error(req_url, error, attempt, OP.FETCHING.name, asyncio.current_task())
                     continue
                 # There is also a scenario that in the process of cancelling, while is still looping, leading to run coroutine with a closed session.
                 # If session is closed, and you go on connecting, ClientConnectionError will be throwed.
                 except Exception as error:
-                    cancel_on_error_without_retry(res_url, error, OP.FETCHING.name, asyncio.current_task())
+                    cancel_on_error_without_retry(req_url, error, OP.FETCHING.name, asyncio.current_task())
                     break
                 else:
                     break
 
             if res_text is not None:
-                logger.debug(f"{OP.PARSING.name} {res_url}")
                 soup = BeautifulSoup(res_text, "lxml")
-
-                hword = soup.find("b", "tb ttn").text
-
                 first_dict = soup.find("div", "pr dictionary") or soup.find("div", "pr di superentry")
                 if first_dict is None:
                     quit_on_no_result(DICT.CAMBRIDGE.name, is_spellcheck=False)
 
+                logger.debug(f'{OP.FOUND.name} "{input_word}" in {DICT.CAMBRIDGE.name} at {req_url}')
+                logger.debug(f"{OP.PARSING.name} {req_url}")
                 blocks = first_dict.find_all("div", ["pr entry-body__el", "entry-body__el clrd js-share-holder", "pr idiom-block"]) # type: ignore
                 if len(blocks) == 0:
                     quit_on_no_result(DICT.CAMBRIDGE.name, is_spellcheck=False)
                 else:
-                    logger.debug(f"{OP.PRINTING.name} the parsed result of {res_url}")
+                    logger.debug(f"{OP.PRINTING.name} the parsed result of {req_url}")
                     for block in blocks:
                         parse_dict_head(block)
                         parse_dict_body(block)
 
                     print()
 
+                    hword = soup.find("b", "tb ttn").text
                     await save_to_cache(input_word, hword, res_url, str(first_dict))
 
 
@@ -156,14 +153,12 @@ def parse_dict_head(block):
     if head is None:
         c_print("#[bold blue]" + hword, end="")
 
-        di_info = block.find("span", "di-info")
-        if di_info is not None:
-            info = di_info.find_all("span", ["pos dpos", "lab dlab", "v dv lmr-0"])
-            if len(info) != 0:
-                temp = [i.text for i in info]
-                type = temp[0]
-                text = " ".join(temp[1:])
-                print(f" {type} {text}")
+        info = block.find_all("span", ["pos dpos", "lab dlab", "v dv lmr-0"])
+        if len(info) != 0:
+            temp = [i.text for i in info]
+            type = temp[0]
+            text = " ".join(temp[1:])
+            print(f" {type} {text}")
         else:
             print()
 
@@ -204,6 +199,11 @@ def parse_dict_head(block):
                 end = "\n"
             c_print(f"\n#[bold blue]{hword}#[/bold blue] #[bold yellow]{w_type}#[/bold yellow]", end=end)
 
+        if dlab is not None:
+            next_sibling = dlab.find_next_sibling()
+            end = "  " if next_sibling is not None and next_sibling.has_attr('class') else "\n"
+            print(dlab.text.strip("\n").strip(), end=end)
+
         if spellvar is not None:
             next_sibling = spellvar.find_next_sibling()
             end = "  " if next_sibling is not None and next_sibling.has_attr('class') else "\n"
@@ -220,9 +220,6 @@ def parse_dict_head(block):
 
         if domain is not None:
             print(domain.text.strip("\n").strip(), end="  ")
-
-        if dlab is not None:
-            print(dlab.text.strip("\n").strip())
 
         prons = head.find_all("span", "pron dpron")
         if len(prons) != 0:
@@ -375,13 +372,22 @@ def parse_synonym(block):
         print_synonym(block)
 
 
-def parse_see_also(def_block):
-    see_also_block = def_block.find("div", re.compile("xref see_also hax dxref-w( lmt-25)?"))
-
+def parse_see_also_lmb(def_block):
+    see_also_block = def_block.find("div", "xref see_also hax dxref-w lmt-25 lmb-25")
     if see_also_block is not None:
         see_also = see_also_block.strong.text.upper()
         c_print("#[bold #757575]" + "\n" + see_also)
-        print_tag(see_also_block)
+        for item in see_also_block.find_all("div", ["item lc lc1 lpb-10 lpr-10", "item lc lc1 lc-xs6-12 lpb-10 lpr-10"]):
+            print_tag(item)
+
+
+def parse_see_also(def_block):
+    see_also_block = def_block.find("div", re.compile("xref see_also hax dxref-w( lmt-25)?"))
+    if see_also_block is not None:
+        see_also = see_also_block.strong.text.upper()
+        c_print("#[bold #757575]" + "\n" + see_also)
+        for item in see_also_block.find_all("div", ["item lc lc1 lpb-10 lpr-10", "item lc lc1 lc-xs6-12 lpb-10 lpr-10"]):
+            print_tag(item)
 
 
 def parse_compare(def_block):
@@ -389,7 +395,7 @@ def parse_compare(def_block):
 
     if compare_block is not None:
         compare = compare_block.strong.text.upper()
-        c_print("#[bold #757575]" + "\n  " + compare)
+        c_print("#[bold #757575]" + "\n" + compare)
         for item in compare_block.find_all("div", ["item lc lc1 lpb-10 lpr-10", "item lc lc1 lc-xs6-12 lpb-10 lpr-10"]):
             print_tag(item)
 
@@ -431,8 +437,12 @@ def parse_idiom(block):
 def parse_sole_idiom(block):
     idiom_sole_meaning = block.find("div", "def ddef_d db")
 
+    text = idiom_sole_meaning.text.strip()
+    if text[-1] == ":":
+        text = text[ : -1]
+
     if idiom_sole_meaning is not None:
-        print("\033[34m" + idiom_sole_meaning.text.strip() + "\033[0m")
+        print("\033[34m" + text + "\033[0m")
     parse_example(block)
     parse_see_also(block)
 
@@ -476,6 +486,7 @@ def parse_dict_body(block):
         if idiom_sole_block is not None:
             parse_sole_idiom(idiom_sole_block)
 
+    parse_see_also_lmb(block)
     parse_idiom(block)
     parse_phrasal_verb(block)
     parse_compare(block)

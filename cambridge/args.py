@@ -81,6 +81,14 @@ def parse_args(session):
 
     # Add an optional argument for s command
     parser_sw.add_argument(
+        "-c",
+        "--chinese",
+        nargs="+",
+        help="look up a word/phrase in Cambridge Dictionary with Chinese translation",
+    )
+
+    # Add an optional argument for s command
+    parser_sw.add_argument(
         "-w",
         "--webster",
         nargs="+",
@@ -95,14 +103,6 @@ def parse_args(session):
         help="look up a word/phrase afresh without using cache",
     )
 
-    # Add an optional argument for s command
-    parser_sw.add_argument(
-        "-c",
-        "--chinese",
-        nargs="+",
-        default=None,
-        help="look up a word/phrase in Cambridge Dictionary with Chinese translation",
-    )
 
     # Add an optional argument for s command
     parser_sw.add_argument(
@@ -147,29 +147,36 @@ def parse_args(session):
 
     else:
         argv_list = sys.argv[1 : ]
-        w_index = None 
-        c_index = None 
+        w_index = None
+        c_index = None
         s_index = None
         for index, word in enumerate(argv_list):
-            if word[0] != "-" and w_index is None and c_index is None and s_index is None:
-                argv_list.insert(index, "-s")
+            if word == "--search" or word == "-s":
                 s_index = index
-                break
-            elif word.startswith("-w"):
+            elif word == "--webster" or word == "-w":
                 w_index = index
-            elif word.startswith("-c"):
+            elif word == "--chinese" or word == "-c":
                 c_index = index
+            elif word[0] != "-" and s_index is None and w_index is None and c_index is None:
+                argv_list.insert(index, "-s")
+                break
             else:
                 continue
 
         to_parse = []
-        for word in argv_list:
+        for index, word in enumerate(argv_list):
             if word == "--debug":
                 parser_sw.set_defaults(debug=True)
             elif word == "--fresh" or word == "-f":
                 parser_sw.set_defaults(fresh=True)
             elif word == "--nosuggestions" or word == "-n":
                 parser_sw.set_defaults(nosuggestions=True)
+            elif (word == "--search" or word == "-s") and (index == len(argv_list) - 1 or argv_list[index + 1][0] == "-"):
+                continue
+            elif (word == "--webster" or word == "-w") and (index == len(argv_list) - 1 or argv_list[index + 1][0] == "-"):
+                continue
+            elif (word == "--chinese" or word == "-c") and (index == len(argv_list) - 1 or argv_list[index + 1][0] == "-"):
+                continue
             else:
                 to_parse.append(word)
 

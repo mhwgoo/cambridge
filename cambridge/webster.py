@@ -295,20 +295,34 @@ def dtText(node, ancestor_attr):
     l_words = get_word_cases(node)[0]
     u_words = get_word_cases(node)[1]
 
-    if node.getprevious() is not None and node.getprevious().get("class") == "sub-content-thread":
+    node_pre = node.getprevious()
+    node_pre_attr = None
+    if node_pre is not None:
+        node_pre_attr = node_pre.get("class")
+
+    is_format = False
+    if node_pre_attr == "sub-content-thread" or node_pre_attr == "uns":
         format_basedon_ancestor(ancestor_attr, prefix="\n")
+        is_format = True
 
     for index, text in enumerate(texts):
         if text.strip("\n").strip():
             if text == ": ":
                 print_meaning_content(text, end="")
-            elif text == " see also " or text == " see " or text == " compare ":
+            elif text == " see " or text == " compare ":
                 parent_attr = node.getparent().get("class")
                 if "dt" in parent_attr or "sdsense" == parent_attr:
                     print_meaning_keyword("-> " + text.strip().upper())
                 else:
+                    if is_format:
+                        print_meaning_keyword(text.strip().upper())
+                    else:
+                        print_meaning_keyword("\n" + text.strip().upper())
+            elif text == " see also ": # e.g. "drag"
+                if is_format:
+                    print_meaning_keyword(text.strip().upper())
+                else:
                     print_meaning_keyword("\n" + text.strip().upper())
-
             elif u_words and text in u_words:
                 text_new = text.upper()
                 print_meaning_content(text_new, end="")
@@ -577,10 +591,10 @@ def tags(node, ancestor_attr, num_label_count):
                 text = "".join(list(elm.itertext())).strip()
                 if elm.getnext() is not None:
                     print_meaning_badge(text, end=" ")
-                elif ancestor_attr == "sen has-num-only":
-                    print_meaning_badge(text, end="\n")
+                #elif ancestor_attr == "sen has-num-only":
+                #    print_meaning_badge(text, end="\n")
                 else:
-                    print_meaning_badge(text, end="")
+                    print_meaning_badge(text, end="") # e.g. "scant"
 
             elif elm_attr == "et":
                 et(elm)
@@ -793,7 +807,8 @@ def entry_uros(node):
                             for i in child:
                                 print_class_va(i.text)
                         else:
-                            print_class_va(c.text, end="")
+                            end = " " if c.getnext() is not None else ""
+                            print_class_va(c.text, end=end)
                     elif "prons-entries-list" in attr_c:
                         continue
 

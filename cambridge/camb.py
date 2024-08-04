@@ -201,19 +201,20 @@ def parse_dict_head(block):
 
         if dlab is not None:
             next_sibling = dlab.find_next_sibling()
-            end = "  " if next_sibling is not None and next_sibling.has_attr('class') else "\n"
+            end = "  " if ((next_sibling is not None and next_sibling.has_attr('class')) or len(vars) > 0) else "\n"
             print(dlab.text.strip("\n").strip(), end=end)
+
+        if len(vars) > 0:
+            for var in vars:
+                next_sibling = var.find_next_sibling()
+                end = "  " if ((next_sibling is not None and next_sibling.has_attr('class')) or irreg is not None) else "\n"
+                print(var.text.replace("\n", "").replace("Your browser doesn't support HTML5 audio", " ").replace("/", "|").strip(), end=end)
 
         if spellvar is not None:
             next_sibling = spellvar.find_next_sibling()
             end = "  " if next_sibling is not None and next_sibling.has_attr('class') else "\n"
             print(spellvar.text.strip("\n").strip(), end=end)
 
-        if len(vars) > 0:
-            for var in vars:
-                next_sibling = var.find_next_sibling()
-                end = "  " if ((next_sibling is not None and next_sibling.has_attr('class')) or irreg is not None) else "\n"
-                print(var.text.strip("\n").strip(), end=end)
 
         if irreg is not None:
             print(irreg.text.strip("\n").strip())
@@ -224,12 +225,13 @@ def parse_dict_head(block):
         prons = head.find_all("span", "pron dpron")
         if len(prons) != 0:
             for pron in prons:
-                pron_text = pron.text.strip("\n").strip().replace("/", "|")
                 parent = pron.find_parent()
-                area = parent.find("span", "region dreg")
-                area_text = area.text if area is not None else ""
-                end= "" if parent.find_next_sibling() is None else " "
-                c_print(f"#[bold]{area_text} #[/bold]" + pron_text, end=end)
+                if parent.find_parent()['class'][0] == "pos-header":
+                    pron_text = pron.text.strip("\n").strip().replace("/", "|")
+                    area = parent.find("span", "region dreg")
+                    area_text = area.text if area is not None else ""
+                    end= "" if parent.find_next_sibling() is None else " "
+                    c_print(f"#[bold]{area_text} #[/bold]" + pron_text, end=end)
         print()
 
 

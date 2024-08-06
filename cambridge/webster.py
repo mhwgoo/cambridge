@@ -534,7 +534,7 @@ def sense(node, attr, parent_attr, ancestor_attr, num_label_count):
                     c_print(f"#[bold]{child.text.strip()}", end=end)
                 elif "badge mw-badge-gray-100" in child.attrib["class"]:
                     end = " " if child.getnext() is not None else "\n"
-                    print_meaning_badge(child.text.strip(), end=end)
+                    print_meaning_badge(child.text, end=end)
         else:
             sense_content = children[1]
 
@@ -591,8 +591,8 @@ def tags(node, ancestor_attr, num_label_count):
                 text = "".join(list(elm.itertext())).strip()
                 if elm.getnext() is not None:
                     print_meaning_badge(text, end=" ")
-                #elif ancestor_attr == "sen has-num-only":
-                #    print_meaning_badge(text, end="\n")
+                elif "spl plural badge" in elm_attr: # e.g. "time", "dig"
+                    print_meaning_badge(text, end="\n")
                 else:
                     print_meaning_badge(text, end="") # e.g. "scant"
 

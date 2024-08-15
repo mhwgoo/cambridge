@@ -22,11 +22,11 @@ async def main():
         except SystemExit:
             print("Exit.")
 
-    except KeyboardInterrupt:
-        print("\nStopped by user.")
+    #except KeyboardInterrupt:
+    #    print("\nStopped by user.")
 
-    except SystemExit:
-        pass
+    #except SystemExit:
+    #    pass
 
     con.close()
 

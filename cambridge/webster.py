@@ -8,6 +8,7 @@ from .cache import check_cache, save_to_cache, get_cache
 from . import camb
 from . import color as w_col
 
+
 WEBSTER_BASE_URL = "https://www.merriam-webster.com"
 WEBSTER_DICT_BASE_URL = WEBSTER_BASE_URL + "/dictionary/"
 WEBSTER_WORD_OF_THE_DAY_URL = WEBSTER_BASE_URL + "/word-of-the-day"
@@ -23,7 +24,7 @@ search_pattern = """
 """
 parser = etree.HTMLParser(remove_comments=True)
 
-word_entries = set() # A page may have multiple word entries, e.g. "give away", "giveaway"
+word_entries = []    # A page may have multiple word entries, e.g. "runaway" as noun, "runaway" as adjective, "run away" as verb
 word_forms = set()   # A word may have multiple word forms, e.g. "ran", "running", "run", "flies"
 word_types = set()   # A word's word types, e.g. "preposition", "adjective"
 
@@ -194,7 +195,6 @@ def synonyms(node):
 
 def examples(node):
     print()
-    time = 0
     for elm in node.iterdescendants():
         try:
             is_title = ("ex-header function-label" in elm.attrib["class"])
@@ -208,34 +208,30 @@ def examples(node):
                 texts = list(elm.itertext())
 
                 for index, t in enumerate(texts):
-                    if time in [0, 1, 8, 9, 16, 17, 24, 25]:
-                        if index == 0:
-                            c_print(f"\n#[{w_col.accessory}]|", end="")
-                            c_print(f"#[{w_col.eg_sentence}]{t}", end="")
-                        else:
-                            hit = False
-                            text = t.strip().lower()
-                            for w in word_entries:
-                                if "preposition" in word_types or "adverb" in word_types or "conjuction" in word_types and ("noun" in word_types and text[-1] !="s"):
-                                    if w == text:
-                                        hit = True
-                                        break
-                                else:
-                                    if w in text and len(text) < 20:
-                                        hit = True
-                                        break
-                            for f in word_forms:
-                                if f == text:
+                    if index == 0:
+                        c_print(f"\n#[{w_col.accessory}]|", end="")
+                        c_print(f"#[{w_col.eg_sentence}]{t}", end="")
+                    else:
+                        hit = False
+                        text = t.strip().lower()
+                        for w in word_entries:
+                            if "preposition" in word_types or "adverb" in word_types or "conjuction" in word_types and ("noun" in word_types and text[-1] !="s"):
+                                if w == text:
                                     hit = True
                                     break
-
-                            if hit:
-                                c_print(f"#[{w_col.eg_sentence} bold]{t}", end="")
                             else:
-                                c_print(f"#[{w_col.eg_sentence}]{t}", end="")
-                    else:
-                        continue
-                time = time + 1
+                                if w in text and len(text) < 20:
+                                    hit = True
+                                    break
+                        for f in word_forms:
+                            if f == text:
+                                hit = True
+                                break
+
+                        if hit:
+                            c_print(f"#[{w_col.eg_sentence} bold]{t}", end="")
+                        else:
+                            c_print(f"#[{w_col.eg_sentence}]{t}", end="")
 
 
 def phrases(node):
@@ -301,7 +297,7 @@ def dtText(node, ancestor_attr):
         node_pre_attr = node_pre.get("class")
 
     is_format = False
-    if node_pre_attr == "sub-content-thread" or node_pre_attr == "uns":
+    if node_pre_attr == "sub-content-thread" or node_pre_attr == "uns" or node_pre_attr == "dt ":
         format_basedon_ancestor(ancestor_attr, prefix="\n")
         is_format = True
 
@@ -586,15 +582,22 @@ def tags(node, ancestor_attr, num_label_count):
 
     for elm in node.iterdescendants():
         elm_attr = elm.get("class")
+        parent = elm.getparent()
+        parent_attr = parent.get("class")
+
         if elm_attr is not None:
-            if "badge" in elm_attr and "pron" not in elm_attr:
+            if "badge " in elm_attr and "pron" not in elm_attr:
                 text = "".join(list(elm.itertext())).strip()
                 if elm.getnext() is not None:
                     print_meaning_badge(text, end=" ")
                 elif "spl plural badge" in elm_attr: # e.g. "time", "dig"
                     print_meaning_badge(text, end="\n")
                 else:
-                    print_meaning_badge(text, end="") # e.g. "scant"
+                    prev = elm.getprevious()
+                    if prev is not None and prev.get("class") is not None and prev.get("class") == "sn sense-1":
+                        print_meaning_badge(text, end="") # e.g. "scant"
+                    else:
+                        print_meaning_badge(text, end="\n") # e.g. "aver"
 
             elif elm_attr == "et":
                 et(elm)
@@ -610,14 +613,16 @@ def tags(node, ancestor_attr, num_label_count):
                 print_class_sgram(elm)
 
             elif elm_attr == "vl":
-                print_meaning_badge(elm.text.strip())
+                parent_prev = parent.getprevious()
+                if parent_prev is None and elm.text[0] == " ":
+                    print_meaning_badge(elm.text[1 : ])
+                else:
+                    print_meaning_badge(elm.text)
 
             elif elm_attr == "va":
                 print_class_va(elm.text.strip())
 
             elif elm_attr == "sd":
-                parent = elm.getparent()
-                parent_attr = parent.get("class")
                 parent_prev = parent.getprevious()
                 if parent_prev is not None and "hasSdSense" in parent_prev.get("class"):
                     print()
@@ -627,7 +632,7 @@ def tags(node, ancestor_attr, num_label_count):
                 if num_label_count == 2:
                     print(" ", end="")
 
-                print_meaning_badge(elm.text)
+                print_meaning_badge(elm.text, end=" ")
 
             elif elm_attr == "dtText":
                 dtText(elm, ancestor_attr) # only meaning text
@@ -646,7 +651,7 @@ def tags(node, ancestor_attr, num_label_count):
             elif elm_attr == "unText":
                 unText_simple(elm, ancestor_attr, has_badge)
 
-            elif "prons-entries-list" in elm_attr:
+            elif "prons-entries-list" in elm_attr and parent_attr is None:
                 print_pron(elm)
 
             elif elm_attr == "sn sense-2":
@@ -720,7 +725,7 @@ def entry_header_content(node):
         if elm.tag == "h1" or elm.tag == "p":
             word = "".join(list(elm.itertext()))
             global word_entries
-            word_entries.add(word.strip().lower())
+            word_entries.append(word.strip().lower())
             end = "" if elm.getnext() is None else " "
             c_print(f"#[{w_col.eh_h1_word} bold]{word}", end=end)
 
@@ -914,7 +919,7 @@ def dictionary_entry(node):
                 print_meaning_content(text, end="\n")
 
 
-def print_meaning_badge(text, end=" "):
+def print_meaning_badge(text, end=""):
     c_print(f"#[{w_col.meaning_badge}]{text}", end=end)
 
 

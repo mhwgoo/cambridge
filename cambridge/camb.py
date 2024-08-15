@@ -10,6 +10,7 @@ from .utils import fetch, get_request_url, parse_response_url, replace_all, OP, 
 from .cache import check_cache, save_to_cache, get_cache
 from . import webster
 
+
 CAMBRIDGE_URL = "https://dictionary.cambridge.org"
 CAMBRIDGE_EN_SEARCH_URL = CAMBRIDGE_URL + "/search/direct/?datasetsearch=english&q="
 CAMBRIDGE_CN_SEARCH_URL = CAMBRIDGE_URL + "/search/direct/?datasetsearch=english-chinese-simplified&q="
@@ -201,7 +202,7 @@ def parse_dict_head(block):
 
         if dlab is not None:
             next_sibling = dlab.find_next_sibling()
-            end = "  " if ((next_sibling is not None and next_sibling.has_attr('class')) or len(vars) > 0) else "\n"
+            end = "  " if ((next_sibling is not None and next_sibling.has_attr('class')) or len(vars) > 0 or irreg is not None) else "\n"
             print(dlab.text.strip("\n").strip(), end=end)
 
         if len(vars) > 0:
@@ -488,10 +489,11 @@ def parse_dict_body(block):
         if idiom_sole_block is not None:
             parse_sole_idiom(idiom_sole_block)
 
+        parse_compare(block)
+
     parse_see_also_lmb(block)
     parse_idiom(block)
     parse_phrasal_verb(block)
-    parse_compare(block)
 
 
 def parse_dict_name(first_dict):

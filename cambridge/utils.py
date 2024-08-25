@@ -59,7 +59,7 @@ def cancel_on_error(path, error, attempt, op, task):
         print(f'{op} on {path} failed: [{error.__class__.__name__}]')
         if task is not None:
             logger.debug(f"{OP.CANCELLING.name} task...")
-            task.cancel() # Only cancel won't exit the system, instead making it possible for fetch() to return None
+            task.cancel() # Cancel won't exit the system, instead making it possible for fetch() to return None
         else:
             sys.exit(2)
     return attempt
@@ -86,7 +86,7 @@ async def fetch(session, url):
             attempt = cancel_on_error(url, error, attempt, OP.FETCHING.name, asyncio.current_task())
             continue
         except Exception as error:
-            cancel_on_error_without_retry(url, error, OP.FETCHING.name, asyncio.current_task()) # NO break! Or in cancelling, fetch() already returned None to caller.
+            cancel_on_error_without_retry(url, error, OP.FETCHING.name, asyncio.current_task()) # NO break!
         else:
             return resp
 

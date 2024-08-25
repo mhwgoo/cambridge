@@ -2,7 +2,6 @@ import sys
 import re
 from bs4 import BeautifulSoup
 import asyncio
-import aiohttp
 
 from .console import c_print
 from .log import logger
@@ -200,6 +199,9 @@ def parse_dict_head(block):
                 end = "\n"
             c_print(f"\n#[bold blue]{hword}#[/bold blue] #[bold yellow]{w_type}#[/bold yellow]", end=end)
 
+        if domain is not None:
+            print(domain.text.strip("\n").strip(), end="  ")
+
         if dlab is not None:
             next_sibling = dlab.find_next_sibling()
             end = "  " if ((next_sibling is not None and next_sibling.has_attr('class')) or len(vars) > 0 or irreg is not None) else "\n"
@@ -218,10 +220,15 @@ def parse_dict_head(block):
 
 
         if irreg is not None:
-            print(irreg.text.strip("\n").strip())
+            infgroup = irreg.find("span", "inf-group dinfg")
+            if infgroup is None:
+                print(irreg.text.strip("\n").strip())
+            else:
+                # e.g. cortex, vortex; intentionally omit the part:
+                # plural cortices uk  /ˈkɔː.tɪ.siːz/ us  /ˈkɔːr.tɪ.siːz/
+                # plural vortexes or vortices uk  /-tɪ.siːz/ us  /-tə-/
+                print()
 
-        if domain is not None:
-            print(domain.text.strip("\n").strip(), end="  ")
 
         prons = head.find_all("span", "pron dpron")
         if len(prons) != 0:

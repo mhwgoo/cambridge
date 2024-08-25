@@ -1,8 +1,9 @@
 import sys
+import asyncio
 from lxml import etree # type: ignore
 
 from .console import c_print
-from .utils import fetch, get_request_url, decode_url, OP, DICT, has_tool, get_suggestion, get_suggestion_by_fzf, get_wod_selection, get_wod_selection_by_fzf, quit_on_no_result
+from .utils import fetch, get_request_url, decode_url, OP, DICT, has_tool, get_suggestion, get_suggestion_by_fzf, get_wod_selection, get_wod_selection_by_fzf, quit_on_no_result, cancel_on_error, cancel_on_error_without_retry
 from .log import logger
 from .cache import check_cache, save_to_cache, get_cache
 from . import camb
@@ -59,6 +60,7 @@ async def cache_run(res_url_from_cache):
 async def fresh_run(session, input_word, no_suggestions, req_url):
     response = await fetch(session, req_url)
     res_url = str(response.real_url)
+    status = response.status
 
     # By default Requests will perform location redirection for all verbs except HEAD.
     # https://requests.readthedocs.io/en/latest/user/quickstart/#redirection-and-history
@@ -68,18 +70,83 @@ async def fresh_run(session, input_word, no_suggestions, req_url):
     #     new_url = WEBSTER_BASE_URL + loc
     #     new_res = await fetch(session, new_url)
 
-    status = response.status
-    text = await response.text()
-    if status == 200:
-        logger.debug(f'{OP.FOUND.name} "{input_word}" in {DICT.MERRIAM_WEBSTER.name} at {res_url}')
+    res_text = None
+    attempt = 0
+    while True:
+        try:
+            res_text = await response.text()
+        except asyncio.TimeoutError as error:
+            attempt = cancel_on_error(req_url, error, attempt, OP.FETCHING.name, asyncio.current_task())
+            continue
+        # There is also a scenario that in the process of cancelling, while is still looping, leading to run coroutine with a closed session.
+        # If session is closed, and you go on connecting, ClientConnectionError will be throwed.
+        except Exception as error:
+            cancel_on_error_without_retry(req_url, error, OP.FETCHING.name, asyncio.current_task())
+            break
+        else:
+            break
 
-        logger.debug(f"{OP.PARSING.name} {res_url}")
-        tree = etree.HTML(text, parser)
+    if res_text is not None:
+        if status == 200:
+            logger.debug(f'{OP.FOUND.name} "{input_word}" in {DICT.MERRIAM_WEBSTER.name} at {res_url}')
 
-        partial_match = tree.xpath('//p[contains(@class,"partial")]')
-        if partial_match:
-            input_word = decode_url(res_url).split("/")[-1]
-            suggestions = tree.xpath('//h2[@class="hword"]/text() | //h2[@class="hword"]/span/text()')
+            logger.debug(f"{OP.PARSING.name} {res_url}")
+            tree = etree.HTML(res_text, parser)
+
+            partial_match = tree.xpath('//p[contains(@class,"partial")]')
+            if partial_match:
+                input_word = decode_url(res_url).split("/")[-1]
+                suggestions = tree.xpath('//h2[@class="hword"]/text() | //h2[@class="hword"]/span/text()')
+
+                logger.debug(f"{OP.PRINTING.name} out suggestions at {res_url}")
+                select_word = get_suggestion_by_fzf(suggestions, DICT.MERRIAM_WEBSTER.name) if has_tool("fzf") else get_suggestion(suggestions, DICT.MERRIAM_WEBSTER.name)
+                if select_word == "":
+                    logger.debug(f'{OP.SWITCHED.name} to {DICT.CAMBRIDGE.name}')
+                    await camb.search_cambridge(session, input_word, True, False, no_suggestions, None)
+                else:
+                    logger.debug(f'{OP.SELECTED.name} "{select_word}"')
+                    await search_webster(session, select_word, False, no_suggestions, None)
+            else:
+                sub_tree = tree.xpath('//*[@id="left-content"]')[0]
+                nodes = sub_tree.xpath(search_pattern)
+                if len(nodes) == 0:
+                    quit_on_no_result(DICT.MERRIAM_WEBSTER.name, is_spellcheck=Fasle)
+
+                # Response word within res_url is not same with what apppears on the web page. e.g. "set in stone"
+                result = sub_tree.xpath('//*[@id="left-content"]/div[contains(@id, "-entry-1")]/div[1]/div/div[1]/h1/text()') \
+                       or sub_tree.xpath('//*[@id="left-content"]/div[contains(@id, "-entry-1")]/div[1]/div/div/h1/span/text()')
+
+                if len(result) == 0:
+                    quit_on_no_result(DICT.MERRIAM_WEBSTER.name, is_spellcheck=Fasle)
+
+                await parse_and_print(nodes, res_url, new_line=True)
+
+                sub_text = etree.tostring(sub_tree).decode('utf-8')
+                # logger.debug(f'START CACHING: input_word is "{input_word}"; res_word is "{res_word}"; res_url is "{res_url}"')
+                await save_to_cache(input_word, result[0], res_url, sub_text)
+
+        elif status == 404:
+            logger.debug(f'{OP.NOT_FOUND.name} "{input_word}" at {res_url}')
+
+            if no_suggestions:
+                sys.exit(-1)
+
+            logger.debug(f"{OP.PARSING.name} out suggestions at {res_url}")
+            tree = etree.HTML(res_text, parser)
+            result = tree.xpath('//div[@class="widget spelling-suggestion"]')
+            if len(result) == 0:
+                quit_on_no_result(DICT.MERRIAM_WEBSTER.name, is_spellcheck=True)
+
+            nodes = result[0]
+            suggestions = []
+            for node in nodes:
+                if node.tag != "h1":
+                    for word in node.itertext():
+                        w = word.strip("\n").strip()
+                        if w.startswith("The"):
+                            continue
+                        else:
+                            suggestions.append(w)
 
             logger.debug(f"{OP.PRINTING.name} out suggestions at {res_url}")
             select_word = get_suggestion_by_fzf(suggestions, DICT.MERRIAM_WEBSTER.name) if has_tool("fzf") else get_suggestion(suggestions, DICT.MERRIAM_WEBSTER.name)
@@ -89,60 +156,10 @@ async def fresh_run(session, input_word, no_suggestions, req_url):
             else:
                 logger.debug(f'{OP.SELECTED.name} "{select_word}"')
                 await search_webster(session, select_word, False, no_suggestions, None)
+
         else:
-            sub_tree = tree.xpath('//*[@id="left-content"]')[0]
-            nodes = sub_tree.xpath(search_pattern)
-            if len(nodes) == 0:
-                quit_on_no_result(DICT.MERRIAM_WEBSTER.name, is_spellcheck=Fasle)
-
-            # Response word within res_url is not same with what apppears on the web page. e.g. "set in stone"
-            result = sub_tree.xpath('//*[@id="left-content"]/div[contains(@id, "-entry-1")]/div[1]/div/div[1]/h1/text()') \
-                   or sub_tree.xpath('//*[@id="left-content"]/div[contains(@id, "-entry-1")]/div[1]/div/div/h1/span/text()')
-
-            if len(result) == 0:
-                quit_on_no_result(DICT.MERRIAM_WEBSTER.name, is_spellcheck=Fasle)
-
-            await parse_and_print(nodes, res_url, new_line=True)
-
-            sub_text = etree.tostring(sub_tree).decode('utf-8')
-            # logger.debug(f'START CACHING: input_word is "{input_word}"; res_word is "{res_word}"; res_url is "{res_url}"')
-            await save_to_cache(input_word, result[0], res_url, sub_text)
-
-    elif status == 404:
-        logger.debug(f'{OP.NOT_FOUND.name} "{input_word}" at {res_url}')
-
-        if no_suggestions:
-            sys.exit(-1)
-
-        logger.debug(f"{OP.PARSING.name} out suggestions at {res_url}")
-        tree = etree.HTML(text, parser)
-        result = tree.xpath('//div[@class="widget spelling-suggestion"]')
-        if len(result) == 0:
-            quit_on_no_result(DICT.MERRIAM_WEBSTER.name, is_spellcheck=True)
-
-        nodes = result[0]
-        suggestions = []
-        for node in nodes:
-            if node.tag != "h1":
-                for word in node.itertext():
-                    w = word.strip("\n").strip()
-                    if w.startswith("The"):
-                        continue
-                    else:
-                        suggestions.append(w)
-
-        logger.debug(f"{OP.PRINTING.name} out suggestions at {res_url}")
-        select_word = get_suggestion_by_fzf(suggestions, DICT.MERRIAM_WEBSTER.name) if has_tool("fzf") else get_suggestion(suggestions, DICT.MERRIAM_WEBSTER.name)
-        if select_word == "":
-            logger.debug(f'{OP.SWITCHED.name} to {DICT.CAMBRIDGE.name}')
-            await camb.search_cambridge(session, input_word, True, False, no_suggestions, None)
-        else:
-            logger.debug(f'{OP.SELECTED.name} "{select_word}"')
-            await search_webster(session, select_word, False, no_suggestions, None)
-
-    else:
-        print(f'Something went wrong when fetching {req_url} with STATUS: {status}')
-        sys.exit(2)
+            print(f'Something went wrong when fetching {req_url} with STATUS: {status}')
+            sys.exit(2)
 
 
 def nearby_entries(node):
@@ -687,7 +704,10 @@ def vg_sseq_entry_item(node):
 
 def et(node):
     text = "".join(node.itertext()).strip("\n")
-    print(text, end=" ")
+    if node.getnext() is not None:
+        print(text, end=" ")
+    else:
+        print(text, end="\n")
 
 
 def vg(node):
@@ -911,12 +931,15 @@ def dictionary_entry(node):
                 print_header_badge(badge.text, end="\n")
 
             elif elm_attr == "cxl-ref":
-                texts = list(elm.itertext())
-                text = ":"
-                for t in texts:
-                    if t.strip("\n").strip():
-                        text += " " + t
-                print_meaning_content(text, end="\n")
+                text = ""
+                for e in elm.iterdescendants():
+                    if e.tag == "span":
+                        e_attr = e.get("class")
+                        if e_attr == "cxl":
+                            print_meaning_badge(e.text, end=" ")
+                        else:
+                            text += e.text + ", "
+                print_meaning_content(text[ : -2], end="\n")
 
 
 def print_meaning_badge(text, end=""):

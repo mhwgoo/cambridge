@@ -209,7 +209,7 @@ async def list_words(args):
             if i:
                 tasks.append(delete_from_cache(i))
         await asyncio.gather(*tasks)
-        sys.exit()
+        return
 
     if args.random:
         method = "random"

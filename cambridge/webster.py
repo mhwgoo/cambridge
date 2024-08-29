@@ -301,7 +301,7 @@ def related_phrases(node):
         c_print(f"#[{w_col.rph_item}]{text}", end="")
 
 
-def dtText(node, ancestor_attr):
+def dtText(node, ancestor_attr, num_label_count):
     """Print the meaning text starting with `:`. E.g. one of the word replenish's meaning texts `: to fill or build up again`"""
     texts = list(node.itertext())
 
@@ -313,9 +313,11 @@ def dtText(node, ancestor_attr):
     if node_pre is not None:
         node_pre_attr = node_pre.get("class")
 
+    prefix = "\n " if num_label_count == 2 else "\n"
+
     is_format = False
     if node_pre_attr == "sub-content-thread" or node_pre_attr == "uns" or node_pre_attr == "dt ":
-        format_basedon_ancestor(ancestor_attr, prefix="\n")
+        format_basedon_ancestor(ancestor_attr, prefix=prefix)
         is_format = True
 
     for index, text in enumerate(texts):
@@ -329,10 +331,16 @@ def dtText(node, ancestor_attr):
                 else:
                     if is_format:
                         print_meaning_keyword(text.strip().upper())
+                    elif "has-sn" in ancestor_attr or "has-num" in ancestor_attr:
+                        format_basedon_ancestor(ancestor_attr, prefix=prefix)
+                        print_meaning_keyword(text.strip().upper())
                     else:
                         print_meaning_keyword("\n" + text.strip().upper())
-            elif text == " see also ": # e.g. "drag"
+            elif text == " see also ": # e.g. "drag", "group"
                 if is_format:
+                    print_meaning_keyword(text.strip().upper())
+                elif "has-sn" in ancestor_attr or "has-num" in ancestor_attr:
+                    format_basedon_ancestor(ancestor_attr, prefix=prefix)
                     print_meaning_keyword(text.strip().upper())
                 else:
                     print_meaning_keyword("\n" + text.strip().upper())
@@ -476,7 +484,10 @@ def unText_simple(node, ancestor_attr, has_badge=True):
 
     node_pre = node.getprevious()
     node_pre_attr = node_pre.get("class")
-    arrow = "-> " if "mdash" in node_pre_attr else ""
+
+    arrow = ""
+    if "mdash" in node_pre_attr: # e.g. "time", does not work for "heavy" with the same structure
+        arrow = "-> "
 
     bolds = get_word_faces(node)
     text_list = list(node.itertext())
@@ -531,7 +542,10 @@ def sense(node, attr, parent_attr, ancestor_attr, num_label_count):
                 c_print(f"#[bold {w_col.meaning_letter}]{sn}", end = " ")
             else:
                 if num_label_count == 2 and sn == "a":
-                    c_print(f"#[bold {w_col.meaning_letter}]{sn}", end = " ")
+                    if "sb-0 sb-entry" != ancestor_attr:
+                        c_print(f"   #[bold {w_col.meaning_letter}]{sn}", end = " ")
+                    else:
+                        c_print(f"#[bold {w_col.meaning_letter}]{sn}", end = " ")
                 elif num_label_count == 2:
                     c_print(f"   #[bold {w_col.meaning_letter}]{sn}", end = " ")
                 else:
@@ -607,14 +621,10 @@ def tags(node, ancestor_attr, num_label_count):
                 text = "".join(list(elm.itertext())).strip()
                 if elm.getnext() is not None:
                     print_meaning_badge(text, end=" ")
-                elif "spl plural badge" in elm_attr: # e.g. "time", "dig"
+                elif "spl plural badge" in elm_attr: # e.g. "time", "dig", does not work for "short" with some structure
                     print_meaning_badge(text, end="\n")
                 else:
-                    prev = elm.getprevious()
-                    if prev is not None and prev.get("class") is not None and prev.get("class") == "sn sense-1":
-                        print_meaning_badge(text, end="") # e.g. "scant"
-                    else:
-                        print_meaning_badge(text, end="\n") # e.g. "aver"
+                    print_meaning_badge(text, end="") # e.g. "scant", "cool", does not work for "aver" with some structure
 
             elif elm_attr == "et":
                 et(elm)
@@ -652,7 +662,7 @@ def tags(node, ancestor_attr, num_label_count):
                 print_meaning_badge(elm.text, end=" ")
 
             elif elm_attr == "dtText":
-                dtText(elm, ancestor_attr) # only meaning text
+                dtText(elm, ancestor_attr, num_label_count) # only meaning text
                 has_dtText = True
                 elm_next = elm.getnext()
                 if elm_next is not None and elm_next.get("class") == "uns":

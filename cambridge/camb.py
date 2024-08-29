@@ -224,9 +224,19 @@ def parse_dict_head(block):
             if infgroup is None:
                 print(irreg.text.strip("\n").strip())
             else:
-                # e.g. cortex, vortex; intentionally omit the part:
-                # plural cortices uk  /ˈkɔː.tɪ.siːz/ us  /ˈkɔːr.tɪ.siːz/
-                # plural vortexes or vortices uk  /-tɪ.siːz/ us  /-tə-/
+                # intentionally leave out pronunciations of the plural form:
+                # e.g. cortex: uk  /ˈkɔː.tɪ.siːz/ us  /ˈkɔːr.tɪ.siːz/
+                # e.g. vortex: uk  /-tɪ.siːz/ us  /-tə-/
+                infdlab = infgroup.find("span", "lab dlab")
+                if infdlab is not None:
+                    next_sibling = infdlab.find_next_sibling()
+                    end = " " if next_sibling is not None else ""
+                    print(infdlab.text, end=end)
+                for index, b in enumerate(infgroup.find_all("b")):
+                    if index == 0:
+                        print(b.text, end="")
+                    else:
+                        print(" or " + b.text, end="")
                 print()
 
 

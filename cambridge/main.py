@@ -25,8 +25,8 @@ async def main():
     #except KeyboardInterrupt:
     #    print("\nStopped by user.")
 
-    #except SystemExit:
-    #    pass
+    except SystemExit:
+        print("Exit.")
 
     con.close()
 

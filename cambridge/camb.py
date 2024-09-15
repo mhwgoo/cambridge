@@ -72,10 +72,10 @@ async def fresh_run(session, input_word, is_ch, no_suggestions, req_url):
                 try:
                     spell_res_text = await spell_res.text()
                 except asyncio.TimeoutError as error:
-                    attempt = cancel_on_error(spell_req_url, error, attempt, OP.FETCHING.name, asyncio.current_task())
+                    attempt = cancel_on_error(spell_req_url, error, attempt, OP.FETCHING.name)
                     continue
                 except Exception as error:
-                    cancel_on_error_without_retry(spell_req_url, error, OP.FETCHING.name, asyncio.current_task())
+                    cancel_on_error_without_retry(spell_req_url, error, OP.FETCHING.name)
                     break
                 else:
                     break
@@ -112,12 +112,12 @@ async def fresh_run(session, input_word, is_ch, no_suggestions, req_url):
                 try:
                     res_text = await response.text()
                 except asyncio.TimeoutError as error:
-                    attempt = cancel_on_error(req_url, error, attempt, OP.FETCHING.name, asyncio.current_task())
+                    attempt = cancel_on_error(req_url, error, attempt, OP.FETCHING.name)
                     continue
                 # There is also a scenario that in the process of cancelling, while is still looping, leading to run coroutine with a closed session.
                 # If session is closed, and you go on connecting, ClientConnectionError will be throwed.
                 except Exception as error:
-                    cancel_on_error_without_retry(req_url, error, OP.FETCHING.name, asyncio.current_task())
+                    cancel_on_error_without_retry(req_url, error, OP.FETCHING.name)
                     break
                 else:
                     break
@@ -184,7 +184,9 @@ def parse_dict_head(block):
                 if dgram is not None:
                     w_type += " " + dgram.text
             w_type = w_type.strip("\n").strip().replace(" or ", "/")
-            c_print(f"\n#[bold blue]{hword}#[/bold blue] #[bold yellow]{w_type}#[/bold yellow]")
+            end = " " if irreg is not None else "\n"
+            c_print(f"\n#[bold blue]{hword}#[/bold blue] #[bold yellow]{w_type}#[/bold yellow]", end=end)
+
         elif head.find("div", "posgram dpos-g hdib lmr-5") is not None:
             posgram = head.find("div", "posgram dpos-g hdib lmr-5")
             w_type = posgram.text.strip("\n").strip().replace(" or ", "/")
@@ -218,25 +220,26 @@ def parse_dict_head(block):
             end = "  " if next_sibling is not None and next_sibling.has_attr('class') else "\n"
             print(spellvar.text.strip("\n").strip(), end=end)
 
-
         if irreg is not None:
-            infgroup = irreg.find("span", "inf-group dinfg")
-            if infgroup is None:
+            infgroups = irreg.find_all("span", "inf-group dinfg")
+            if not infgroups:
                 print(irreg.text.strip("\n").strip())
             else:
                 # intentionally leave out pronunciations of the plural form:
                 # e.g. cortex: uk  /ˈkɔː.tɪ.siːz/ us  /ˈkɔːr.tɪ.siːz/
                 # e.g. vortex: uk  /-tɪ.siːz/ us  /-tə-/
-                infdlab = infgroup.find("span", "lab dlab")
-                if infdlab is not None:
-                    next_sibling = infdlab.find_next_sibling()
-                    end = " " if next_sibling is not None else ""
-                    print(infdlab.text, end=end)
-                for index, b in enumerate(infgroup.find_all("b")):
-                    if index == 0:
-                        print(b.text, end="")
-                    else:
-                        print(" or " + b.text, end="")
+                for infgroup in infgroups:
+                    infdlab = infgroup.find("span", "lab dlab")
+                    if infdlab is not None:
+                        next_sibling = infdlab.find_next_sibling()
+                        end = " " if next_sibling is not None else ""
+                        print(infdlab.text, end=end)
+
+                    for index, b in enumerate(infgroup.find_all("b")):
+                        if index == 0:
+                            print(b.text, end=" ")
+                        else:
+                            print("or " + b.text, end="")
                 print()
 
 

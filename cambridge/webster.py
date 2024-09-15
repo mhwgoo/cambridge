@@ -9,7 +9,6 @@ from .cache import check_cache, save_to_cache, get_cache
 from . import camb
 from . import color as w_col
 
-
 WEBSTER_BASE_URL = "https://www.merriam-webster.com"
 WEBSTER_DICT_BASE_URL = WEBSTER_BASE_URL + "/dictionary/"
 WEBSTER_WORD_OF_THE_DAY_URL = WEBSTER_BASE_URL + "/word-of-the-day"
@@ -76,12 +75,12 @@ async def fresh_run(session, input_word, no_suggestions, req_url):
         try:
             res_text = await response.text()
         except asyncio.TimeoutError as error:
-            attempt = cancel_on_error(req_url, error, attempt, OP.FETCHING.name, asyncio.current_task())
+            attempt = cancel_on_error(req_url, error, attempt, OP.FETCHING.name)
             continue
         # There is also a scenario that in the process of cancelling, while is still looping, leading to run coroutine with a closed session.
         # If session is closed, and you go on connecting, ClientConnectionError will be throwed.
         except Exception as error:
-            cancel_on_error_without_retry(req_url, error, OP.FETCHING.name, asyncio.current_task())
+            cancel_on_error_without_retry(req_url, error, OP.FETCHING.name)
             break
         else:
             break
@@ -556,12 +555,14 @@ def sense(node, attr, parent_attr, ancestor_attr, num_label_count):
             # Because using tags() here conflicts with these same classes elsewhere with different new line or not requirements.
             # Adding extra checks as to where the node comes from in already complex tags() is not a good idea.
             for child in children[1 : ]:
-                if child.attrib["class"] == "if":
-                    end = "\n" if child.getnext() is None else ""
-                    c_print(f"#[bold]{child.text.strip()}", end=end)
-                elif "badge mw-badge-gray-100" in child.attrib["class"]:
-                    end = " " if child.getnext() is not None else "\n"
-                    print_meaning_badge(child.text, end=end)
+                child_attr = child.get("class")
+                if child_attr is not None:
+                    if child_attr == "if":
+                        end = "\n" if child.getnext() is None else ""
+                        c_print(f"#[bold]{child.text.strip()}", end=end)
+                    elif "badge mw-badge-gray-100" in child_attr:
+                        end = " " if child.getnext() is not None else "\n"
+                        print_meaning_badge(child.text, end=end)
         else:
             sense_content = children[1]
 

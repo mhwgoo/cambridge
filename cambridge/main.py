@@ -30,6 +30,12 @@ async def main():
 
     con.close()
 
+
+def run_on_term():
+    result = asyncio.run(main())
+    print(result)
+
+
 if __name__ == "__main__":
     import os
     import sys
@@ -46,6 +52,7 @@ if __name__ == "__main__":
     asyncio.run(main())
 
 else:
+    import sys
     import asyncio
     import aiohttp
     import logging
@@ -53,5 +60,3 @@ else:
     from .args import parse_args, search_word, list_words, wod
     from .cache import con
     from .log import logger
-
-    asyncio.run(main())

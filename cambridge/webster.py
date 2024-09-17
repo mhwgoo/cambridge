@@ -409,9 +409,11 @@ def ex_sent(node, ancestor_attr, num_label_count):
         text = t.strip("\n").strip()
         if text:
             if t in hl_words:
-                if index == count - 1 or (index == count-2 and texts[count-1].strip("\n").strip() == "") :
+                if index == count - 1 or (index == count - 2 and texts[count-1].strip("\n").strip() == "") :
                     print_mw(text, True, "hl")
-                elif texts[index + 1].strip("\n").strip() and (not texts[index + 1].strip("\n").strip()[0].isalnum()):
+                elif texts[index + 1].strip("\n").strip() and texts[index + 1].strip("\n").strip()[0].isalnum() == "-":
+                    print_mw(text, True, "hl")
+                elif index != count - 2  and not texts[index + 1].strip("\n").strip() and texts[index + 2].strip("\n").strip() in ems:
                     print_mw(text, True, "hl")
                 else:
                     print_mw(text, False, "hl")
@@ -422,11 +424,11 @@ def ex_sent(node, ancestor_attr, num_label_count):
                 if index != (count - 1) and texts[index + 1].startswith(" "):
                     print("", end = " ")
             else:
-                if index == count - 1 or (index == count-2 and texts[count-1].strip("\n").strip() == "") :
+                if index == count - 1 or (index == count - 2 and texts[count-1].strip("\n").strip() == "") :
                     print_mw(text, True, "normal")
                 elif texts[index + 1] in ems:
                     print_mw(text, True, "normal")
-                elif texts[index + 1] in hl_words and t[-1] == '"':
+                elif texts[index + 1] in hl_words and (t[-1] == '"' or t[-1] == '-'):
                     print_mw(text, True, "normal")
                 else:
                     print_mw(text, False, "normal")
@@ -563,6 +565,16 @@ def sense(node, attr, parent_attr, ancestor_attr, num_label_count):
                     elif "badge mw-badge-gray-100" in child_attr:
                         end = " " if child.getnext() is not None else "\n"
                         print_meaning_badge(child.text, end=end)
+                else:
+                    for c in child:
+                        c_attr = c.get("class")
+                        if c_attr == "vl":
+                            print_meaning_badge(c.text.strip(), end=" ")
+                        elif c_attr == "va":
+                            print_class_va(c.text)
+                        elif "prons-entries-list" in c_attr:
+                            print_pron(c)
+                            print()
         else:
             sense_content = children[1]
 
@@ -611,6 +623,7 @@ def tags(node, ancestor_attr, num_label_count):
     has_et = False
     has_dtText = False
     no_print = False
+    has_sense2 = False
 
     for elm in node.iterdescendants():
         elm_attr = elm.get("class")
@@ -618,14 +631,25 @@ def tags(node, ancestor_attr, num_label_count):
         parent_attr = parent.get("class")
 
         if elm_attr is not None:
+            if "sn sense-2" == elm_attr:
+                has_sense2 = True
             if "badge " in elm_attr and "pron" not in elm_attr:
+                prev = elm.getprevious()
+                if prev is not None and prev.get("class") is None:
+                    print("", end=" ")
                 text = "".join(list(elm.itertext())).strip()
                 if elm.getnext() is not None:
                     print_meaning_badge(text, end=" ")
-                elif "spl plural badge" in elm_attr: # e.g. "time", "dig", does not work for "short" with some structure
+                elif "spl plural badge" in elm_attr: # e.g. "young", "dig"
+                    end = "\n" if has_sense2 else ""
+                    print_meaning_badge(text, end=end)
+                elif "lb badge" in elm_attr: # e.g "Goth"
                     print_meaning_badge(text, end="\n")
+                elif "sl badge" in elm_attr: # e.g. "dig", "scant", "cool"; "bro", "aver", "feign", "balk"
+                    end = "\n" if has_sense2 else ""
+                    print_meaning_badge(text, end=end)
                 else:
-                    print_meaning_badge(text, end="") # e.g. "scant", "cool", does not work for "aver" with some structure
+                    print_meaning_badge(text, end="")
 
             elif elm_attr == "et":
                 et(elm)
@@ -893,15 +917,22 @@ def row_headword_row_header_vrs(node):
 def dxnls(node):
     """Print dxnls section, such as 'see also', 'compare' etc."""
 
+    prev = node.getprevious()
+    prev_attr = prev.get("class")
+
     texts = list(node.itertext())
     for text in texts:
         text = text.strip()
         if not text:
             continue
         if text == "see also":
-            c_print(f"\n#[bold {w_col.dxnls_content}]{text.upper()}", end = " ")
+            if prev is not None and prev_attr is not None and "entry-uros" not in prev_attr:
+               print()
+            c_print(f"#[bold {w_col.dxnls_content}]{text.upper()}", end = " ")
         elif text == "compare":
-            c_print(f"\n#[bold {w_col.dxnls_content}]{text.upper()}", end = " ")
+            if prev is not None and prev_attr is not None and "entry-uros" not in prev_attr:
+               print()
+            c_print(f"#[bold {w_col.dxnls_content}]{text.upper()}", end = " ")
         elif text == ",":
             c_print(f"#[{w_col.dxnls_content}]{text}", end = " ")
         else:

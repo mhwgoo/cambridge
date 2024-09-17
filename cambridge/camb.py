@@ -228,18 +228,25 @@ def parse_dict_head(block):
                 # intentionally leave out pronunciations of the plural form:
                 # e.g. cortex: uk  /ˈkɔː.tɪ.siːz/ us  /ˈkɔːr.tɪ.siːz/
                 # e.g. vortex: uk  /-tɪ.siːz/ us  /-tə-/
-                for infgroup in infgroups:
+                for index, infgroup in enumerate(infgroups):
+                    b = infgroup.find("b")
+                    if b is not None:
+                        next = b.find_next_sibling()
+                        end = " or " if next is not None else ""
+                        c_print(f"#[bold]{b.text}#[/bold]", end=end)
+                        if next is not None and next.has_attr('class') and next['class'][0] == "inf":
+                            c_print(f"#[bold]{next.text}#[/bold]", end="")
+
                     infdlab = infgroup.find("span", "lab dlab")
                     if infdlab is not None:
+                        print(infdlab.text, end="")
                         next_sibling = infdlab.find_next_sibling()
-                        end = " " if next_sibling is not None else ""
-                        print(infdlab.text, end=end)
+                        if next_sibling is not None:
+                            c_print(f"#[bold] {next_sibling.text}#[/bold]", end="")
 
-                    for index, b in enumerate(infgroup.find_all("b")):
-                        if index == 0:
-                            print(b.text, end=" ")
-                        else:
-                            print("or " + b.text, end="")
+                    if index != len(infgroups) - 1:
+                        print(" | ", end="")
+
                 print()
 
 

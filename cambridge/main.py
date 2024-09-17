@@ -32,8 +32,7 @@ async def main():
 
 
 def run_on_term():
-    result = asyncio.run(main())
-    print(result)
+    asyncio.run(main())
 
 
 if __name__ == "__main__":

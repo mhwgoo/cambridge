@@ -53,3 +53,5 @@ else:
     from .args import parse_args, search_word, list_words, wod
     from .cache import con
     from .log import logger
+
+    asyncio.run(main())

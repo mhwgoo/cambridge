@@ -109,14 +109,14 @@ async def fresh_run(session, input_word, no_suggestions, req_url):
                 sub_tree = tree.xpath('//*[@id="left-content"]')[0]
                 nodes = sub_tree.xpath(search_pattern)
                 if len(nodes) == 0:
-                    quit_on_no_result(DICT.MERRIAM_WEBSTER.name, is_spellcheck=Fasle)
+                    quit_on_no_result(DICT.MERRIAM_WEBSTER.name, is_spellcheck=False)
 
                 # Response word within res_url is not same with what apppears on the web page. e.g. "set in stone"
                 result = sub_tree.xpath('//*[@id="left-content"]/div[contains(@id, "-entry-1")]/div[1]/div/div[1]/h1/text()') \
                        or sub_tree.xpath('//*[@id="left-content"]/div[contains(@id, "-entry-1")]/div[1]/div/div/h1/span/text()')
 
                 if len(result) == 0:
-                    quit_on_no_result(DICT.MERRIAM_WEBSTER.name, is_spellcheck=Fasle)
+                    quit_on_no_result(DICT.MERRIAM_WEBSTER.name, is_spellcheck=False)
 
                 await parse_and_print(nodes, res_url, new_line=True)
 

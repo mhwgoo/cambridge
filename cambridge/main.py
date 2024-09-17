@@ -20,13 +20,13 @@ async def main():
         try:
             sys.exit(2)
         except SystemExit:
-            print("Exit.")
+            pass
 
     #except KeyboardInterrupt:
     #    print("\nStopped by user.")
 
     except SystemExit:
-        print("Exit.")
+        pass
 
     con.close()
 

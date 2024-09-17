@@ -46,7 +46,7 @@ def parse_args(session):
         "-d",
         "--delete",
         nargs="+",
-        help="delete a word/phrase or multiple words/phrases(separated by ', ') from cache",
+        help="delete a word/phrase or multiple words/phrases(separated by ',') from cache",
     )
 
     # Add an optional argument for l command
@@ -66,7 +66,7 @@ def parse_args(session):
     )
 
     # Add sub-command s
-    parser_sw = sub_parsers.add_parser("s", help="look up a word/phrase; hidden for convenience, no need to type")
+    parser_sw = sub_parsers.add_parser("s", help="look up words/phrases; hidden for convenience, no need to type")
 
     # Make sub-command s run default function of "search_words"
     parser_sw.set_defaults(func=search_word)
@@ -76,7 +76,7 @@ def parse_args(session):
         "-s",
         "--search",
         nargs="+",
-        help="look up a word/phrase in Cambridge Dictionary; e.g. camb <word/phrase>",
+        help="look up words/phrases (separated by ',') in Cambridge Dictionary",
     )
 
     # Add an optional argument for s command
@@ -84,7 +84,7 @@ def parse_args(session):
         "-c",
         "--chinese",
         nargs="+",
-        help="look up a word/phrase in Cambridge Dictionary with Chinese translation",
+        help="look up words/phrases (separated by ',') in Cambridge Dictionary with Chinese translation",
     )
 
     # Add an optional argument for s command
@@ -92,7 +92,7 @@ def parse_args(session):
         "-w",
         "--webster",
         nargs="+",
-        help="look up a word/phrase in Merriam-Webster Dictionary",
+        help="look up words/phrases (separated by ',') in Merriam-Webster Dictionary",
     )
 
     # Add an optional argument for s command
@@ -100,7 +100,7 @@ def parse_args(session):
         "-f",
         "--fresh",
         action="store_true",
-        help="look up a word/phrase afresh without using cache",
+        help="look up words/phrases afresh without using cache",
     )
 
 
@@ -109,7 +109,7 @@ def parse_args(session):
         "-n",
         "--nosuggestions",
         action="store_true",
-        help="look up a word/phrase without showing spelling suggestions if not found",
+        help="look up words/phrases without showing spelling suggestions if not found",
     )
 
     # Add sub-command wod

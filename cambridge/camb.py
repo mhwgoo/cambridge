@@ -229,20 +229,26 @@ def parse_dict_head(block):
                 # e.g. cortex: uk  /ˈkɔː.tɪ.siːz/ us  /ˈkɔːr.tɪ.siːz/
                 # e.g. vortex: uk  /-tɪ.siːz/ us  /-tə-/
                 for index, infgroup in enumerate(infgroups):
-                    b = infgroup.find("b")
-                    if b is not None:
-                        next = b.find_next_sibling()
-                        end = " or " if next is not None else ""
-                        c_print(f"#[bold]{b.text}#[/bold]", end=end)
-                        if next is not None and next.has_attr('class') and next['class'][0] == "inf":
-                            c_print(f"#[bold]{next.text}#[/bold]", end="")
-
                     infdlab = infgroup.find("span", "lab dlab")
                     if infdlab is not None:
+                        previous_sibling = infdlab.find_previous_sibling()
+                        if previous_sibling is not None:
+                            c_print(f"#[bold] {previous_sibling.text}#[/bold]", end=" or ")
+
                         print(infdlab.text, end="")
+
                         next_sibling = infdlab.find_next_sibling()
                         if next_sibling is not None:
                             c_print(f"#[bold] {next_sibling.text}#[/bold]", end="")
+
+                    else:
+                        b = infgroup.find("b")
+                        if b is not None:
+                            next = b.find_next_sibling()
+                            end = " or " if next is not None else ""
+                            c_print(f"#[bold]{b.text}#[/bold]", end=end)
+                            if next is not None and next.has_attr('class') and next['class'][0] == "inf":
+                                c_print(f"#[bold]{next.text}#[/bold]", end="")
 
                     if index != len(infgroups) - 1:
                         print(" | ", end="")

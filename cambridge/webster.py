@@ -916,9 +916,6 @@ def row_headword_row_header_vrs(node):
 def dxnls(node):
     """Print dxnls section, such as 'see also', 'compare' etc."""
 
-    prev = node.getprevious()
-    prev_attr = prev.get("class")
-
     texts = list(node.itertext())
     for text in texts:
         text = text.strip()

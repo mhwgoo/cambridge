@@ -1,6 +1,6 @@
 import sys
 import re
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup # type: ignore
 import asyncio
 
 from .console import c_print
@@ -99,7 +99,7 @@ async def fresh_run(session, input_word, is_ch, no_suggestions, req_url):
                 select_word = get_suggestion_by_fzf(suggestions, DICT.CAMBRIDGE.name) if has_tool("fzf") else get_suggestion(suggestions, DICT.CAMBRIDGE.name)
                 if select_word == "":
                     logger.debug(f'{OP.SWITCHED.name} to {DICT.MERRIAM_WEBSTER.name}')
-                    await webster.search_webster(session, input_word, True, no_suggestions, None)
+                    await webster.search_webster(session, input_word, True, no_suggestions, None) # type: ignore
                 else:
                     logger.debug(f'{OP.SELECTED.name} "{select_word}"')
                     await search_cambridge(session, select_word, False, False, no_suggestions, None)
@@ -141,7 +141,7 @@ async def fresh_run(session, input_word, is_ch, no_suggestions, req_url):
 
                     print()
 
-                    hword = soup.find("b", "tb ttn").text
+                    hword = soup.find("b", "tb ttn").text # type: ignore
                     await save_to_cache(input_word, hword, res_url, str(first_dict))
 
 

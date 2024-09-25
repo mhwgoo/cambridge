@@ -39,7 +39,7 @@ if __name__ == "__main__":
     import os
     import sys
     import asyncio
-    import aiohttp
+    import aiohttp # type: ignore
     import logging
 
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -53,7 +53,7 @@ if __name__ == "__main__":
 else:
     import sys
     import asyncio
-    import aiohttp
+    import aiohttp # type: ignore
     import logging
 
     from .args import parse_args, search_word, list_words, wod

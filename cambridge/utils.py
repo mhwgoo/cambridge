@@ -3,7 +3,7 @@ import subprocess
 import asyncio
 from urllib import parse
 from enum import Enum
-from fake_user_agent import aio_user_agent
+from fake_user_agent import aio_user_agent # type: ignore
 
 from .log import logger
 from .console import c_print
@@ -66,7 +66,7 @@ def cancel_on_error_without_retry(path, error, op):
 
     logger.debug(f"{OP.CANCELLING.name} task...")
     task = asyncio.current_task()
-    task.cancel() # Cancel won't exit the system, instead making it possible for fetch() to return None
+    task.cancel() # type: ignore
 
 
 async def fetch(session, url):

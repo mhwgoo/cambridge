@@ -326,7 +326,7 @@ def dtText(node, ancestor_attr, num_label_count):
             elif text == " see " or text == " compare ":
                 parent_attr = node.getparent().get("class")
                 if "dt" in parent_attr or "sdsense" == parent_attr:
-                    print_meaning_keyword("-> " + text.strip().upper())
+                    print_meaning_keyword(" -> " + text.strip().upper()) # e.g. "antenna", "storm"
                 else:
                     if is_format:
                         print_meaning_keyword(text.strip().upper())
@@ -349,9 +349,10 @@ def dtText(node, ancestor_attr, num_label_count):
             elif l_words and text in l_words:
                 text_new = (" " + text)
                 print_meaning_content(text_new, end="")
-            elif index == len(texts) - 1:
-                text = text[:-1] if text[-1] == " " else text
-                print_meaning_content(text, end="") # e.g. creative
+            #elif index == len(texts) - 1:
+            #    text = text[:-1] if text[-1] == " " else text
+            #    print("$$$$$$")
+            #    print_meaning_content(text, end="") # e.g. creative
             else:
                 print_meaning_content(text, end="")
 
@@ -409,7 +410,7 @@ def ex_sent(node, ancestor_attr, num_label_count):
         text = t.strip("\n").strip()
         if text:
             if t in hl_words:
-                if index == count - 1 or (index == count - 2 and texts[count-1].strip("\n").strip() == "") :
+                if index == count - 1 or (index == count - 2 and (texts[count-1].strip("\n").strip() == "" or texts[count-1].strip("\n").strip() == ".")):
                     print_mw(text, True, "hl")
                 elif texts[index + 1].strip("\n").strip() and texts[index + 1].strip("\n").strip()[0].isalnum() == "-":
                     print_mw(text, True, "hl")
@@ -485,10 +486,11 @@ def unText_simple(node, ancestor_attr, has_badge=True):
 
     node_pre = node.getprevious()
     node_pre_attr = node_pre.get("class")
+    node_next = node.getnext()
 
-    arrow = ""
     if "mdash" in node_pre_attr: # e.g. "time", does not work for "heavy" with the same structure
-        arrow = "-> "
+        pre_space = "" if ancestor_attr == "sense  no-subnum" and node_next is None else " "
+        c_print(f"{pre_space}#[{w_col.meaning_arrow}]->", end="")
 
     bolds = get_word_faces(node)
     text_list = list(node.itertext())
@@ -501,7 +503,7 @@ def unText_simple(node, ancestor_attr, has_badge=True):
                     text_list[index] = f"#[bold]{t}#[/bold]#[{w_col.meaning_arrow}]"
 
     text = "".join(text_list).strip()
-    c_print(f"#[{w_col.meaning_arrow}]{arrow + text}", end="")
+    c_print(f"#[{w_col.meaning_arrow}] {text}", end="")
 
 
 def sense(node, attr, parent_attr, ancestor_attr, num_label_count):
@@ -689,9 +691,6 @@ def tags(node, ancestor_attr, num_label_count):
             elif elm_attr == "dtText":
                 dtText(elm, ancestor_attr, num_label_count) # only meaning text
                 has_dtText = True
-                elm_next = elm.getnext()
-                if elm_next is not None and elm_next.get("class") == "uns":
-                    print(" ", end="")
 
             elif elm_attr == "sub-content-thread":
                 sub_content_thread(elm, ancestor_attr, num_label_count) # example under the meaning
@@ -894,11 +893,11 @@ def print_vrs(node):
                     if attr == "il " or attr == "vl":
                         print_or_badge(child.text)
                     elif attr == "va":
+                        end = " " if child.getnext() is not None else ""
                         if child.text is None:
                             for i in child:
-                                print_class_va(i.text, end="")
+                                print_class_va(i.text, end=end)
                         else:
-                            end = " " if child.getnext() is not None else ""
                             print_class_va(child.text, end=end)
                     elif "prons-entries-list" in attr:
                         print_pron(child)
@@ -926,12 +925,8 @@ def dxnls(node):
         if not text:
             continue
         if text == "see also":
-            if prev is not None and prev_attr is not None and "entry-uros" not in prev_attr:
-               print()
             c_print(f"#[bold {w_col.dxnls_content}]{text.upper()}", end = " ")
         elif text == "compare":
-            if prev is not None and prev_attr is not None and "entry-uros" not in prev_attr:
-               print()
             c_print(f"#[bold {w_col.dxnls_content}]{text.upper()}", end = " ")
         elif text == ",":
             c_print(f"#[{w_col.dxnls_content}]{text}", end = " ")

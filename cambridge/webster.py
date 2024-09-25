@@ -485,12 +485,19 @@ def unText_simple(node, ancestor_attr, has_badge=True):
         format_basedon_ancestor(ancestor_attr, prefix="")
 
     node_pre = node.getprevious()
-    node_pre_attr = node_pre.get("class")
-    node_next = node.getnext()
+    node_pre_attr = None
+    if node_pre is not None:
+        node_pre_attr = node_pre.get("class")
 
-    if "mdash" in node_pre_attr: # e.g. "time", does not work for "heavy" with the same structure
-        pre_space = "" if ancestor_attr == "sense  no-subnum" and node_next is None else " "
-        c_print(f"{pre_space}#[{w_col.meaning_arrow}]->", end="")
+    if "mdash mdash-silent" == node_pre_attr:
+        gp_prev = node.getparent().getparent().getprevious()
+        node_next = node.getnext()
+        if gp_prev is None and node_next is None:
+            c_print(f"#[{w_col.meaning_arrow}]->", end="")
+        elif gp_prev is not None and gp_prev.get("class") == "sub-content-thread" and node_next is not None and node_next.get("class") == "vi":
+            c_print(f"#[{w_col.meaning_arrow}]->", end="")
+        else:
+            c_print(f" #[{w_col.meaning_arrow}]->", end="")
 
     bolds = get_word_faces(node)
     text_list = list(node.itertext())

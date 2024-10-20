@@ -258,9 +258,9 @@ def phrases(node):
         try:
             if child.attrib["class"] == "drp":
                 if child.getnext().tag == "span":
-                    c_print(f"#[{w_col.ph_item} bold]{child.text}", end = "")
+                    c_print(f"#[{w_col.ph_item} bold]{child.text}", end="")
                 else:
-                    c_print(f"#[{w_col.ph_item} bold]{child.text}", end = "\n")
+                    c_print(f"#[{w_col.ph_item} bold]{child.text}", end="\n")
 
             elif child.attrib["class"] == "vg":
                 vg(child)
@@ -270,7 +270,9 @@ def phrases(node):
                 if i.attrib["class"] == "vl":
                     print_or_badge(i.text)
                 else:
-                    c_print(f"#[{w_col.ph_item} bold]{i.text}", end = "\n")
+                    c_print(f"#[{w_col.ph_item} bold]{i.text}", end="")
+            if child.getnext().get("class") == "vg":
+                print()
 
 
 def related_phrases(node):
@@ -323,19 +325,7 @@ def dtText(node, ancestor_attr, num_label_count):
         if text.strip("\n").strip():
             if text == ": ":
                 print_meaning_content(text, end="")
-            elif text == " see " or text == " compare ":
-                parent_attr = node.getparent().get("class")
-                if "dt" in parent_attr or "sdsense" == parent_attr:
-                    print_meaning_keyword(" -> " + text.strip().upper()) # e.g. "antenna", "storm"
-                else:
-                    if is_format:
-                        print_meaning_keyword(text.strip().upper())
-                    elif "has-sn" in ancestor_attr or "has-num" in ancestor_attr:
-                        format_basedon_ancestor(ancestor_attr, prefix=prefix)
-                        print_meaning_keyword(text.strip().upper())
-                    else:
-                        print_meaning_keyword("\n" + text.strip().upper())
-            elif text == " see also ": # e.g. "drag", "group"
+            elif text in [" see also ", " see ", " compare "]: # e.g. "drag", "group"
                 if is_format:
                     print_meaning_keyword(text.strip().upper())
                 elif "has-sn" in ancestor_attr or "has-num" in ancestor_attr:
@@ -410,9 +400,9 @@ def ex_sent(node, ancestor_attr, num_label_count):
         text = t.strip("\n").strip()
         if text:
             if t in hl_words:
-                if index == count - 1 or (index == count - 2 and (texts[count-1].strip("\n").strip() == "" or texts[count-1].strip("\n").strip() == ".")):
+                if index == count - 1 or (index == count - 2 and (texts[count-1].strip("\n").strip() == "")):
                     print_mw(text, True, "hl")
-                elif texts[index + 1].strip("\n").strip() and texts[index + 1].strip("\n").strip()[0].isalnum() == "-":
+                elif texts[index + 1].strip("\n").strip() and texts[index + 1].strip("\n").strip()[0] in [",", ".", "?", "!", "-", "—"]: # differentiate from monetary symbols like $
                     print_mw(text, True, "hl")
                 elif index != count - 2  and not texts[index + 1].strip("\n").strip() and texts[index + 2].strip("\n").strip() in ems:
                     print_mw(text, True, "hl")
@@ -458,12 +448,16 @@ def extra(node, ancestor_attr):
     l_words = get_word_cases(node)[0]
     u_words = get_word_cases(node)[1]
 
-    prev_attr = node.getprevious().get("class")
+    prev = node.getprevious()
+    prev_attr = ""
+    if prev is not None:
+        prev_attr = prev.get("class")
+
     for text in texts:
         text_new = text.strip("\n").strip()
         if text_new:
             if text_new == "called also" or text_new == "compare":
-                prefix = "\n  " if prev_attr is not None and prev_attr == "sub-content-thread" else " "
+                prefix = "\n" if prev_attr == "sub-content-thread" else " "  # e.g. "flash-bang"
                 print_meaning_keyword(prefix + text_new.upper())
             elif u_words and text in u_words:
                 text_new = text_new.upper()
@@ -490,14 +484,19 @@ def unText_simple(node, ancestor_attr, has_badge=True):
         node_pre_attr = node_pre.get("class")
 
     if "mdash mdash-silent" == node_pre_attr:
-        gp_prev = node.getparent().getparent().getprevious()
+        gp = node.getparent().getparent()
+        gp_prev = gp.getprevious()
+        gp_next = gp.getnext()
+        gp_parent = gp.getparent()
         node_next = node.getnext()
-        if gp_prev is None and node_next is None:
-            c_print(f"#[{w_col.meaning_arrow}]->", end="")
-        elif gp_prev is not None and gp_prev.get("class") == "sub-content-thread" and node_next is not None and node_next.get("class") == "vi":
-            c_print(f"#[{w_col.meaning_arrow}]->", end="")
+        if gp_prev is None and (node_next is None or gp_next is None):
+            c_print(f"#[{w_col.meaning_arrow}]->", end=" ")
+        elif gp_prev is not None and gp_prev.get("class") in ["sub-content-thread", "sn"]:
+            c_print(f"#[{w_col.meaning_arrow}]->", end=" ")
+        elif gp_prev is not None and gp_prev.get("class") == "dtText" and gp_parent.get("class") == "sdsense" and node_next is None: # e.g. "look", "who", "forbear"
+            c_print(f"#[{w_col.meaning_arrow}]->", end=" ")
         else:
-            c_print(f" #[{w_col.meaning_arrow}]->", end="")
+            c_print(f" #[{w_col.meaning_arrow}]->", end=" ")
 
     bolds = get_word_faces(node)
     text_list = list(node.itertext())
@@ -510,7 +509,7 @@ def unText_simple(node, ancestor_attr, has_badge=True):
                     text_list[index] = f"#[bold]{t}#[/bold]#[{w_col.meaning_arrow}]"
 
     text = "".join(text_list).strip()
-    c_print(f"#[{w_col.meaning_arrow}] {text}", end="")
+    c_print(f"#[{w_col.meaning_arrow}]{text}", end="")
 
 
 def sense(node, attr, parent_attr, ancestor_attr, num_label_count):
@@ -649,12 +648,7 @@ def tags(node, ancestor_attr, num_label_count):
                 text = "".join(list(elm.itertext())).strip()
                 if elm.getnext() is not None:
                     print_meaning_badge(text, end=" ")
-                elif "spl plural badge" in elm_attr: # e.g. "young", "dig"
-                    end = "\n" if has_sense2 else ""
-                    print_meaning_badge(text, end=end)
-                elif "lb badge" in elm_attr: # e.g "Goth"
-                    print_meaning_badge(text, end="\n")
-                elif "sl badge" in elm_attr: # e.g. "dig", "scant", "cool"; "bro", "aver", "feign", "balk"
+                elif "spl plural badge" in elm_attr or "lb badge" in elm_attr or "sl badge" in elm_attr:
                     end = "\n" if has_sense2 else ""
                     print_meaning_badge(text, end=end)
                 else:
@@ -841,7 +835,12 @@ def entry_uros(node):
 
             elif elm.tag == "span" and "fw-bold fl" in attr:
                 elm_next = elm.getnext()
-                end = "\n" if elm_next is not None and elm_next.get("class") == "ins" else ""
+                if elm_next is not None and elm_next.get("class") == "ins":
+                    end = "\n"
+                elif elm_next is not None and "badge" in elm_next.get("class"):
+                    end = " "
+                else:
+                    end = ""
                 c_print(f"#[{w_col.eh_word_type}]{elm.text}", end=end)
 
             elif "ins" in attr:
@@ -933,9 +932,9 @@ def dxnls(node):
         elif text == "compare":
             c_print(f"#[bold {w_col.dxnls_content}]{text.upper()}", end = " ")
         elif text == ",":
-            c_print(f"#[{w_col.dxnls_content}]{text}", end = " ")
+            print_meaning_content(text, end=" ")
         else:
-            c_print(f"#[{w_col.dxnls_content}]{text}", end = "")
+            print_meaning_content(text, end="")
 
     print()
 
@@ -978,9 +977,12 @@ def dictionary_entry(node):
                         e_attr = e.get("class")
                         if e_attr == "cxl":
                             print_meaning_badge(e.text, end=" ")
+                        elif e_attr == "text-uppercase" and e.tail:
+                            text += e.text.upper() + e.tail
+                            print_meaning_content(text, end="\n")
                         else:
                             text += e.text + ", "
-                print_meaning_content(text[ : -2], end="\n")
+                            print_meaning_content(text[ : -2], end="\n")
 
 
 def print_meaning_badge(text, end=""):
@@ -1026,7 +1028,7 @@ def print_pron(node, header=False):
     prons = []
     for text in node.itertext():
         text = text.strip("\n").strip()
-        if text:
+        if text and len(text) > 1:
             prons.append(text)
 
     count = len(prons)
@@ -1046,7 +1048,7 @@ def print_pron(node, header=False):
             if index == 0:
                 print(f"|{pron}|", end=" ")
             elif index == count - 1:
-                if sibling is not None:
+                if sibling is not None and sibling.get("class") != "sep-semicolon":
                     c_print(f"#[{w_col.eh_word_syllables}]{pron}", end=" ")
                 else:
                     if header:

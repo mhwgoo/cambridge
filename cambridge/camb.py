@@ -151,7 +151,7 @@ def parse_dict_head(block):
     hword = word_block.text
 
     if head is None:
-        c_print("#[bold blue]" + hword, end="")
+        c_print("\n#[bold blue]" + hword, end="")
 
         info = block.find_all("span", ["pos dpos", "lab dlab", "v dv lmr-0"])
         if len(info) != 0:

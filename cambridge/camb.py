@@ -176,6 +176,7 @@ def parse_dict_head(block):
                 dlab = lab
 
         w_type = ""
+        next_sibling = None
         if head.find("span", "anc-info-head danc-info-head") is not None:
             dpos = head.find("span", attrs={"title": "A word that describes an action, condition or experience."})
             if dpos is not None:
@@ -184,40 +185,40 @@ def parse_dict_head(block):
                 if dgram is not None:
                     w_type += " " + dgram.text
             w_type = w_type.strip("\n").strip().replace(" or ", "/")
-            end = " " if irreg is not None else "\n"
-            c_print(f"\n#[bold blue]{hword}#[/bold blue] #[bold yellow]{w_type}#[/bold yellow]", end=end)
+            next_sibling = dgram.find_next_sibling()
 
         elif head.find("div", "posgram dpos-g hdib lmr-5") is not None:
             posgram = head.find("div", "posgram dpos-g hdib lmr-5")
             w_type = posgram.text.strip("\n").strip().replace(" or ", "/")
             next_sibling = posgram.find_next_sibling()
-            if next_sibling is None:
-                end = ""
-            elif next_sibling is not None and next_sibling.has_attr('class') and next_sibling['class'][0] == "lml--5":
-                end = "  "
-            elif len(vars) > 0 or spellvar is not None or domain is not None or dlab is not None or irreg is not None:
-                end = "  "
-            else:
-                end = "\n"
-            c_print(f"\n#[bold blue]{hword}#[/bold blue] #[bold yellow]{w_type}#[/bold yellow]", end=end)
+
+        if next_sibling is None:
+            end = ""
+        elif next_sibling is not None and next_sibling.has_attr('class') and next_sibling['class'][0] == "lml--5":
+            end = " "
+        elif len(vars) > 0 or spellvar is not None or domain is not None or dlab is not None or irreg is not None:
+            end = " "
+        else:
+            end = "\n"
+        c_print(f"\n#[bold blue]{hword}#[/bold blue] #[bold yellow]{w_type}#[/bold yellow]", end=end)
 
         if domain is not None:
-            print(domain.text.strip("\n").strip(), end="  ")
+            print(domain.text.strip("\n").strip(), end=" ")
 
         if dlab is not None:
             next_sibling = dlab.find_next_sibling()
-            end = "  " if ((next_sibling is not None and next_sibling.has_attr('class')) or len(vars) > 0 or irreg is not None) else "\n"
+            end = " " if ((next_sibling is not None and next_sibling.has_attr('class')) or len(vars) > 0 or irreg is not None) else "\n"
             print(dlab.text.strip("\n").strip(), end=end)
 
         if len(vars) > 0:
             for var in vars:
                 next_sibling = var.find_next_sibling()
-                end = "  " if ((next_sibling is not None and next_sibling.has_attr('class')) or irreg is not None) else "\n"
+                end = " " if ((next_sibling is not None and next_sibling.has_attr('class')) or irreg is not None) else "\n"
                 print(var.text.replace("\n", "").replace("Your browser doesn't support HTML5 audio", " ").replace("/", "|").strip(), end=end)
 
         if spellvar is not None:
             next_sibling = spellvar.find_next_sibling()
-            end = "  " if next_sibling is not None and next_sibling.has_attr('class') else "\n"
+            end = " " if next_sibling is not None and next_sibling.has_attr('class') else "\n"
             print(spellvar.text.strip("\n").strip(), end=end)
 
         if irreg is not None:
@@ -478,7 +479,8 @@ def parse_sole_idiom(block):
         text = text[ : -1]
 
     if idiom_sole_meaning is not None:
-        print("\033[34m" + text + "\033[0m")
+        print("\033[34;1m: \033[0m" + "\033[34m" + text + "\033[0m")
+
     parse_example(block)
     parse_see_also(block)
 

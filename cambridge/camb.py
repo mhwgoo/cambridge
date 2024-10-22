@@ -177,22 +177,23 @@ def parse_dict_head(block):
 
         w_type = ""
         next_sibling = None
-        if head.find("span", "anc-info-head danc-info-head") is not None:
-            dpos = head.find("span", attrs={"title": "A word that describes an action, condition or experience."})
-            if dpos is not None:
-                w_type += dpos.text
-                dgram = dpos.find_next_sibling("span", "gram dgram")
+        dpos = head.find("span", attrs={"title": "A word that describes an action, condition or experience."}) or \
+               head.find("span", attrs={"title": "A word that refers to a person, place, idea, event or thing."})
+        if dpos is not None:
+            w_type += dpos.text
+            dgram = dpos.find_next_sibling("span", "gram dgram")
+            if dgram is not None:
+                w_type += " " + dgram.text
+            w_type = w_type.strip("\n").strip().replace(" or ", "/")
+
+            parent = dpos.find_parent()
+            if parent['class'][-1] == "lmr-5":
+                next_sibling = parent.find_next_sibling()
+            else:
                 if dgram is not None:
-                    w_type += " " + dgram.text
                     next_sibling = dgram.find_next_sibling()
                 else:
                     next_sibling = dpos.find_next_sibling()
-            w_type = w_type.strip("\n").strip().replace(" or ", "/")
-
-        elif head.find("div", "posgram dpos-g hdib lmr-5") is not None:
-            posgram = head.find("div", "posgram dpos-g hdib lmr-5")
-            w_type = posgram.text.strip("\n").strip().replace(" or ", "/")
-            next_sibling = posgram.find_next_sibling()
 
         if next_sibling is None:
             end = ""
@@ -269,7 +270,8 @@ def parse_dict_head(block):
                     area_text = area.text if area is not None else ""
                     end= "" if parent.find_next_sibling() is None else " "
                     c_print(f"#[bold]{area_text} #[/bold]" + pron_text, end=end)
-        print()
+
+            print()
 
 
 def parse_def_title(block):

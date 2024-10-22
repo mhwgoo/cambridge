@@ -184,8 +184,10 @@ def parse_dict_head(block):
                 dgram = dpos.find_next_sibling("span", "gram dgram")
                 if dgram is not None:
                     w_type += " " + dgram.text
+                    next_sibling = dgram.find_next_sibling()
+                else:
+                    next_sibling = dpos.find_next_sibling()
             w_type = w_type.strip("\n").strip().replace(" or ", "/")
-            next_sibling = dgram.find_next_sibling()
 
         elif head.find("div", "posgram dpos-g hdib lmr-5") is not None:
             posgram = head.find("div", "posgram dpos-g hdib lmr-5")

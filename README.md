@@ -2,15 +2,15 @@
 `cambridge` is a terminal version of Cambridge Dictionary, whose source is from https://dictionary.cambridge.org; also supports the Merriam-Webster Dictionary as backup.
 
 ## Screenshots
-#### Look up Cambridge Dictionary (screenshot on DARK terminal background)
+#### Look up words/phrases in Cambridge Dictionary (screenshot on DARK terminal background)
 ![look up a word in Cambridge Dictionary](/screenshots/cambridge.png)
 
-#### Look up Merriam-Webster Dictionary (screenshot on LIGHT terminal background)
+#### Look up words/phases in Merriam-Webster Dictionary (screenshot on LIGHT terminal background)
 ![look up a word in Merriam-Webster Dictionary](/screenshots/webster.png)
 
 ## Highlights
 1. `camb <word/phrase>` to look up in Cambridge Dictionary by default
-2. `camb -c <word/phrase>` to look up in Cambridge Dictionary with additional Chinese translation
+2. `camb -c <word/phrase>` to look up in Cambridge Dictionary with correspondent Chinese meanings
 3. `camb -w <word/phrase>` to look up in Merriam-Webster Dictionary
 4. **support concurrent searching multiple words from one dictionary, or multiple words from different dictionaries**
 5. less than 2s taken to do all the work for the word, including fetching, parsing, printing, and writing cache
@@ -21,7 +21,7 @@
 10. support checking "Word of the Day" from Merriam-Webster Dictionary
 11. support displaying spellcheck suggestion list, cache list, Webster's all of word of the days by `fzf`
 12. if `fzf` not installed, the aforementioned lists have been formatted elaborately
-13. well tuned to dark, light, blueish, grayish, `gruvbox` terminal colorschemes
+13. well tuned to dark, light, blueish, grayish, `gruvbox` (dark & light), `solarized` (dark & light) terminal colorschemes
 
 ## Install & Uninstall
 ```bash
@@ -40,10 +40,10 @@ make clean_cache
 #### Command `s` (hidden)
 For looking up words/phrases in a dictionary or multiple dictionaries.
 ```bash
-camb <word/phrase>, <word/phrase>, ...     # look up words/phrases in Cambridge Dictionary
-camb -w <word/phrase>, <word/phrase>, ...  # look up words/phrases in Merriam-Webster Dictionary
-camb -c <word/phrase>, <word/phrase>, ...  # look up words/phrases in Cambridge with Chinese translation
-camb <w/p>, <w/p>, ... -w <w/p>, <w/p>, ... -c <w/p>, <w/p>, ... # concurrent searching
+camb <word/phrase>[, w/p, w/p, ...]    # look up words/phrases in Cambridge Dictionary
+camb -w <word/phrase>[, w/p, w/p, ...] # look up words/phrases in Merriam-Webster Dictionary
+camb -c <word/phrase>[, w/p, w/p, ...] # look up words/phrases in Cambridge with Chinese translation
+camb <w/p>[, <w/p>, ...] -w <w/p>[, <w/p>, ...] -c <w/p>[, <w/p>, ...] # look up words/phrases from multiple dictionaries all at once
 
 # Additional Options
 --debug   # look up words/phrases in debug mode

@@ -1,8 +1,7 @@
 cambridge/__pycache__/*
 cambridge/.DS_Store
-cambridge/.ruff_cache/*
 .DS_Store
-.ruff_cache/*
+*/.ruff_cache/*
 dist/
 venv/
 bugs/

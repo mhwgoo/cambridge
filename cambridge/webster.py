@@ -478,25 +478,15 @@ def unText_simple(node, ancestor_attr, has_badge=True):
         print()
         format_basedon_ancestor(ancestor_attr, prefix="")
 
-    node_pre = node.getprevious()
-    node_pre_attr = None
-    if node_pre is not None:
-        node_pre_attr = node_pre.get("class")
+    prefix = f"#[{w_col.meaning_arrow}]->"
+    suffix = " "
 
-    if "mdash mdash-silent" == node_pre_attr:
-        gp = node.getparent().getparent()
-        gp_prev = gp.getprevious()
-        gp_next = gp.getnext()
-        gp_parent = gp.getparent()
-        node_next = node.getnext()
-        if gp_prev is None and (node_next is None or gp_next is None):
-            c_print(f"#[{w_col.meaning_arrow}]->", end=" ")
-        elif gp_prev is not None and gp_prev.get("class") in ["sub-content-thread", "sn"]:
-            c_print(f"#[{w_col.meaning_arrow}]->", end=" ")
-        elif gp_prev is not None and gp_prev.get("class") == "dtText" and gp_parent.get("class") == "sdsense" and node_next is None: # e.g. "look", "who", "forbear"
-            c_print(f"#[{w_col.meaning_arrow}]->", end=" ")
-        else:
-            c_print(f" #[{w_col.meaning_arrow}]->", end=" ")
+    node_p = node.getparent() # class: "un"
+    node_p_pre = node_p.getprevious()
+    if node_p_pre is not None and node_p_pre.get("class") == "un":
+        c_print(" " + prefix, end=suffix)
+    else:
+        c_print(prefix, end=suffix)
 
     bolds = get_word_faces(node)
     text_list = list(node.itertext())

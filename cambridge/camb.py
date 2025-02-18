@@ -177,8 +177,8 @@ def parse_dict_head(block):
 
         w_type = ""
         next_sibling = None
-        dpos = head.find("span", attrs={"title": "A word that describes an action, condition or experience."}) or \
-               head.find("span", attrs={"title": "A word that refers to a person, place, idea, event or thing."})
+
+        dpos = head.find(title=re.compile("A word that"))
         if dpos is not None:
             w_type += dpos.text
             dgram = dpos.find_next_sibling("span", "gram dgram")
@@ -500,6 +500,7 @@ def parse_phrasal_verb(block):
 
 
 def parse_dict_body(block):
+    #TODO https://dictionary.cambridge.org/dictionary/english/best-efforts  parse <div class="pr runon drunon">
     subblocks = block.find_all("div", ["pr dsense", "pr dsense dsense-noh"])
 
     if len(subblocks) != 0:

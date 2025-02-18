@@ -481,12 +481,13 @@ def unText_simple(node, ancestor_attr, has_badge=True):
     prefix = f"#[{w_col.meaning_arrow}]->"
     suffix = " "
 
-    node_p = node.getparent() # class: "un"
-    node_p_pre = node_p.getprevious()
-    if node_p_pre is not None and node_p_pre.get("class") == "un":
-        c_print(" " + prefix, end=suffix)
-    else:
-        c_print(prefix, end=suffix)
+    node_pre = node.getprevious()
+    if node_pre is not None and node_pre.get("class") == "mdash mdash-silent":
+        node_p_pre = node.getparent().getprevious()
+        if node_p_pre is not None and node_p_pre.get("class") == "un":
+            c_print(" " + prefix, end=suffix)
+        else:
+            c_print(prefix, end=suffix)
 
     bolds = get_word_faces(node)
     text_list = list(node.itertext())
@@ -622,6 +623,7 @@ def tags(node, ancestor_attr, num_label_count):
     has_dtText = False
     no_print = False
     has_sense2 = False
+    sense2_has_blank_span = False
 
     for elm in node.iterdescendants():
         elm_attr = elm.get("class")
@@ -631,6 +633,8 @@ def tags(node, ancestor_attr, num_label_count):
         if elm_attr is not None:
             if "sn sense-2" == elm_attr:
                 has_sense2 = True
+                if elm.getnext() is not None and elm.getnext().get("class") is None:
+                    sense2_has_blank_span = True
             if "badge " in elm_attr and "pron" not in elm_attr:
                 prev = elm.getprevious()
                 if prev is not None and prev.get("class") is None:
@@ -698,7 +702,7 @@ def tags(node, ancestor_attr, num_label_count):
 
             elif elm_attr == "sn sense-2":
                 no_print = True
-    if (not has_et and not no_print) or (has_et and has_dtText) or has_sense2: # e.g. invest <span class="et">: [Medieval Latin investire, from Latin, to clothe]
+    if (not has_et and not no_print) or (has_et and has_dtText) or (has_sense2 and sense2_has_blank_span):
         print()
 
 

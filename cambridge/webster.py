@@ -374,7 +374,7 @@ def get_word_faces(node):
         if attr is not None:
             if i.tag == "em" and "mw" in attr:
                 ems.append(i.text)
-            elif i.tag == "span" and "mw" in attr:
+            elif i.tag == "span" and "mw" in attr and "mw_t_sp" != attr and "mw_t_gloss" != attr:
                 hl_words.append(i.text)
     return hl_words, ems
 
@@ -402,7 +402,7 @@ def ex_sent(node, ancestor_attr, num_label_count):
             if t in hl_words:
                 if index == count - 1 or (index == count - 2 and (texts[count-1].strip("\n").strip() == "")):
                     print_mw(text, True, "hl")
-                elif texts[index + 1].strip("\n").strip() and texts[index + 1].strip("\n").strip()[0] in [",", ".", "?", "!", "-", "—"]: # differentiate from monetary symbols like $
+                elif texts[index + 1][0].isalpha() or (texts[index + 1].strip("\n").strip() and texts[index + 1].strip("\n").strip()[0] in [",", ".", "?", "!", "-", "—"]):
                     print_mw(text, True, "hl")
                 elif index != count - 2  and not texts[index + 1].strip("\n").strip() and texts[index + 2].strip("\n").strip() in ems:
                     print_mw(text, True, "hl")
@@ -412,7 +412,7 @@ def ex_sent(node, ancestor_attr, num_label_count):
                 if index != 0 and texts[index - 1].endswith(" "):
                     print("", end = " ")
                 c_print(f"#[{w_col.meaning_sentence} bold]{text}", end = "")
-                if index != (count - 1) and texts[index + 1].startswith(" "):
+                if index != (count - 1) and texts[index + 1] != " " and texts[index + 1].startswith(" ") :
                     print("", end = " ")
             else:
                 if index == count - 1 or (index == count - 2 and texts[count-1].strip("\n").strip() == "") :
@@ -698,7 +698,7 @@ def tags(node, ancestor_attr, num_label_count):
 
             elif elm_attr == "sn sense-2":
                 no_print = True
-    if (not has_et and not no_print) or (has_et and has_dtText): # e.g. invest <span class="et">: [Medieval Latin investire, from Latin, to clothe]
+    if (not has_et and not no_print) or (has_et and has_dtText) or has_sense2: # e.g. invest <span class="et">: [Medieval Latin investire, from Latin, to clothe]
         print()
 
 
@@ -862,7 +862,7 @@ def entry_uros(node):
                             for i in child:
                                 print_class_va(i.text)
                         else:
-                            end = " " if c.getnext() is not None else ""
+                            end = " " if (c.getnext() is not None or elm.getnext() is not None) else ""
                             print_class_va(c.text, end=end)
                     elif "prons-entries-list" in attr_c:
                         continue
@@ -961,19 +961,16 @@ def dictionary_entry(node):
                 print_header_badge(badge.text, end="\n")
 
             elif elm_attr == "cxl-ref":
-                text = ""
-                for e in elm.iterdescendants():
-                    if e.tag == "span":
-                        e_attr = e.get("class")
-                        if e_attr == "cxl":
-                            print_meaning_badge(e.text, end=" ")
-                        elif e_attr == "text-uppercase" and e.tail:
-                            text += e.text.upper() + e.tail
-                            print_meaning_content(text, end="\n")
-                        else:
-                            text += e.text + ", "
-                            print_meaning_content(text[ : -2], end="\n")
-
+                texts = list(elm.itertext())
+                for text in texts:
+                    t = text.strip()
+                    if t == ",":
+                        print_meaning_content(t, end=" ")
+                    elif "chiefly" in t:
+                        print_meaning_badge("\n" + t, end=" ")
+                    else:
+                        print_meaning_content(t.upper(), end="")
+                print()
 
 def print_meaning_badge(text, end=""):
     c_print(f"#[{w_col.meaning_badge}]{text}", end=end)
@@ -1020,6 +1017,9 @@ def print_pron(node, header=False):
         text = text.strip("\n").strip()
         if text and len(text) > 1:
             prons.append(text)
+
+    if "US" in prons[0] or "Canadian" in prons[0] or "British" in prons[0]:
+        prons = prons[1:]
 
     count = len(prons)
     if count == 1:

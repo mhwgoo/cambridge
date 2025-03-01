@@ -174,7 +174,7 @@ def nearby_entries(node):
             continue
         else:
             if has_title:
-                c_print(f"\n#[bold {w_col.nearby_title}]{elm.text}", end="\n")
+                c_print(f"\n#[bold {w_col.nearby_title}]{elm.text}", end="")
 
             elif has_em:
                 word = "".join(list(elm.itertext()))

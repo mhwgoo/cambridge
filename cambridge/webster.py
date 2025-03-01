@@ -174,7 +174,7 @@ def nearby_entries(node):
             continue
         else:
             if has_title:
-                c_print(f"#[bold {w_col.nearby_title}]{elm.text}", end="")
+                c_print(f"\n#[bold {w_col.nearby_title}]{elm.text}", end="\n")
 
             elif has_em:
                 word = "".join(list(elm.itertext()))
@@ -211,6 +211,7 @@ def synonyms(node):
 
 def examples(node):
     print()
+
     for elm in node.iterdescendants():
         try:
             is_title = ("ex-header function-label" in elm.attrib["class"])
@@ -239,20 +240,26 @@ def examples(node):
                                 if w in text and len(text) < 20:
                                     hit = True
                                     break
+                                elif '/' in w:
+                                    temp = w.split("/")
+                                    if temp[0] in text or temp[-1] in text:
+                                        hit = True
+                                        break
+                                    break
+
                         for f in word_forms:
                             if f == text:
                                 hit = True
                                 break
 
                         if hit:
-                            c_print(f"#[{w_col.eg_sentence} bold]{t}", end="")
+                            c_print(f"#[{w_col.eg_word} bold]{t}", end="")
                         else:
                             c_print(f"#[{w_col.eg_sentence}]{t}", end="")
 
 
 def phrases(node):
     print()
-
     children = node.getchildren()[1]
     for child in children:
         try:

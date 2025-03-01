@@ -167,25 +167,23 @@ def nearby_entries(node):
     for elm in node.iterdescendants():
         try:
             has_title = (elm.tag == "h2")
-            has_word = (elm.tag == "div") and (elm.attrib["class"] == "b-link hw-text fw-bold")
+            has_word = (elm.tag == "div" or elm.tag == "span") and (elm.attrib["class"] == "b-link hw-text fw-bold")
             has_nearby = (elm.tag == "a") and (elm.attrib["class"] == "b-link")
             has_em = (elm.tag == "em")
         except KeyError:
             continue
         else:
-            if has_title:
+            if has_title and "Browse Nearby Entries" in elm.text:
                 c_print(f"\n#[bold {w_col.nearby_title}]{elm.text}", end="\n")
-
+            elif has_title and "Dictionary Entries Near" in elm.text:
+                c_print(f"\n#[bold {w_col.nearby_title}]{elm.text}", end="")
             elif has_em:
                 word = "".join(list(elm.itertext()))
                 c_print(f"#[bold {w_col.nearby_em}]{word}", end="\n")
-
             elif has_word:
                 c_print(f"#[{w_col.nearby_word}]{elm.text}", end="\n")
-
             elif has_nearby:
                 c_print(f"#[{w_col.nearby_item}]{elm.text}", end="\n")
-
 
 def synonyms(node):
     print()

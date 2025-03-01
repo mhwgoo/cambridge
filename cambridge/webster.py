@@ -167,14 +167,14 @@ def nearby_entries(node):
     for elm in node.iterdescendants():
         try:
             has_title = (elm.tag == "h2")
-            has_word = (elm.tag == "span") and (elm.attrib["class"] == "b-link hw-text fw-bold")
+            has_word = (elm.tag == "div") and (elm.attrib["class"] == "b-link hw-text fw-bold")
             has_nearby = (elm.tag == "a") and (elm.attrib["class"] == "b-link")
             has_em = (elm.tag == "em")
         except KeyError:
             continue
         else:
             if has_title:
-                c_print(f"\n#[bold {w_col.nearby_title}]{elm.text}", end="")
+                c_print(f"\n#[bold {w_col.nearby_title}]{elm.text}", end="\n")
 
             elif has_em:
                 word = "".join(list(elm.itertext()))

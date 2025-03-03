@@ -173,7 +173,7 @@ def nearby_entries(node):
         except KeyError:
             continue
         else:
-            if has_title and "Browse Nearby Entries" in elm.text:
+            if has_title and "Browse Nearby" in elm.text:
                 c_print(f"\n#[bold {w_col.nearby_title}]{elm.text}", end="\n")
             elif has_title and "Dictionary Entries Near" in elm.text:
                 c_print(f"\n#[bold {w_col.nearby_title}]{elm.text}", end="")
@@ -848,7 +848,11 @@ def entry_uros(node):
 
             elif "sl badge" in attr:
                 text = "".join(list(elm.itertext())).strip()
-                print_meaning_badge(text)
+                prev = elm.getprevious()
+                if prev is not None and prev.get("class") == "vrs":
+                    print_meaning_badge(" " + text)
+                else:
+                    print_meaning_badge(text)
 
             elif "utxt" in attr:
                 for i in elm.iterchildren():
@@ -980,6 +984,7 @@ def dictionary_entry(node):
                     else:
                         print_meaning_content(t.upper(), end="")
                 print()
+
 
 def print_meaning_badge(text, end=""):
     c_print(f"#[{w_col.meaning_badge}]{text}", end=end)

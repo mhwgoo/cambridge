@@ -692,7 +692,7 @@ def tags(node, ancestor_attr, num_label_count):
                 dtText(elm, ancestor_attr, num_label_count) # only meaning text
                 has_dtText = True
 
-            elif elm_attr == "sub-content-thread":
+            elif "sub-content-thread" in elm_attr:
                 sub_content_thread(elm, ancestor_attr, num_label_count) # example under the meaning
                 has_badge = False
 
@@ -853,7 +853,7 @@ def entry_uros(node):
             elif "utxt" in attr:
                 for i in elm.iterchildren():
                     sub_attr = i.get("class")
-                    if sub_attr is not None and sub_attr == "sub-content-thread":
+                    if sub_attr is not None and "sub-content-thread" in sub_attr:
                         sub_content_thread(i, "")
 
             elif "prons-entries-list" in attr:

@@ -59,12 +59,12 @@ camb "have your/its moments" | camb have your\/its moments
 ```
 
 #### Command `l`
-For listing and deleting items in the cache.
+For listing and deleting items from the cache.
 ```bash
-camb l                  # list alphabetically ordered words/phrases you've found before
-camb l -t               # list words/phrases in reverse chronological order
-camb l -r               # list 20 words/phrases from the word list randomly
-camb l -d               # delete one or more words/phrases(separated by ", ") from the list
+camb l                  # list all words/phrases in alphabetical order
+camb l -t               # list all words/phrases in reverse chronological order
+camb l -r               # list 20 words/phrases at random
+camb l -d               # delete one or more words/phrases from the cache, separated by ', '
 ```
 
 #### Command `wod`

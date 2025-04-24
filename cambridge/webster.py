@@ -14,6 +14,7 @@ WEBSTER_DICT_BASE_URL = WEBSTER_BASE_URL + "/dictionary/"
 WEBSTER_WORD_OF_THE_DAY_URL = WEBSTER_BASE_URL + "/word-of-the-day"
 WEBSTER_WORD_OF_THE_DAY_URL_CALENDAR = WEBSTER_BASE_URL + "/word-of-the-day/calendar"
 
+parser = None
 search_pattern = """
 //*[@id="left-content"]/div[contains(@id, "-entry")] |
 //*[@id="left-content"]/div[@id="phrases"] |
@@ -22,7 +23,6 @@ search_pattern = """
 //*[@id="left-content"]/div[@id="related-phrases"] |
 //*[@id="left-content"]/div[@id="nearby-entries"]
 """
-parser = etree.HTMLParser(remove_comments=True)
 
 word_entries = []    # A page may have multiple word entries, e.g. "runaway" as noun, "runaway" as adjective, "run away" as verb
 word_forms = set()   # A word may have multiple word forms, e.g. "ran", "running", "run", "flies"
@@ -60,15 +60,6 @@ async def fresh_run(session, input_word, no_suggestions, req_url):
     response = await fetch(session, req_url)
     res_url = str(response.real_url)
     status = response.status
-
-    # By default Requests will perform location redirection for all verbs except HEAD.
-    # https://requests.readthedocs.io/en/latest/user/quickstart/#redirection-and-history
-    # You don't need to deal with redirection yourself.
-    # if status == 301:
-    #     loc = res.headers["location"]
-    #     new_url = WEBSTER_BASE_URL + loc
-    #     new_res = await fetch(session, new_url)
-
     res_text = None
     attempt = 0
     while True:
@@ -86,12 +77,14 @@ async def fresh_run(session, input_word, no_suggestions, req_url):
             break
 
     if res_text is not None:
+        global parser
+        parser = etree.HTMLParser(remove_comments=True)
+        tree = etree.HTML(res_text, parser)
+
         if status == 200:
             logger.debug(f'{OP.FOUND.name} "{input_word}" in {DICT.MERRIAM_WEBSTER.name} at {res_url}')
 
             logger.debug(f"{OP.PARSING.name} {res_url}")
-            tree = etree.HTML(res_text, parser)
-
             partial_match = tree.xpath('//p[contains(@class,"partial")]')
             if partial_match:
                 input_word = decode_url(res_url).split("/")[-1]
@@ -131,21 +124,9 @@ async def fresh_run(session, input_word, no_suggestions, req_url):
                 sys.exit(-1)
 
             logger.debug(f"{OP.PARSING.name} out suggestions at {res_url}")
-            tree = etree.HTML(res_text, parser)
-            result = tree.xpath('//div[@class="widget spelling-suggestion"]')
-            if len(result) == 0:
+            suggestions = tree.xpath('//div[@class="row m-0"][1]/p[@class="col-6 col-md-4 spelling-suggestion-col "]/a/text()')
+            if len(suggestions) == 0:
                 quit_on_no_result(DICT.MERRIAM_WEBSTER.name, is_spellcheck=True)
-
-            nodes = result[0]
-            suggestions = []
-            for node in nodes:
-                if node.tag != "h1":
-                    for word in node.itertext():
-                        w = word.strip("\n").strip()
-                        if w.startswith("The"):
-                            continue
-                        else:
-                            suggestions.append(w)
 
             logger.debug(f"{OP.PRINTING.name} out suggestions at {res_url}")
             select_word = get_suggestion_by_fzf(suggestions, DICT.MERRIAM_WEBSTER.name) if has_tool("fzf") else get_suggestion(suggestions, DICT.MERRIAM_WEBSTER.name)
@@ -240,7 +221,8 @@ def examples(node):
                                     break
                                 elif '/' in w:
                                     temp = w.split("/")
-                                    if temp[0] in text or temp[-1] in text:
+                                    # e.g. "put the screws on/to (someone or something)"
+                                    if temp[0] in text or temp[-1] in text or " ".join(temp[0].split(" ")[ : -1]) + " " + temp[1].split(" ")[0] in text:
                                         hit = True
                                         break
                                     break
@@ -515,7 +497,7 @@ def sense(node, attr, parent_attr, ancestor_attr, num_label_count):
     children = node.getchildren()
 
     # meaning without any sign
-    if attr == "sense  no-subnum":
+    if "sense" in attr and "no-subnum" in attr:
         sense_content = children[0] # class "sense-content w-100"
 
     # meaning with "1" + "a"
@@ -974,15 +956,12 @@ def dictionary_entry(node):
                 print_header_badge(badge.text, end="\n")
 
             elif elm_attr == "cxl-ref":
-                texts = list(elm.itertext())
-                for text in texts:
-                    t = text.strip()
-                    if t == ",":
-                        print_meaning_content(t, end=" ")
-                    elif "chiefly" in t:
-                        print_meaning_badge("\n" + t, end=" ")
-                    else:
-                        print_meaning_content(t.upper(), end="")
+                for i in elm.iterdescendants():
+                    i_attr = i.get("class")
+                    if i.tag == "span" and i_attr == "cxl":
+                        print_meaning_badge(i.text, end=" ")
+                    elif i.tag == "span" and i_attr == "text-uppercase":
+                        print_meaning_content(i.text.upper(), end="")
                 print()
 
 
@@ -1015,7 +994,7 @@ def format_basedon_ancestor(ancestor_attr, prefix="", suffix=""):
         #if "no-sn letter-only" in root_attr:
         #    print("  ", end=suffix)
         print("    ", end=suffix)
-    elif ancestor_attr == "sense  no-subnum":
+    elif "sense" in ancestor_attr and "no-subnum" in ancestor_attr:
         print("", end=suffix)
     elif ancestor_attr == "sense has-num-only has-subnum-only":
         print("    ", end=suffix)
@@ -1094,7 +1073,7 @@ def print_class_ins(node):
     for child in node:
         attr = child.get("class")
         if attr is not None:
-            if attr == "il  il-badge badge mw-badge-gray-100":
+            if "il-badge badge mw-badge-gray-100" in attr:
                 print_header_badge(child.text.strip(), end=" ") # e.g. "natalism"
             elif attr == "prt-a":
                 print_pron(child)

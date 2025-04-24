@@ -109,6 +109,10 @@ def replace_all(string):
     )
 
 
+def remove_extra_spaces(text):
+	return ' '.join(text.split())
+
+
 def parse_response_url(url):
     return url.split("?")[0]
 

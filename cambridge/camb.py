@@ -43,12 +43,7 @@ async def cache_run(res_url_from_cache):
 
     soup = BeautifulSoup(res_text, "lxml")
     first_dict = soup.find("div", "pr dictionary") or soup.find("div", "pr di superentry")
-
-    logger.debug(f"{OP.PRINTING.name} the parsed result of {res_url_from_cache}")
-    blocks = first_dict.find_all("div", ["pr entry-body__el", "entry-body__el clrd js-share-holder", "pr idiom-block"]) # type: ignore
-    for block in blocks:
-        parse_dict_head(block)
-        parse_dict_body(block)
+    await parse_and_print(first_dict, res_url_from_cache, new_line=False)
     c_print(f'\n#[#757575]{OP.FOUND.name} "{res_word}" from {DICT.CAMBRIDGE.name} in cache. You can add "-f -w" to fetch the {DICT.MERRIAM_WEBSTER.name} dictionary')
 
 
@@ -128,22 +123,33 @@ async def fresh_run(session, input_word, is_ch, no_suggestions, req_url):
                 if first_dict is None:
                     quit_on_no_result(DICT.CAMBRIDGE.name, is_spellcheck=False)
 
-                logger.debug(f'{OP.FOUND.name} "{input_word}" in {DICT.CAMBRIDGE.name} at {req_url}')
-                logger.debug(f"{OP.PARSING.name} {req_url}")
-                blocks = first_dict.find_all("div", ["pr entry-body__el", "entry-body__el clrd js-share-holder", "pr idiom-block"]) # type: ignore
-                if len(blocks) == 0:
-                    quit_on_no_result(DICT.CAMBRIDGE.name, is_spellcheck=False)
-                else:
-                    logger.debug(f"{OP.PRINTING.name} the parsed result of {req_url}")
-                    for block in blocks:
-                        parse_dict_head(block)
-                        parse_dict_body(block)
+                logger.debug(f'{OP.FOUND.name} "{input_word}" in {DICT.CAMBRIDGE.name} at {res_url}')
+                async with asyncio.TaskGroup() as tg:
+                    task1 = tg.create_task(parse_and_print(first_dict, res_url, new_line=True))
+                    task2 = tg.create_task(cache(soup, first_dict, input_word, res_url))
 
-                    print()
 
-                    hword = soup.find("b", "tb ttn").text # type: ignore
-                    clean_text = remove_extra_spaces(str(first_dict))
-                    await save_to_cache(input_word, hword, res_url, clean_text)
+async def parse_and_print(first_dict, res_url, new_line=True):
+    logger.debug(f"{OP.PARSING.name} {res_url}")
+    nodes = first_dict.find_all("div", ["pr entry-body__el", "entry-body__el clrd js-share-holder", "pr idiom-block"]) # type: ignore
+
+    logger.debug(f"{OP.PRINTING.name} the parsed result of {res_url}")
+    for node in nodes:
+        parse_dict_head(node)
+        parse_dict_body(node)
+
+    if new_line:
+        print()
+
+
+async def cache(soup, first_dict, input_word, res_url):
+    res_word = input_word
+    result = soup.find("b", "tb ttn").text # type: ignore
+    if len(result) != 0:
+        res_word = result
+
+    clean_text = remove_extra_spaces(str(first_dict))
+    await save_to_cache(input_word, res_word, res_url, clean_text)
 
 
 def parse_dict_head(block):

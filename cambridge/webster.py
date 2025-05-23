@@ -16,15 +16,6 @@ WEBSTER_WORD_OF_THE_DAY_URL = WEBSTER_BASE_URL + "/word-of-the-day"
 WEBSTER_WORD_OF_THE_DAY_URL_CALENDAR = WEBSTER_BASE_URL + "/word-of-the-day/calendar"
 
 parser = etree.HTMLParser(remove_comments=True)
-search_pattern = """
-//*[@id="left-content"]/div[contains(@id, "-entry")] |
-//*[@id="left-content"]/div[@id="phrases"] |
-//*[@id="left-content"]/div[@id="synonyms"] |
-//*[@id="left-content"]/div[@id="examples"]/div[@class="content-section-body"]/div[contains(@class,"on-web-container")]/div[contains(@class,"on-web")] |
-//*[@id="left-content"]/div[@id="related-phrases"] |
-//*[@id="left-content"]/div[@id="nearby-entries"]
-"""
-
 word_entries = []    # A page may have multiple word entries, e.g. "runaway" as noun, "runaway" as adjective, "run away" as verb
 word_forms = set()   # A word may have multiple word forms, e.g. "ran", "running", "run", "flies"
 word_types = set()   # A word's word types, e.g. "preposition", "adjective"
@@ -51,18 +42,12 @@ async def cache_run(res_url_from_cache):
     res_word, res_text = await get_cache(res_url_from_cache)
     logger.debug(f'{OP.FOUND.name} "{res_word}" from {DICT.MERRIAM_WEBSTER.name} in cache')
     logger.debug(f"{OP.PARSING.name} {res_url_from_cache}")
-    nodes = etree.HTML(res_text, parser).xpath(search_pattern)
-    await parse_and_print(nodes, res_url_from_cache, new_line=False)
+    first_dict = etree.HTML(res_text, parser)
+    await parse_and_print(first_dict, res_url_from_cache, new_line=False)
     c_print(f'\n#[#757575]{OP.FOUND.name} "{res_word}" from {DICT.MERRIAM_WEBSTER.name} in cache. You can add "-f" to fetch the {DICT.CAMBRIDGE.name} dictionary')
 
 
 async def fresh_run(session, input_word, no_suggestions, req_url):
-    async with asyncio.TaskGroup() as tg:
-        task1 = tg.create_task(entry(session, input_word, no_suggestions, req_url))
-        # task2 = tg.create_task(examples())
-
-
-async def entry(session, input_word, no_suggestions, req_url):
     response = await fetch(session, req_url)
     res_url = str(response.real_url)
     status = response.status
@@ -118,28 +103,31 @@ async def entry(session, input_word, no_suggestions, req_url):
 
         elif status == 200:
             logger.debug(f'{OP.FOUND.name} "{input_word}" in {DICT.MERRIAM_WEBSTER.name} at {res_url}')
-            logger.debug(f"{OP.PARSING.name} {res_url}")
 
-            sub_tree = tree.xpath('//*[@id="left-content"]')[0]
-            nodes = sub_tree.xpath(search_pattern)
-            if len(nodes) == 0:
+            first_dict = tree.xpath('//*[@id="left-content"]')[0]
+            if first_dict is None:
                 quit_on_no_result(DICT.MERRIAM_WEBSTER.name, is_spellcheck=False)
 
-            # Response word within res_url is not same with what apppears on the web page. e.g. "set in stone"
-            result = sub_tree.xpath('//*[@id="left-content"]/div[contains(@id, "-entry-1")]/div[1]/div/div[1]/h1/text()') \
-                or sub_tree.xpath('//*[@id="left-content"]/div[contains(@id, "-entry-1")]/div[1]/div/div/h1/span/text()')
-
-            if len(result) == 0:
-                quit_on_no_result(DICT.MERRIAM_WEBSTER.name, is_spellcheck=False)
-
-            await parse_and_print(nodes, res_url, new_line=True)
-
-            clean_text = remove_extra_spaces(etree.tostring(sub_tree).decode('utf-8'))
-            await save_to_cache(input_word, result[0], res_url, clean_text)
+            async with asyncio.TaskGroup() as tg:
+                task1 = tg.create_task(parse_and_print(first_dict, res_url, new_line=True))
+                task2 = tg.create_task(cache(first_dict, input_word, res_url))
 
         else:
             print(f'Something went wrong when fetching {req_url} with STATUS: {status}')
             sys.exit(2)
+
+
+async def cache(first_dict, input_word, res_url):
+    res_word = input_word
+
+    # Response word within res_url is not same with what apppears on the web page. e.g. "set in stone"
+    result = first_dict.xpath('//*[@id="left-content"]/div[contains(@id, "-entry-1")]/div[1]/div/div[1]/h1/text()') \
+        or first_dict.xpath('//*[@id="left-content"]/div[contains(@id, "-entry-1")]/div[1]/div/div/h1/span/text()')
+    if len(result) != 0:
+        res_word = result[0]
+
+    clean_text = remove_extra_spaces(etree.tostring(first_dict).decode('utf-8'))
+    await save_to_cache(input_word, res_word, res_url, clean_text)
 
 
 def examples(node):
@@ -1103,9 +1091,20 @@ def print_dict_name():
     c_print(f"#[{w_col.dict_name}]{dict_name}", justify="right")
 
 
-async def parse_and_print(nodes, res_url, new_line=False):
-    logger.debug(f"{OP.PRINTING.name} the parsed result of {res_url}")
+async def parse_and_print(first_dict, res_url, new_line=True):
+    logger.debug(f"{OP.PARSING.name} {res_url}")
 
+    search_pattern = """
+    //*[@id="left-content"]/div[contains(@id, "-entry")] |
+    //*[@id="left-content"]/div[@id="phrases"] |
+    //*[@id="left-content"]/div[@id="synonyms"] |
+    //*[@id="left-content"]/div[@id="examples"]/div[@class="content-section-body"]/div[contains(@class,"on-web-container")]/div[contains(@class,"on-web")] |
+    //*[@id="left-content"]/div[@id="related-phrases"] |
+    //*[@id="left-content"]/div[@id="nearby-entries"]
+    """
+    nodes = first_dict.xpath(search_pattern)
+
+    logger.debug(f"{OP.PRINTING.name} the parsed result of {res_url}")
     for node in nodes:
         try:
             attr = node.attrib["id"]

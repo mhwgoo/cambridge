@@ -3,7 +3,7 @@ import asyncio
 from lxml import etree # type: ignore
 
 from .console import c_print
-from .utils import fetch, get_request_url, decode_url, OP, DICT, has_tool, get_suggestion, get_suggestion_by_fzf, get_wod_selection, get_wod_selection_by_fzf, quit_on_no_result, cancel_on_error, cancel_on_error_without_retry
+from .utils import fetch, get_request_url, decode_url, OP, DICT, has_tool, get_suggestion, get_suggestion_by_fzf, get_wod_selection, get_wod_selection_by_fzf, quit_on_no_result, cancel_on_error, cancel_on_error_without_retry, remove_extra_spaces
 from .log import logger
 from .cache import check_cache, save_to_cache, get_cache
 from . import camb
@@ -11,10 +11,11 @@ from . import color as w_col
 
 WEBSTER_BASE_URL = "https://www.merriam-webster.com"
 WEBSTER_DICT_BASE_URL = WEBSTER_BASE_URL + "/dictionary/"
+WEBSTER_SENT_BASE_URL = WEBSTER_BASE_URL + "/sentences/"
 WEBSTER_WORD_OF_THE_DAY_URL = WEBSTER_BASE_URL + "/word-of-the-day"
 WEBSTER_WORD_OF_THE_DAY_URL_CALENDAR = WEBSTER_BASE_URL + "/word-of-the-day/calendar"
 
-parser = None
+parser = etree.HTMLParser(remove_comments=True)
 search_pattern = """
 //*[@id="left-content"]/div[contains(@id, "-entry")] |
 //*[@id="left-content"]/div[@id="phrases"] |
@@ -50,13 +51,18 @@ async def cache_run(res_url_from_cache):
     res_word, res_text = await get_cache(res_url_from_cache)
     logger.debug(f'{OP.FOUND.name} "{res_word}" from {DICT.MERRIAM_WEBSTER.name} in cache')
     logger.debug(f"{OP.PARSING.name} {res_url_from_cache}")
-    tree = etree.HTML(res_text, parser)
-    nodes = tree.xpath(search_pattern)
+    nodes = etree.HTML(res_text, parser).xpath(search_pattern)
     await parse_and_print(nodes, res_url_from_cache, new_line=False)
     c_print(f'\n#[#757575]{OP.FOUND.name} "{res_word}" from {DICT.MERRIAM_WEBSTER.name} in cache. You can add "-f" to fetch the {DICT.CAMBRIDGE.name} dictionary')
 
 
 async def fresh_run(session, input_word, no_suggestions, req_url):
+    async with asyncio.TaskGroup() as tg:
+        task1 = tg.create_task(entry(session, input_word, no_suggestions, req_url))
+        # task2 = tg.create_task(examples())
+
+
+async def entry(session, input_word, no_suggestions, req_url):
     response = await fetch(session, req_url)
     res_url = str(response.real_url)
     status = response.status
@@ -77,47 +83,8 @@ async def fresh_run(session, input_word, no_suggestions, req_url):
             break
 
     if res_text is not None:
-        global parser
-        parser = etree.HTMLParser(remove_comments=True)
         tree = etree.HTML(res_text, parser)
-
-        if status == 200:
-            logger.debug(f'{OP.FOUND.name} "{input_word}" in {DICT.MERRIAM_WEBSTER.name} at {res_url}')
-
-            logger.debug(f"{OP.PARSING.name} {res_url}")
-            partial_match = tree.xpath('//p[contains(@class,"partial")]')
-            if partial_match:
-                input_word = decode_url(res_url).split("/")[-1]
-                suggestions = tree.xpath('//h2[@class="hword"]/text() | //h2[@class="hword"]/span/text()')
-
-                logger.debug(f"{OP.PRINTING.name} out suggestions at {res_url}")
-                select_word = get_suggestion_by_fzf(suggestions, DICT.MERRIAM_WEBSTER.name) if has_tool("fzf") else get_suggestion(suggestions, DICT.MERRIAM_WEBSTER.name)
-                if select_word == "":
-                    logger.debug(f'{OP.SWITCHED.name} to {DICT.CAMBRIDGE.name}')
-                    await camb.search_cambridge(session, input_word, True, False, no_suggestions, None)
-                else:
-                    logger.debug(f'{OP.SELECTED.name} "{select_word}"')
-                    await search_webster(session, select_word, False, no_suggestions, None)
-            else:
-                sub_tree = tree.xpath('//*[@id="left-content"]')[0]
-                nodes = sub_tree.xpath(search_pattern)
-                if len(nodes) == 0:
-                    quit_on_no_result(DICT.MERRIAM_WEBSTER.name, is_spellcheck=False)
-
-                # Response word within res_url is not same with what apppears on the web page. e.g. "set in stone"
-                result = sub_tree.xpath('//*[@id="left-content"]/div[contains(@id, "-entry-1")]/div[1]/div/div[1]/h1/text()') \
-                       or sub_tree.xpath('//*[@id="left-content"]/div[contains(@id, "-entry-1")]/div[1]/div/div/h1/span/text()')
-
-                if len(result) == 0:
-                    quit_on_no_result(DICT.MERRIAM_WEBSTER.name, is_spellcheck=False)
-
-                await parse_and_print(nodes, res_url, new_line=True)
-
-                sub_text = etree.tostring(sub_tree).decode('utf-8')
-                # logger.debug(f'START CACHING: input_word is "{input_word}"; res_word is "{res_word}"; res_url is "{res_url}"')
-                await save_to_cache(input_word, result[0], res_url, sub_text)
-
-        elif status == 404:
+        if status == 404:
             logger.debug(f'{OP.NOT_FOUND.name} "{input_word}" at {res_url}')
 
             if no_suggestions:
@@ -137,9 +104,91 @@ async def fresh_run(session, input_word, no_suggestions, req_url):
                 logger.debug(f'{OP.SELECTED.name} "{select_word}"')
                 await search_webster(session, select_word, False, no_suggestions, None)
 
+        elif status == 200 and tree.xpath('//p[contains(@class,"partial")]'):
+            input_word = decode_url(res_url).split("/")[-1]
+            suggestions = tree.xpath('//h2[@class="hword"]/text() | //h2[@class="hword"]/span/text()')
+            logger.debug(f"{OP.PRINTING.name} out suggestions at {res_url}")
+            select_word = get_suggestion_by_fzf(suggestions, DICT.MERRIAM_WEBSTER.name) if has_tool("fzf") else get_suggestion(suggestions, DICT.MERRIAM_WEBSTER.name)
+            if select_word == "":
+                logger.debug(f'{OP.SWITCHED.name} to {DICT.CAMBRIDGE.name}')
+                await camb.search_cambridge(session, input_word, True, False, no_suggestions, None)
+            else:
+                logger.debug(f'{OP.SELECTED.name} "{select_word}"')
+                await search_webster(session, select_word, False, no_suggestions, None)
+
+        elif status == 200:
+            logger.debug(f'{OP.FOUND.name} "{input_word}" in {DICT.MERRIAM_WEBSTER.name} at {res_url}')
+            logger.debug(f"{OP.PARSING.name} {res_url}")
+
+            sub_tree = tree.xpath('//*[@id="left-content"]')[0]
+            nodes = sub_tree.xpath(search_pattern)
+            if len(nodes) == 0:
+                quit_on_no_result(DICT.MERRIAM_WEBSTER.name, is_spellcheck=False)
+
+            # Response word within res_url is not same with what apppears on the web page. e.g. "set in stone"
+            result = sub_tree.xpath('//*[@id="left-content"]/div[contains(@id, "-entry-1")]/div[1]/div/div[1]/h1/text()') \
+                or sub_tree.xpath('//*[@id="left-content"]/div[contains(@id, "-entry-1")]/div[1]/div/div/h1/span/text()')
+
+            if len(result) == 0:
+                quit_on_no_result(DICT.MERRIAM_WEBSTER.name, is_spellcheck=False)
+
+            await parse_and_print(nodes, res_url, new_line=True)
+
+            clean_text = remove_extra_spaces(etree.tostring(sub_tree).decode('utf-8'))
+            await save_to_cache(input_word, result[0], res_url, clean_text)
+
         else:
             print(f'Something went wrong when fetching {req_url} with STATUS: {status}')
             sys.exit(2)
+
+
+def examples(node):
+    print()
+    for elm in node.iterdescendants():
+        try:
+            is_title = ("ex-header function-label" in elm.attrib["class"])
+            has_aq = (elm.attrib["class"] == "t has-aq")
+        except KeyError:
+            continue
+        else:
+            if is_title:
+                c_print(f"#[{w_col.eg_title} bold]{elm.text}", end="")
+            if has_aq:
+                texts = list(elm.itertext())
+
+                for index, t in enumerate(texts):
+                    if index == 0:
+                        c_print(f"\n#[{w_col.accessory}]|", end="")
+                        c_print(f"#[{w_col.eg_sentence}]{t}", end="")
+                    else:
+                        hit = False
+                        text = t.strip().lower()
+                        for w in word_entries:
+                            if "preposition" in word_types or "adverb" in word_types or "conjuction" in word_types and ("noun" in word_types and text[-1] !="s"):
+                                if w == text:
+                                    hit = True
+                                    break
+                            else:
+                                if w in text and len(text) < 20:
+                                    hit = True
+                                    break
+                                elif '/' in w:
+                                    temp = w.split("/")
+                                    # e.g. "put the screws on/to (someone or something)"
+                                    if temp[0] in text or temp[-1] in text or " ".join(temp[0].split(" ")[ : -1]) + " " + temp[1].split(" ")[0] in text:
+                                        hit = True
+                                        break
+                                    break
+
+                        for f in word_forms:
+                            if f == text:
+                                hit = True
+                                break
+
+                        if hit:
+                            c_print(f"#[{w_col.eg_word} bold]{t}", end="")
+                        else:
+                            c_print(f"#[{w_col.eg_sentence}]{t}", end="")
 
 
 def nearby_entries(node):
@@ -186,56 +235,6 @@ def synonyms(node):
                         c_print(f"#[{w_col.syn_item}]{syn},", end=" ")
                     else:
                         c_print(f"#[{w_col.syn_item}]{syn}", end="\n")
-
-
-def examples(node):
-    print()
-
-    for elm in node.iterdescendants():
-        try:
-            is_title = ("ex-header function-label" in elm.attrib["class"])
-            has_aq = (elm.attrib["class"] == "t has-aq")
-        except KeyError:
-            continue
-        else:
-            if is_title:
-                c_print(f"#[{w_col.eg_title} bold]{elm.text}", end="")
-            if has_aq:
-                texts = list(elm.itertext())
-
-                for index, t in enumerate(texts):
-                    if index == 0:
-                        c_print(f"\n#[{w_col.accessory}]|", end="")
-                        c_print(f"#[{w_col.eg_sentence}]{t}", end="")
-                    else:
-                        hit = False
-                        text = t.strip().lower()
-                        for w in word_entries:
-                            if "preposition" in word_types or "adverb" in word_types or "conjuction" in word_types and ("noun" in word_types and text[-1] !="s"):
-                                if w == text:
-                                    hit = True
-                                    break
-                            else:
-                                if w in text and len(text) < 20:
-                                    hit = True
-                                    break
-                                elif '/' in w:
-                                    temp = w.split("/")
-                                    # e.g. "put the screws on/to (someone or something)"
-                                    if temp[0] in text or temp[-1] in text or " ".join(temp[0].split(" ")[ : -1]) + " " + temp[1].split(" ")[0] in text:
-                                        hit = True
-                                        break
-                                    break
-
-                        for f in word_forms:
-                            if f == text:
-                                hit = True
-                                break
-
-                        if hit:
-                            c_print(f"#[{w_col.eg_word} bold]{t}", end="")
-                        else:
-                            c_print(f"#[{w_col.eg_sentence}]{t}", end="")
 
 
 def phrases(node):
@@ -1219,16 +1218,13 @@ def print_wod_dyk(node):
 def parse_and_print_wod(res_url, res_text):
     logger.debug(f"{OP.PARSING.name} {res_url}")
 
-    parser = etree.HTMLParser(remove_comments=True)
-    tree = etree.HTML(res_text, parser)
     s = """
     //*[@class="article-header-container wod-article-header"] |
     //*[@class="wod-definition-container"] |
     //*[@class="did-you-know-wrapper"]
     """
 
-    nodes = tree.xpath(s)
-
+    nodes = etree.HTML(res_text, parser).xpath(s)
     logger.debug(f"{OP.PRINTING.name} the parsed result of {res_url}")
 
     print()
@@ -1249,9 +1245,7 @@ def parse_and_print_wod(res_url, res_text):
 async def parse_and_print_wod_calendar(session, res_url, res_text):
     logger.debug(f"{OP.PARSING.name} {res_url}")
 
-    parser = etree.HTMLParser(remove_comments=True)
-    tree = etree.HTML(res_text, parser)
-    nodes = tree.xpath("//li/h2/a")
+    nodes = etree.HTML(res_text, parser).xpath("//li/h2/a")
     logger.debug(f"{OP.PRINTING.name} the parsed result of {res_url}")
 
     data = {}

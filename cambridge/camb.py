@@ -5,7 +5,7 @@ import asyncio
 
 from .console import c_print
 from .log import logger
-from .utils import fetch, get_request_url, parse_response_url, replace_all, OP, DICT, has_tool, get_suggestion, get_suggestion_by_fzf, cancel_on_error, quit_on_no_result, cancel_on_error_without_retry
+from .utils import fetch, get_request_url, parse_response_url, replace_all, OP, DICT, has_tool, get_suggestion, get_suggestion_by_fzf, cancel_on_error, quit_on_no_result, cancel_on_error_without_retry, remove_extra_spaces
 from .cache import check_cache, save_to_cache, get_cache
 from . import webster
 
@@ -142,7 +142,8 @@ async def fresh_run(session, input_word, is_ch, no_suggestions, req_url):
                     print()
 
                     hword = soup.find("b", "tb ttn").text # type: ignore
-                    await save_to_cache(input_word, hword, res_url, str(first_dict))
+                    clean_text = remove_extra_spaces(str(first_dict))
+                    await save_to_cache(input_word, hword, res_url, clean_text)
 
 
 def parse_dict_head(block):

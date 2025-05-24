@@ -56,8 +56,6 @@ ph_item = "#4A7D95"
 syn_title = ph_title
 syn_item = "#4A7D95"
 syn_em = "#2E8B57"
-# syn_label = "#0F3850"
-syn_label = "#757575"
 
 # 4. Webster examples on the web
 eg_title = ph_title

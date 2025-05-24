@@ -171,11 +171,11 @@ def parse_args(session):
                 parser_sw.set_defaults(fresh=True)
             elif word == "--nosuggestions" or word == "-n":
                 parser_sw.set_defaults(nosuggestions=True)
-            elif (word == "--search" or word == "-s") and (index == len(argv_list) - 1 or argv_list[index + 1][0] == "-"):
+            elif (word == "--search" or word == "-s") and (index == len(argv_list) - 1):
                 continue
-            elif (word == "--webster" or word == "-w") and (index == len(argv_list) - 1 or argv_list[index + 1][0] == "-"):
+            elif (word == "--webster" or word == "-w") and (index == len(argv_list) - 1):
                 continue
-            elif (word == "--chinese" or word == "-c") and (index == len(argv_list) - 1 or argv_list[index + 1][0] == "-"):
+            elif (word == "--chinese" or word == "-c") and (index == len(argv_list) - 1):
                 continue
             else:
                 to_parse.append(word)

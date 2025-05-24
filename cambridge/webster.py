@@ -11,15 +11,12 @@ from . import color as w_col
 
 WEBSTER_BASE_URL = "https://www.merriam-webster.com"
 WEBSTER_DICT_BASE_URL = WEBSTER_BASE_URL + "/dictionary/"
-WEBSTER_SENT_BASE_URL = WEBSTER_BASE_URL + "/sentences/"
+# WEBSTER_SENT_BASE_URL = WEBSTER_BASE_URL + "/sentences/"
 WEBSTER_WORD_OF_THE_DAY_URL = WEBSTER_BASE_URL + "/word-of-the-day"
 WEBSTER_WORD_OF_THE_DAY_URL_CALENDAR = WEBSTER_BASE_URL + "/word-of-the-day/calendar"
 
 parser = etree.HTMLParser(remove_comments=True)
 word_entries = []    # A page may have multiple word entries, e.g. "runaway" as noun, "runaway" as adjective, "run away" as verb
-word_forms = set()   # A word may have multiple word forms, e.g. "ran", "running", "run", "flies"
-word_types = set()   # A word's word types, e.g. "preposition", "adjective"
-
 
 async def search_webster(session, input_word, is_fresh=False, no_suggestions=False, req_url=None):
     if req_url is None:
@@ -117,6 +114,48 @@ async def fresh_run(session, input_word, no_suggestions, req_url):
             sys.exit(2)
 
 
+async def parse_and_print(first_dict, res_url, new_line=True):
+    logger.debug(f"{OP.PARSING.name} {res_url}")
+
+    search_pattern = """
+    //*[@id="left-content"]/div[contains(@id, "-entry")] |
+    //*[@id="left-content"]/div[@id="phrases"] |
+    //*[@id="left-content"]/div[@id="synonyms"] |
+    //*[@id="left-content"]/div[@id="examples"]/div[@class="content-section-body"]/div[contains(@class,"on-web-container")]/div[contains(@class,"on-web")] |
+    //*[@id="left-content"]/div[@id="related-phrases"] |
+    //*[@id="left-content"]/div[@id="nearby-entries"]
+    """
+    nodes = first_dict.xpath(search_pattern)
+
+    logger.debug(f"{OP.PRINTING.name} the parsed result of {res_url}")
+    for node in nodes:
+        try:
+            attr = node.attrib["id"]
+        except KeyError:
+            attr = node.attrib["class"]
+
+        if "-entry" in attr:
+            dictionary_entry(node)
+
+        elif attr == "phrases":
+            phrases(node)
+
+        elif attr == "nearby-entries":
+            nearby_entries(node)
+
+        elif attr == "synonyms":
+            synonyms(node)
+
+        elif "on-web" in attr:
+            examples(node)
+
+        elif attr == "related-phrases":
+            related_phrases(node)
+
+    if new_line:
+        print()
+
+
 async def cache(first_dict, input_word, res_url):
     res_word = input_word
 
@@ -132,48 +171,27 @@ async def cache(first_dict, input_word, res_url):
 
 def examples(node):
     print()
-    for elm in node.iterdescendants():
-        try:
-            is_title = ("ex-header function-label" in elm.attrib["class"])
-            has_aq = (elm.attrib["class"] == "t has-aq")
-        except KeyError:
-            continue
-        else:
-            if is_title:
-                c_print(f"#[{w_col.eg_title} bold]{elm.text}", end="")
-            if has_aq:
-                texts = list(elm.itertext())
 
-                for index, t in enumerate(texts):
-                    if index == 0:
-                        c_print(f"\n#[{w_col.accessory}]|", end="")
-                        c_print(f"#[{w_col.eg_sentence}]{t}", end="")
-                    else:
-                        hit = False
-                        text = t.strip().lower()
-                        for w in word_entries:
-                            if "preposition" in word_types or "adverb" in word_types or "conjuction" in word_types and ("noun" in word_types and text[-1] !="s"):
-                                if w == text:
-                                    hit = True
-                                    break
-                            else:
-                                if w in text and len(text) < 20:
-                                    hit = True
-                                    break
-                                elif '/' in w:
-                                    temp = w.split("/")
-                                    # e.g. "put the screws on/to (someone or something)"
-                                    if temp[0] in text or temp[-1] in text or " ".join(temp[0].split(" ")[ : -1]) + " " + temp[1].split(" ")[0] in text:
-                                        hit = True
-                                        break
-                                    break
+    for child in node.iterchildren():
+        child_class = child.get("class")
+        if "ex-header" in child_class:
+            c_print(f"#[{w_col.eg_title} bold]{child.text}", end="")
 
-                        for f in word_forms:
-                            if f == text:
-                                hit = True
-                                break
+        elif "function-label-header" == child_class:
+            print(f"\n{child.text}", end="")
 
-                        if hit:
+        elif "sub-content-thread ex-sent sents" == child_class:
+            for c in child:
+                c_child = c.get("class")
+                if "t has-aq" == c_child:
+                    ems = []
+                    for i in c.iterchildren():
+                        if i.tag == "em":
+                            ems.append(i.text)
+
+                    c_print(f"\n#[{w_col.accessory}]|", end="")
+                    for t in c.itertext():
+                        if t in ems:
                             c_print(f"#[{w_col.eg_word} bold]{t}", end="")
                         else:
                             c_print(f"#[{w_col.eg_sentence}]{t}", end="")
@@ -203,26 +221,27 @@ def nearby_entries(node):
             elif has_nearby:
                 c_print(f"#[{w_col.nearby_item}]{elm.text}", end="\n")
 
+
 def synonyms(node):
     print()
 
     for elm in node.iterdescendants():
-            if elm.tag == "h2":
-                c_print(f"#[bold {w_col.syn_title}]{elm.text}", end="\n")
+        if elm.tag == "h2":
+            c_print(f"#[bold {w_col.syn_title}]{elm.text}", end="\n")
 
-            if elm.tag == "p" and elm.attrib["class"] == "function-label":
-                c_print(f"#[{w_col.syn_label}]{elm.text}")
+        if elm.tag == "p" and elm.attrib["class"] == "function-label":
+            print(elm.text)
 
-            if elm.tag == "ul":
-                children = elm.getchildren()
-                total_num = len(children)
+        if elm.tag == "ul":
+            children = elm.getchildren()
+            total_num = len(children)
 
-                for index, child in enumerate(children):
-                    syn = "".join(list(child.itertext())).strip()
-                    if index != (total_num - 1):
-                        c_print(f"#[{w_col.syn_item}]{syn},", end=" ")
-                    else:
-                        c_print(f"#[{w_col.syn_item}]{syn}", end="\n")
+            for index, child in enumerate(children):
+                syn = "".join(list(child.itertext())).strip()
+                if index != (total_num - 1):
+                    c_print(f"#[{w_col.syn_item}]{syn},", end=" ")
+                else:
+                    c_print(f"#[{w_col.syn_item}]{syn}", end="\n")
 
 
 def phrases(node):
@@ -402,7 +421,7 @@ def ex_sent(node, ancestor_attr, num_label_count):
 def sub_content_thread(node, ancestor_attr, num_label_count=1):
     children = node.getchildren()
     for child in children:
-        attr = child.attrib["class"]
+        attr = child.get("class")
 
         if ("ex-sent" in attr) and ("aq has-aq" not in attr):
             ex_sent(child, ancestor_attr, num_label_count)
@@ -411,7 +430,7 @@ def sub_content_thread(node, ancestor_attr, num_label_count=1):
             elms = child.getchildren()
             for e in elms:
                 elm = e.getchildren()[0]
-                elm_attr = elm.attrib["class"]
+                elm_attr = elm.get("class")
                 if ("ex-sent" in elm_attr) and ("aq has-aq" not in elm_attr):
                     ex_sent(elm, ancestor_attr, num_label_count)
 
@@ -535,6 +554,8 @@ def sense(node, attr, parent_attr, ancestor_attr, num_label_count):
                     if child_attr == "if":
                         end = "\n" if child.getnext() is None else ""
                         c_print(f"#[bold]{child.text.strip()}", end=end)
+                    elif child_attr == "il ":
+                        print_meaning_badge(child.text.strip(), end=" ")
                     elif "badge mw-badge-gray-100" in child_attr:
                         end = " " if child.getnext() is not None else "\n"
                         print_meaning_badge(child.text, end=end)
@@ -664,6 +685,8 @@ def tags(node, ancestor_attr, num_label_count):
             elif "sub-content-thread" in elm_attr:
                 sub_content_thread(elm, ancestor_attr, num_label_count) # example under the meaning
                 has_badge = False
+                if elm.getnext() is not None and elm.getnext().get("class") == "dtText":
+                    print()
 
             elif elm_attr == "ca":
                 extra(elm, ancestor_attr)
@@ -760,8 +783,6 @@ def entry_header_content(node):
         elif elm.tag == "h2":
             type = " ".join(list(elm.itertext()))
             c_print(f"#[bold {w_col.eh_word_type}]{type}", end="")
-            global word_types
-            word_types.add(type.strip().lower())
 
     print()
 
@@ -1063,7 +1084,8 @@ def print_class_ins(node):
             if "il-badge badge mw-badge-gray-100" in attr:
                 print_header_badge(child.text.strip(), end=" ") # e.g. "natalism"
             elif attr == "prt-a":
-                print_pron(child)
+                for c in child:
+                    print_pron(c)
             elif attr == "il ":
                 print_or_badge(child.text)
             elif attr == "sep-semicolon":
@@ -1080,8 +1102,6 @@ def print_class_ins(node):
                         print_class_if(child.text, before_il=True)
                     else:
                         print_class_if(child.text, before_semicolon=False)
-                global word_forms
-                word_forms.add(child.text.strip().lower())
             else:
                 c_print(f"#[bold]{child.text}", end="")
 
@@ -1089,48 +1109,6 @@ def print_class_ins(node):
 def print_dict_name():
     dict_name = "The Merriam-Webster Dictionary"
     c_print(f"#[{w_col.dict_name}]{dict_name}", justify="right")
-
-
-async def parse_and_print(first_dict, res_url, new_line=True):
-    logger.debug(f"{OP.PARSING.name} {res_url}")
-
-    search_pattern = """
-    //*[@id="left-content"]/div[contains(@id, "-entry")] |
-    //*[@id="left-content"]/div[@id="phrases"] |
-    //*[@id="left-content"]/div[@id="synonyms"] |
-    //*[@id="left-content"]/div[@id="examples"]/div[@class="content-section-body"]/div[contains(@class,"on-web-container")]/div[contains(@class,"on-web")] |
-    //*[@id="left-content"]/div[@id="related-phrases"] |
-    //*[@id="left-content"]/div[@id="nearby-entries"]
-    """
-    nodes = first_dict.xpath(search_pattern)
-
-    logger.debug(f"{OP.PRINTING.name} the parsed result of {res_url}")
-    for node in nodes:
-        try:
-            attr = node.attrib["id"]
-        except KeyError:
-            attr = node.attrib["class"]
-
-        if "-entry" in attr:
-            dictionary_entry(node)
-
-        elif attr == "phrases":
-            phrases(node)
-
-        elif attr == "nearby-entries":
-            nearby_entries(node)
-
-        elif attr == "synonyms":
-            synonyms(node)
-
-        elif "on-web" in attr:
-            examples(node)
-
-        elif attr == "related-phrases":
-            related_phrases(node)
-
-    if new_line:
-        print()
 
 
 # --- Word of the Day --- #

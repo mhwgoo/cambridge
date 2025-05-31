@@ -685,8 +685,8 @@ def tags(node, ancestor_attr, num_label_count):
             elif "sub-content-thread" in elm_attr:
                 sub_content_thread(elm, ancestor_attr, num_label_count) # example under the meaning
                 has_badge = False
-                if elm.getnext() is not None and elm.getnext().get("class") == "dtText":
-                    print()
+                # if elm.getnext() is not None and elm.getnext().get("class") == "dtText": # e.g. hygiene SEE ALSO FEMININE HYGIENE
+                #     print()
 
             elif elm_attr == "ca":
                 extra(elm, ancestor_attr)

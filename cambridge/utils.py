@@ -55,7 +55,7 @@ def cancel_on_error(path, error, attempt, op):
     logger.debug(f"{op} {path} {attempt} times")
 
     if attempt == 3:
-        print(f'Maximum {op} reached.')
+        print(f'Maximum {op} times reached.')
         cancel_on_error_without_retry(path, error, op)
 
     return attempt

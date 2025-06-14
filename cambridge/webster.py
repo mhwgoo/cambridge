@@ -310,7 +310,7 @@ def dtText(node, ancestor_attr, num_label_count):
     prefix = "\n " if num_label_count == 2 else "\n"
 
     is_format = False
-    if node_pre_attr == "sub-content-thread" or node_pre_attr == "uns" or node_pre_attr == "dt ":
+    if node_pre_attr is not None and ("sub-content-thread" in node_pre_attr or node_pre_attr == "uns" or node_pre_attr == "dt "):
         format_basedon_ancestor(ancestor_attr, prefix=prefix)
         is_format = True
 
@@ -685,8 +685,6 @@ def tags(node, ancestor_attr, num_label_count):
             elif "sub-content-thread" in elm_attr:
                 sub_content_thread(elm, ancestor_attr, num_label_count) # example under the meaning
                 has_badge = False
-                # if elm.getnext() is not None and elm.getnext().get("class") == "dtText": # e.g. hygiene SEE ALSO FEMININE HYGIENE
-                #     print()
 
             elif elm_attr == "ca":
                 extra(elm, ancestor_attr)

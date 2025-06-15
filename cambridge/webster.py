@@ -657,11 +657,7 @@ def tags(node, ancestor_attr, num_label_count):
                 print_class_sgram(elm)
 
             elif elm_attr == "vl":
-                parent_prev = parent.getprevious()
-                if parent_prev is None and elm.text[0] == " ":
-                    print_meaning_badge(elm.text[1 : ])
-                else:
-                    print_meaning_badge(elm.text)
+                print_meaning_badge(elm.text[1 : ])
 
             elif elm_attr == "va":
                 print_class_va(elm.text.strip())

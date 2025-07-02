@@ -9,7 +9,7 @@ author = "Kate Wang"
 author-email = "kate.wang2018@gmail.com"
 home-page = "https://github.com/KateWang2016/cambridge"
 
-requires-python = ">=3.5"
+requires-python = ">=3.11"
 
 requires = [
     "aiohttp",

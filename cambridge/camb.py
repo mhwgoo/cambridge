@@ -213,7 +213,9 @@ def parse_dict_head(block):
         c_print(f"\n#[bold blue]{hword}#[/bold blue] #[bold yellow]{w_type}#[/bold yellow]", end=end)
 
         if domain is not None:
-            print(domain.text.strip("\n").strip(), end=" ")
+            next_sibling = domain.find_next_sibling()
+            end = " " if next_sibling is not None and next_sibling.has_attr('class') else "\n"
+            print(domain.text.strip("\n").strip(), end=end)
 
         if dlab is not None:
             next_sibling = dlab.find_next_sibling()
@@ -336,47 +338,44 @@ def parse_meaning(def_block, is_pmeaning=False):
 
 
 def print_example_tag(tag_block):
-    if tag_block is None:
-        return
-
     tag = tag_block.text
     tag = replace_all(tag)
     print("[" + tag + "]", end= " ")
 
 
 def parse_example(def_block, is_pexample=False):
-    es = def_block.find_all("div", "examp dexamp")
-    if len(es) == 0:
+    examps = def_block.find_all("div", "examp dexamp")
+    if len(examps) == 0:
         return
 
-    for e in es:
-        result = e.find("span", "eg deg")
-        if result is not None:
-            example = replace_all(result.text)
+    for e in examps:
+        eg = e.find("span", "eg deg")
+        if eg is not None:
+            example = replace_all(eg.text)
         else:
             continue
 
         if is_pexample:
             print("  ", end="")
 
-        example_lan = e.find("span", "trans dtrans dtrans-se hdb break-cj")
-        if example_lan is not None:
-            example_lan_sent = " " + example_lan.text.replace("。", "")
-        else:
-            example_lan_sent = ""
-
         c_print("#[blue]" + "|" + "#[/blue]", end="")
 
         dlab = e.find("span", "lab dlab")
-        print_example_tag(dlab)
+        if dlab is not None:
+            print_example_tag(dlab)
 
         dgram = e.find("span", "gram dgram")
-        print_example_tag(dgram)
+        if dgram is not None:
+            print_example_tag(dgram)
 
         dlu = e.find("span", "lu dlu")
-        print_example_tag(dlu)
+        if dlu is not None:
+            print_example_tag(dlu)
 
-        c_print(f"#[#757575]{example}{example_lan_sent}#[/#757575]")
+        if eg is not None and len(list(eg.children)) == 1: # A node's children in bs4 is a generator.
+            print("[" + example + "]")
+        else:
+            c_print(f"#[#757575]{example}#[/#757575]")
 
 
 def print_tag(node):

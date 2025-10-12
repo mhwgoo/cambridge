@@ -172,9 +172,9 @@ def has_tool(name):
 def get_suggestion_notice(dict_name, has_fzf):
     flip_dict = DICT.MERRIAM_WEBSTER.name if (dict_name == DICT.CAMBRIDGE.name) else DICT.CAMBRIDGE.name
     if has_fzf:
-        return f"[ENTER] to print the selected suggestion's meaning; Any [NUMBER] to switch to {flip_dict}, or a new word to search; [ESC] to quit out."
+        return f"[ENTER] to print the selected suggestion's meaning; Any [NUMBER] to switch to {flip_dict}; TYPE a new word to search; [ESC] to quit out."
     else:
-        return f"[ENTER] to switch to {flip_dict}; [NUMBER] to print the selected suggestion's meaning, or a new word to search; Any Other [KEY] to quit out: "
+        return f"[ENTER] to switch to {flip_dict}; [NUMBER] to print the selected suggestion's meaning; TYPE a new word to search; Any Other [KEY] to quit out: "
 
 
 def get_suggestion(suggestions, dict_name):
@@ -212,7 +212,7 @@ def get_wod_selection(data):
     title = DICT.MERRIAM_WEBSTER.name + " Calendar of Word of the Day"
     c_print(title + (int(len(title)/2))*" ", justify="center")
     list_items(data, "wod_calendar")
-    notice =  "Type one word of day from above to print the meaning; Input a new word; [ANY OTHER KEY] to quit out: "
+    notice =  "INPUT one word of day from above to print the meaning; TYPE a new word; [ANY OTHER KEY] to quit out: "
     print(notice, end="")
     return input("")
 
@@ -235,7 +235,7 @@ def get_cache_selection(data, method):
     title = "List of Cache" + f" ({method})"
     c_print(title + (int(len(title)/2))*" ", justify="center")
     list_items(data, "cache_list")
-    notice =  "Type one word from above to print the meaning; Input a new word; [ANY OTHER KEY] to quit out: "
+    notice =  "INPUT one word from above to print the meaning; TYPE a new word; [ANY OTHER KEY] to quit out: "
     print(notice, end="")
     return input("")
 

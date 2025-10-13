@@ -18,6 +18,10 @@ WEBSTER_WORD_OF_THE_DAY_URL_CALENDAR = WEBSTER_BASE_URL + "/word-of-the-day/cale
 parser = etree.HTMLParser(remove_blank_text=True, remove_comments=True, remove_pis=True)
 html_tree = None
 word_entries = [] # A page may have multiple word entries, e.g. "runaway" as noun, "runaway" as adjective, "run away" as verb
+adj_verb_forms = [] # e.g. busier, busiest, busied, busying
+noun_plural_form = ""
+word_variants = [] # e.g. busily
+
 
 async def search_webster(session, input_word, is_fresh=False, no_suggestions=False, req_url=None):
     if req_url is None:
@@ -118,6 +122,11 @@ async def fresh_run(session, input_word, no_suggestions, req_url):
                  task5 = tg.create_task(related_phrases())
                  task6 = tg.create_task(nearby_entries())
 
+            print("_______")
+            print("word_entries: ", word_entries)
+            print("adj_verb_forms: ", adj_verb_forms)
+            print("noun_plural_form: ", noun_plural_form)
+            print("word_variants: ", word_variants)
 
 def dictionary_entry(node):
     print()
@@ -170,27 +179,34 @@ async def parse_suggestions(suggestions, session, input_word):
 
 def print_example(example, tags):
     c_print(f"\n#[{w_col.accessory}]|", end="")
-    for t in example.itertext():
-        if t in tags:
-            c_print(f"#[{w_col.eg_word} bold]{t}", end="")
-        else:
-            c_print(f"#[{w_col.eg_sentence}]{t}", end="")
+
+    if isinstance(example, str): # for the case of printing from the cache
+        example = example.split()
+        for word in example:
+            if word in tags and (word in word_entries or word in adj_verb_forms or word in noun_plural_form or word in word_variants):
+                c_print(f"#[{w_col.eg_word} bold]{word}", end="")
+            else:
+                c_print(f"#[{w_col.eg_sentence}]{word}", end="")
+
+    else: # for the case of printing on the fly
+        for t in example.itertext():
+            if t in tags:
+                c_print(f"#[{w_col.eg_word} bold]{t}", end="")
+            else:
+                c_print(f"#[{w_col.eg_sentence}]{t}", end="")
 
 
 async def examples():
     logger.debug("STARTING to parse and print examples...")
     nodes = html_tree.xpath('//div[@id="examples"]/div[@class="content-section-body"]/div[contains(@class,"on-web-container")]/div[contains(@class,"on-web")]/span[contains(@class, "sub-content-thread ex-sent sents")]/span[contains(@class, "t has-aq")]')
     if len(nodes) != 0:
-        tags = []
+        c_print(f"\n#[{w_col.eg_title} bold]Recent Examples on the Web", end="")
         for node in nodes:
+            tags = []
             for child in node.iterchildren():
                 if child.tag == "em":
                     tags.append(child.text)
-
-        c_print(f"\n#[{w_col.eg_title} bold]Recent Examples on the Web", end="")
-        for node in nodes:
             print_example(node, tags)
-
         print()
     logger.debug("DONE parsing and printing examples.")
 
@@ -818,7 +834,8 @@ def entry_attr(node):
                             print()
                         elif x.tag == "a":
                             print_pron(x, True)
-                            print(" " , end="")
+                            if i.getnext() is not None:
+                                print(" " , end="")
                         elif x.getnext() is None:
                             print("".join(list(x.itertext())).strip(), end="\n")
                         else:
@@ -826,8 +843,6 @@ def entry_attr(node):
 
 
 def row_entry_header(node):
-    """Print class row entry-header, the parent and caller of entry_header_content() and entry_attr()."""
-
     for elm in node.iterchildren():
         if elm.attrib["class"] == "col-12":
             for i in elm.iterchildren():
@@ -844,6 +859,7 @@ def entry_uros(node):
         attr = elm.get("class")
         if attr is not None:
             if elm.tag == "span" and "fw-bold ure" in attr:
+                word_variants.append(elm.text)
                 c_print(f"#[bold {w_col.wf}]{elm.text}", end = " ")
 
             elif elm.tag == "span" and "fw-bold fl" in attr:
@@ -876,6 +892,8 @@ def entry_uros(node):
 
             elif elm.tag == "a" and "play-pron-v2" in attr:
                 print_pron(elm, False)
+                if elm.getparent().getnext() is not None:
+                    print(" " , end="")
 
             elif "vrs" in attr:
                 # can't get css element ::before.content like "variants" in the word "duel"
@@ -891,8 +909,6 @@ def entry_uros(node):
                         else:
                             end = " " if (c.getnext() is not None or elm.getnext() is not None) else ""
                             print_class_va(c.text, end=end)
-                    elif "prons-entries-list" in attr_c:
-                        continue
 
 
 def row_headword_row_header_ins(node):
@@ -995,7 +1011,7 @@ def print_pron(node, header=False):
     if header:
         print(f"|{node.text.strip()}|", end="")
     else:
-        print(f"{node.text}", end="")
+        print(f"{node.text.strip()}", end="")
 
 
 def print_or_badge(text):
@@ -1039,9 +1055,14 @@ def print_class_ins(node):
             elif attr == "il ":
                 print_or_badge(child.text)
             elif attr == "sep-semicolon":
-                print(f"{child.text}", end="")
+                print(child.text, end="")
             elif attr == "if":
                 next_sibling = child.getnext()
+                if child.getprevious() is not None and "il-badge badge mw-badge-gray-100" in child.getprevious().get("class"):
+                    global noun_plural_form
+                    noun_plural_form = child.text
+                else:
+                    adj_verb_forms.append(child.text)
                 if next_sibling is None:
                     print_class_if(child.text, has_next_sibling=False)
                 else:

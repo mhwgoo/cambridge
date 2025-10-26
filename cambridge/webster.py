@@ -5,7 +5,7 @@ from lxml import etree # type: ignore
 from .console import c_print
 from .utils import fetch, get_request_url, decode_url, OP, DICT, has_tool, get_suggestion, get_suggestion_by_fzf, get_wod_selection, get_wod_selection_by_fzf, quit_on_no_result, cancel_on_error, cancel_on_error_without_retry, remove_extra_spaces
 from .log import logger
-from .cache import check_cache, save_to_cache, get_cache
+from .cache import check_cache, save_to_cache, get_cache, save_to_cache_examples_on_the_web
 from . import camb
 from . import color as w_col
 
@@ -17,11 +17,6 @@ WEBSTER_WORD_OF_THE_DAY_URL_CALENDAR = WEBSTER_BASE_URL + "/word-of-the-day/cale
 
 parser = etree.HTMLParser(remove_blank_text=True, remove_comments=True, remove_pis=True)
 html_tree = None
-word_entries = [] # A page may have multiple word entries, e.g. "runaway" as noun, "runaway" as adjective, "run away" as verb
-adj_verb_forms = [] # e.g. busier, busiest, busied, busying
-noun_plural_form = ""
-word_variants = [] # e.g. busily
-
 
 async def search_webster(session, input_word, is_fresh=False, no_suggestions=False, req_url=None):
     if req_url is None:
@@ -104,67 +99,215 @@ async def fresh_run(session, input_word, no_suggestions, req_url):
                 suggestions.append(suggestion)
             await parse_suggestions(suggestions, session, input_word)
         else:
+            # NOTE:
+            # Globals aren't safe with python asyncio.
+            # Asyncio runs tasks cooperatively on a single thread by default, so simultaneous CPU-level concurrent access to a global from multiple tasks won't occur, but logical race conditions can still happen when tasks interleave at await points.
+            response_word = decode_url(res_url).split("/")[-1]
+            word_entries = [] # A page may have multiple word entries, e.g. "runaway" as noun, "runaway" as adjective, "run away" as verb
+            word_variants = [] # e.g. busily
+            adj_and_verb_forms = [] # e.g. busier, busiest, busied, busying
+            noun_plural_form = ""
+
             logger.debug(f"{OP.PARSING.name} {res_url}")
             entries_text = ""
             for i, entry in enumerate(entries):
                 logger.debug(f"STARTING to parse and print entry {i + 1}...")
-                dictionary_entry(entry)
+                word_entry, word_variant, adj_or_verb_forms, noun_plural_form = dictionary_entry(entry)
+                word_entries.append(word_entry)
+                if word_variant:
+                    word_variants.append(word_variant)
+                if adj_or_verb_forms:
+                    adj_and_verb_forms += adj_or_verb_forms
+
                 text = etree.tostring(entry).decode('utf-8')
                 cleaned_text = remove_extra_spaces(text)
                 entries_text += cleaned_text
 
-            res_word = decode_url(res_url).split("/")[-1]
             async with asyncio.TaskGroup() as tg:
-                 task1 = tg.create_task(save_to_cache(input_word, res_word, res_url, entries_text))
-                 task2 = tg.create_task(examples())
-                 task3 = tg.create_task(synonyms())
-                 task4 = tg.create_task(phrases())
-                 task5 = tg.create_task(related_phrases())
-                 task6 = tg.create_task(nearby_entries())
+                task1 = tg.create_task(save_to_cache(input_word, response_word, res_url, entries_text))
+                task2 = tg.create_task(examples(response_word, word_entries, word_variants, adj_and_verb_forms, noun_plural_form))
+                task3 = tg.create_task(synonyms())
+                task4 = tg.create_task(phrases())
+                task5 = tg.create_task(related_phrases(word_entries))
+                task6 = tg.create_task(nearby_entries())
 
             print("_______")
+            print("response_word: ", response_word)
             print("word_entries: ", word_entries)
-            print("adj_verb_forms: ", adj_verb_forms)
-            print("noun_plural_form: ", noun_plural_form)
             print("word_variants: ", word_variants)
+            print("adj_and_verb_forms: ", adj_and_verb_forms)
+            print("noun_plural_form: ", noun_plural_form)
+
 
 def dictionary_entry(node):
     print()
+    word_entry = ""
+    word_variant = ""
+    adj_or_verb_forms = []
+    noun_plural_form = ""
+
     for elm in node.iterchildren():
         elm_attr = elm.get("class")
-        if elm_attr is not None:
-            if "row entry-header" in elm_attr:
-                row_entry_header(elm)
+        if elm_attr is None:
+            continue
 
-            elif elm_attr == "row headword-row header-ins":
-                row_headword_row_header_ins(elm)
+        elif "row entry-header" in elm_attr:
+            for e in elm.iterchildren():
+                if e.attrib["class"] == "col-12":
+                    for i in e.iterchildren():
+                        # Print entry header content. e.g. value 1 of 3 noun
+                        if "entry-header-content" in i.attrib["class"]:
+                            for j in i.iterchildren():
+                                if j.tag == "h1" or j.tag == "p":
+                                    word = "".join(list(j.itertext()))
+                                    word_entry = word.strip().lower()
+                                    end = "" if j.getnext() is None else " "
+                                    c_print(f"#[{w_col.eh_h1_word} bold]{word}", end=end)
+                                elif j.tag == "span":
+                                    num = " ".join(list(j.itertext()))
+                                    end = "" if j.getnext() is None else " "
+                                    print(num, end=end)
+                                elif j.tag == "h2":
+                                    type_name = " ".join(list(j.itertext()))
+                                    c_print(f"#[bold {w_col.eh_word_type}]{type_name}", end="")
 
-            elif elm_attr == "row headword-row header-vrs":
-                row_headword_row_header_vrs(elm)
+                            print()
+                        # Print the pronounciation. e.g. val·ue |ˈval-(ˌ)yü|"""
+                        elif "row entry-attr" in i.attrib["class"]:
+                            for j in i.iterchildren():
+                                if "col word-syllables-prons-header-content" in j.attrib["class"]:
+                                    for p in j.iterchildren():
+                                        if p.tag == "span" and p.attrib["class"] == "word-syllables-entry":
+                                            syllables = p.text
+                                            if p.getnext() is not None:
+                                                print(f"{syllables}", end=" ")
+                                            else:
+                                                print(f"{syllables}", end="\n")
+                                        elif p.tag == "span" and "prons-entries-list-inline" in p.attrib["class"]:
+                                            for x in p:
+                                                if x.tag == "a" and x.getnext() is None:
+                                                    print_pron(x, True)
+                                                    print()
+                                                elif x.tag == "a":
+                                                    print_pron(x, True)
+                                                else:
+                                                    print(" " , end="")
+                                                    end = "\n" if x.getnext() is None else " "
+                                                    print("".join(list(x.itertext())).strip(), end=end)
 
-            elif elm_attr == "vg":
-                vg(elm)
-
-            elif "entry-uros" in elm_attr:
-                for i in elm.iterchildren():
-                    entry_uros(i)
-                    print()
-
-            elif elm_attr == "dxnls":
-                dxnls(elm)
-
-            elif elm_attr == "mt-3":
-                badge = elm.getchildren()[0] # class "lbs badge mw-badge-gray-100 text-start text-wrap d-inline"
-                print_header_badge(badge.text, end="\n")
-
-            elif elm_attr == "cxl-ref":
-                for i in elm.iterdescendants():
-                    i_attr = i.get("class")
-                    if i.tag == "span" and i_attr == "cxl":
-                        print_meaning_badge(i.text, end=" ")
-                    elif i.tag == "span" and i_attr == "text-uppercase":
-                        print_meaning_content(i.text.upper(), end="")
+        # Print verb types. e.g. valued; valuing
+        elif elm_attr == "row headword-row header-ins":
+            children = elm.getchildren()[0].getchildren()[0]
+            if "ins" in children.attrib["class"]:
+                noun_plural_form, adj_or_verb_forms = print_class_ins(children)
                 print()
+
+        # Print word variants. e.g. premise variants or less commonly premiss
+        elif elm_attr == "row headword-row header-vrs":
+            children = elm.getchildren()[0].getchildren()[0] # class "entry-attr vrs"
+            print_vrs(children)
+            print()
+
+        elif elm_attr == "vg":
+            vg(elm)
+
+        # Print other word forms. e.g. valueless, valuelessness
+        elif "entry-uros" in elm_attr:
+            for child in elm.iterchildren():
+                for e in child.iterdescendants():
+                    attr = e.get("class")
+                    if attr is not None:
+                        if e.tag == "span" and "fw-bold ure" in attr:
+                            word_variant = e.text
+                            c_print(f"#[bold {w_col.wf}]{e.text}", end = " ")
+
+                        elif e.tag == "span" and "fw-bold fl" in attr:
+                            e_next = e.getnext()
+                            if e_next is not None and e_next.get("class") == "ins":
+                                end = "\n"
+                            elif e_next is not None and "badge" in e_next.get("class"):
+                                end = " "
+                            else:
+                                end = ""
+                            c_print(f"#[{w_col.eh_word_type}]{e.text}", end=end)
+
+                        elif "ins" in attr:
+                            print("", end="")
+                            print_class_ins(e)
+
+                        elif "sl badge" in attr:
+                            text = "".join(list(e.itertext())).strip()
+                            prev = e.getprevious()
+                            if prev is not None and prev.get("class") == "vrs":
+                                print_meaning_badge(" " + text)
+                            else:
+                                print_meaning_badge(text)
+
+                        elif "utxt" in attr:
+                            for i in e.iterchildren():
+                                sub_attr = i.get("class")
+                                if sub_attr is not None and "sub-content-thread" in sub_attr:
+                                    sub_content_thread(i, "")
+
+                        elif e.tag == "a" and "play-pron-v2" in attr:
+                            print_pron(e, False)
+                            if e.getparent().getnext() is not None:
+                                print(" " , end="")
+
+                        elif "vrs" in attr:
+                            # can't get css element ::before.content like "variants" in the word "duel"
+                            child = e.getchildren()[0]
+                            for c in child.iterchildren():
+                                attr_c = c.get("class")
+                                if attr_c == "il " or attr_c == "vl":
+                                    print_or_badge(c.text)
+                                elif attr_c == "va":
+                                    if c.text is None:
+                                        for i in child:
+                                            print_class_va(i.text)
+                                    else:
+                                        end = " " if (c.getnext() is not None or e.getnext() is not None) else ""
+                                        print_class_va(c.text, end=end)
+
+                print()
+
+        # Print dxnls section, such as 'see also', 'compare' etc.
+        elif elm_attr == "dxnls":
+            texts = list(elm.itertext())
+            for text in texts:
+                text = text.strip()
+                if not text:
+                    continue
+                if text == "see also":
+                    c_print(f"#[bold {w_col.dxnls_content}]{text.upper()}", end = " ")
+                elif text == "compare":
+                    c_print(f"#[bold {w_col.dxnls_content}]{text.upper()}", end = " ")
+                elif text == ",":
+                    print_meaning_content(text, end=" ")
+                else:
+                    print_meaning_content(text, end="")
+            print()
+
+        elif elm_attr == "mt-3":
+            badge = elm.getchildren()[0] # class "lbs badge mw-badge-gray-100 text-start text-wrap d-inline"
+            print_header_badge(badge.text, end="\n")
+
+        elif elm_attr == "cxl-ref":
+            for i in elm.iterdescendants():
+                i_attr = i.get("class")
+                if i.tag == "span" and i_attr == "cxl":
+                    print_meaning_badge(i.text, end=" ")
+                elif i.tag == "span" and i_attr == "text-uppercase":
+                    print_meaning_content(i.text.upper(), end="")
+            print()
+
+    # print("_______from entry")
+    # print("word_entry: ", word_entry)
+    # print("word_variant: ", word_variant)
+    # print("adj_or_verb_forms: ", adj_or_verb_forms)
+    # print("noun_plural_form: ", noun_plural_form)
+
+    return word_entry, word_variant, adj_or_verb_forms, noun_plural_form
 
 
 async def parse_suggestions(suggestions, session, input_word):
@@ -177,36 +320,35 @@ async def parse_suggestions(suggestions, session, input_word):
         await search_webster(session, select_word, False, False, None)
 
 
-def print_example(example, tags):
+async def print_example(example, tag, word_entries, word_variants, adj_and_verb_forms, noun_plural_form):
     c_print(f"\n#[{w_col.accessory}]|", end="")
-
-    if isinstance(example, str): # for the case of printing from the cache
-        example = example.split()
-        for word in example:
-            if word in tags and (word in word_entries or word in adj_verb_forms or word in noun_plural_form or word in word_variants):
-                c_print(f"#[{w_col.eg_word} bold]{word}", end="")
-            else:
-                c_print(f"#[{w_col.eg_sentence}]{word}", end="")
-
-    else: # for the case of printing on the fly
-        for t in example.itertext():
-            if t in tags:
-                c_print(f"#[{w_col.eg_word} bold]{t}", end="")
-            else:
-                c_print(f"#[{w_col.eg_sentence}]{t}", end="")
+    example = example.split()
+    tags = tag.split(",")
+    for word in example:
+        end = "" if word == example[-1] else " "
+        if word in tags and (word in word_entries or word in word_variants or word in adj_and_verb_forms or word in noun_plural_form):
+            c_print(f"#[{w_col.eg_word} bold]{word}", end=end)
+        else:
+            c_print(f"#[{w_col.eg_sentence}]{word}", end=end)
 
 
-async def examples():
+async def examples(response_word, word_entries, word_variants, adj_and_verb_forms, noun_plural_form):
     logger.debug("STARTING to parse and print examples...")
     nodes = html_tree.xpath('//div[@id="examples"]/div[@class="content-section-body"]/div[contains(@class,"on-web-container")]/div[contains(@class,"on-web")]/span[contains(@class, "sub-content-thread ex-sent sents")]/span[contains(@class, "t has-aq")]')
     if len(nodes) != 0:
         c_print(f"\n#[{w_col.eg_title} bold]Recent Examples on the Web", end="")
         for node in nodes:
-            tags = []
+            tag = ""
+            hit = 0
             for child in node.iterchildren():
-                if child.tag == "em":
-                    tags.append(child.text)
-            print_example(node, tags)
+                if child.tag == "em" and hit == 0:
+                    tag += child.text
+                elif child.tag == "em" and hit > 0:
+                    tag += "," + child.text
+                hit += 1
+            example = "".join(list(node.itertext()))
+            await print_example(example, tag, word_entries, word_variants, adj_and_verb_forms, noun_plural_form)
+            await save_to_cache_examples_on_the_web(example, response_word, tag)
         print()
     logger.debug("DONE parsing and printing examples.")
 
@@ -296,7 +438,7 @@ async def phrases():
     logger.debug("DONE parsing and printing phrases.")
 
 
-async def related_phrases():
+async def related_phrases(word_entries):
     logger.debug("STARTING to parse and print related phrases...")
     nodes = html_tree.xpath('//*[@id="left-content"]/div[@id="related-phrases"]')
     if len(nodes) != 0:
@@ -791,135 +933,6 @@ def vg(node):
                 print()
 
 
-def entry_header_content(node):
-    """Print entry header content. e.g. value 1 of 3 noun"""
-
-    for elm in node.iterchildren():
-        if elm.tag == "h1" or elm.tag == "p":
-            word = "".join(list(elm.itertext()))
-            global word_entries
-            word_entries.append(word.strip().lower())
-            end = "" if elm.getnext() is None else " "
-            c_print(f"#[{w_col.eh_h1_word} bold]{word}", end=end)
-
-        elif elm.tag == "span":
-            num = " ".join(list(elm.itertext()))
-            end = "" if elm.getnext() is None else " "
-            print(num, end=end)
-
-        elif elm.tag == "h2":
-            type_name = " ".join(list(elm.itertext()))
-            c_print(f"#[bold {w_col.eh_word_type}]{type_name}", end="")
-
-    print()
-
-
-def entry_attr(node):
-    """Print the pronounciation. e.g. val·ue |ˈval-(ˌ)yü|"""
-
-    for elm in node.iterchildren():
-        if "col word-syllables-prons-header-content" in elm.attrib["class"]:
-            for i in elm.iterchildren():
-                if i.tag == "span" and i.attrib["class"] == "word-syllables-entry":
-                    syllables = i.text
-                    if i.getnext() is not None:
-                        print(f"{syllables}", end=" ")
-                    else:
-                        print(f"{syllables}", end="\n")
-
-                elif i.tag == "span" and "prons-entries-list-inline" in i.attrib["class"]:
-                    for x in i:
-                        if x.tag == "a" and x.getnext() is None:
-                            print_pron(x, True)
-                            print()
-                        elif x.tag == "a":
-                            print_pron(x, True)
-                            if i.getnext() is not None:
-                                print(" " , end="")
-                        elif x.getnext() is None:
-                            print("".join(list(x.itertext())).strip(), end="\n")
-                        else:
-                            print("".join(list(x.itertext())).strip(), end=" ")
-
-
-def row_entry_header(node):
-    for elm in node.iterchildren():
-        if elm.attrib["class"] == "col-12":
-            for i in elm.iterchildren():
-                if "entry-header-content" in i.attrib["class"]:
-                    entry_header_content(i)
-                elif "row entry-attr" in i.attrib["class"]:
-                    entry_attr(i)
-
-
-def entry_uros(node):
-    """Print other word forms. e.g. valueless, valuelessness"""
-
-    for elm in node.iterdescendants():
-        attr = elm.get("class")
-        if attr is not None:
-            if elm.tag == "span" and "fw-bold ure" in attr:
-                word_variants.append(elm.text)
-                c_print(f"#[bold {w_col.wf}]{elm.text}", end = " ")
-
-            elif elm.tag == "span" and "fw-bold fl" in attr:
-                elm_next = elm.getnext()
-                if elm_next is not None and elm_next.get("class") == "ins":
-                    end = "\n"
-                elif elm_next is not None and "badge" in elm_next.get("class"):
-                    end = " "
-                else:
-                    end = ""
-                c_print(f"#[{w_col.eh_word_type}]{elm.text}", end=end)
-
-            elif "ins" in attr:
-                print("", end="")
-                print_class_ins(elm)
-
-            elif "sl badge" in attr:
-                text = "".join(list(elm.itertext())).strip()
-                prev = elm.getprevious()
-                if prev is not None and prev.get("class") == "vrs":
-                    print_meaning_badge(" " + text)
-                else:
-                    print_meaning_badge(text)
-
-            elif "utxt" in attr:
-                for i in elm.iterchildren():
-                    sub_attr = i.get("class")
-                    if sub_attr is not None and "sub-content-thread" in sub_attr:
-                        sub_content_thread(i, "")
-
-            elif elm.tag == "a" and "play-pron-v2" in attr:
-                print_pron(elm, False)
-                if elm.getparent().getnext() is not None:
-                    print(" " , end="")
-
-            elif "vrs" in attr:
-                # can't get css element ::before.content like "variants" in the word "duel"
-                child = elm.getchildren()[0]
-                for c in child.iterchildren():
-                    attr_c = c.get("class")
-                    if attr_c == "il " or attr_c == "vl":
-                        print_or_badge(c.text)
-                    elif attr_c == "va":
-                        if c.text is None:
-                            for i in child:
-                                print_class_va(i.text)
-                        else:
-                            end = " " if (c.getnext() is not None or elm.getnext() is not None) else ""
-                            print_class_va(c.text, end=end)
-
-
-def row_headword_row_header_ins(node):
-    """Print verb types. e.g. valued; valuing"""
-
-    children = node.getchildren()[0].getchildren()[0]
-    if "ins" in children.attrib["class"]:
-        print_class_ins(children)
-        print()
-
-
 def print_vrs(node):
     for elm in node.iterchildren():
         elm_attr = elm.get("class")
@@ -942,34 +955,6 @@ def print_vrs(node):
                         print_pron(child, False)
                     else:
                         continue
-
-
-def row_headword_row_header_vrs(node):
-    """Print word variants. e.g. premise variants or less commonly premiss"""
-
-    children = node.getchildren()[0].getchildren()[0] # class "entry-attr vrs"
-    print_vrs(children)
-    print()
-
-
-def dxnls(node):
-    """Print dxnls section, such as 'see also', 'compare' etc."""
-
-    texts = list(node.itertext())
-    for text in texts:
-        text = text.strip()
-        if not text:
-            continue
-        if text == "see also":
-            c_print(f"#[bold {w_col.dxnls_content}]{text.upper()}", end = " ")
-        elif text == "compare":
-            c_print(f"#[bold {w_col.dxnls_content}]{text.upper()}", end = " ")
-        elif text == ",":
-            print_meaning_content(text, end=" ")
-        else:
-            print_meaning_content(text, end="")
-
-    print()
 
 
 def print_meaning_badge(text, end=""):
@@ -1039,6 +1024,8 @@ def print_class_sgram(node):
 def print_class_ins(node):
     """print node whose class name includes ins, such as 'ins', 'vg-ins'."""
 
+    noun_plural_form = ""
+    adj_or_verb_forms = []
     for child in node:
         attr = child.get("class")
         if attr is not None:
@@ -1059,10 +1046,9 @@ def print_class_ins(node):
             elif attr == "if":
                 next_sibling = child.getnext()
                 if child.getprevious() is not None and "il-badge badge mw-badge-gray-100" in child.getprevious().get("class"):
-                    global noun_plural_form
                     noun_plural_form = child.text
                 else:
-                    adj_verb_forms.append(child.text)
+                    adj_or_verb_forms.append(child.text)
                 if next_sibling is None:
                     print_class_if(child.text, has_next_sibling=False)
                 else:
@@ -1076,6 +1062,7 @@ def print_class_ins(node):
             else:
                 c_print(f"#[bold]{child.text}", end="")
 
+    return noun_plural_form, adj_or_verb_forms
 
 def print_dict_name():
     dict_name = "The Merriam-Webster Dictionary"

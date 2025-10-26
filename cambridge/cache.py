@@ -30,63 +30,179 @@ def create_table():
     )
 
 
+def create_table_examples_on_the_web():
+    con.execute(
+        """CREATE TABLE IF NOT EXISTS examples (
+        "id" INTEGER PRIMARY KEY,
+        "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        "example" TEXT UNIQUE NOT NULL,
+        "response_words" TEXT NOT NULL,
+        "tags" TEXT NOT NULL,
+        UNIQUE(example))"""
+    )
+
+
+# About sqlite3 context manager (from sqlite3 — DB-API 2.0 interface for SQLite databases):
+# "A Connection object can be used as a context manager that automatically commits or rolls back open transactions
+# when leaving the body of the context manager. If the body of the with statement finishes without exceptions, the transaction is committed."
+# "Connection object used as context manager **ONLY** commits or rollbacks transactions, so the connection object should be closed manually."
+# NOTE Assuming a context manager is designed in the first place for automatic close operation is wrong in the case of sqlite connection object.
+
+# About how to use sqlite3 "RETURN" primitive in Python:
+# According to 1, Python autocommits if you use context manager and when the code leaves the with block, and you later fetchone(), RETURN won't work and you will get:
+# OperationalError: cannot commit transaction - SQL statements in progress
+# According to sqlite3 docs, only after SQLITE_DONE, the RETURN starts to work.
+# Then the code is dead with the context manager: COMMIT (when leaving with block) depends on RETURN, RETURN depends on SQLITE_DONE, SQLITE_DONE happens after COMMIT
+# NOTE Don't use a connection as context manager when RETURN is needed.
+
+# After digging deep into cpython/modules/_sqlite/cursor.c, Python deals with sqlite3 step SQLITE_DONE within fetchone(),
+# fetchone() first, then manual COMMIT, and RETURN will work.
+
+# ON CONFLICT only takes effect when there is PRIMARY KEY or UNIQUE constraint present in the table schema.
+# You can't enforce it with other column names, or it will throw:
+# OperationalError: ON CONFLICT clause does not match any PRIMARY KEY or UNIQUE constraint
+# Example code demonstrating UPSERT i.e. ON CONFLICT (column_name) DO UPDATE SET (The code in use chooses DO NOTHING conflict resolution instead):
+"""
+con.execute(
+    "INSERT INTO words (input_word, response_word, created_at, response_url, response_text)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT (input_word) DO UPDATE SET
+    response_word=excluded.response_word,
+    created_at=excluded.created_at,
+    response_url=excluded.response_url,
+    response_text=excluded.response_text
+    ",
+    (input_word, response_word, current_datetime, url, text)
+)
+"""
 def insert_entry_into_table(input_word, response_word, url, text):
     import datetime
     current_datetime = datetime.datetime.now()
 
-    try:
-        # 1. About sqlite3 context manager (from sqlite3 — DB-API 2.0 interface for SQLite databases):
-        # "A Connection object can be used as a context manager that automatically commits or rolls back open transactions
-        # when leaving the body of the context manager. If the body of the with statement finishes without exceptions, the transaction is committed."
-        # "Connection object used as context manager **ONLY** commits or rollbacks transactions, so the connection object should be closed manually."
-        # NOTE Assuming a context manager is designed in the first place for automatic close operation is wrong in the case of sqlite connection object.
-
-        # 2. About how to use sqlite3 "RETURN" primitive in Python:
-        # According to 1, Python autocommits if you use context manager and when the code leaves the with block, and you later fetchone(), RETURN won't work and you will get:
-        # OperationalError: cannot commit transaction - SQL statements in progress
-        # According to sqlite3 docs, only after SQLITE_DONE, the RETURN starts to work.
-        # Then the code is dead with the context manager: COMMIT (when leaving with block) depends on RETURN, RETURN depends on SQLITE_DONE, SQLITE_DONE happens after COMMIT
-        # NOTE Don't use a connection as context manager when RETURN is needed.
-
-        # 4. After digging deep into cpython/modules/_sqlite/cursor.c, Python deals with sqlite3 step SQLITE_DONE within fetchone(),
-        # fetchone() first, then manual COMMIT, and RETURN will work.
-
-        # 5. ON CONFLICT only takes effect when there is PRIMARY KEY or UNIQUE constraint present in the table schema.
-        # You can't enforce it with other column names, or it will throw:
-        # OperationalError: ON CONFLICT clause does not match any PRIMARY KEY or UNIQUE constraint
-        # Example code demonstrating UPSERT i.e. ON CONFLICT (column_name) DO UPDATE SET (The code in use chooses DO NOTHING conflict resolution instead):
-        """
-        con.execute(
-            "INSERT INTO words (input_word, response_word, created_at, response_url, response_text)
-            VALUES (?, ?, ?, ?, ?)
-            ON CONFLICT (input_word) DO UPDATE SET
-            response_word=excluded.response_word,
-            created_at=excluded.created_at,
-            response_url=excluded.response_url,
-            response_text=excluded.response_text
-            ",
-            (input_word, response_word, current_datetime, url, text)
-        )
-        """
-        res_word = con.execute(
-            """INSERT INTO words (input_word, response_word, created_at, response_url, response_text)
-            VALUES (?, ?, ?, ?, ?)
-            ON CONFLICT DO NOTHING
-            RETURNING response_word
-            """,
-            (input_word, response_word, current_datetime, url, text)
-        ).fetchone()
-
-    except sqlite3.OperationalError as error:
-        if "no such table" in str(error):
-            create_table()
-        else:
+    for attempt in (1, 2):
+        try:
+            res_word = con.execute(
+                """
+                INSERT INTO words (input_word, response_word, created_at, response_url, response_text)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT DO NOTHING
+                RETURNING response_word
+                """,
+                (input_word, response_word, current_datetime, url, text)
+            ).fetchone()
+        except sqlite3.OperationalError as error:
+            if "no such table" in str(error) and attempt == 1:
+                create_table()
+                continue
             raise
+        except sqlite3.Error:
+            raise
+        else:
+            con.commit()
+            return res_word
+    return None
+
+
+def insert_entry_into_table_examples_on_the_web(example, response_word, tag):
+    import datetime
+    current_datetime = datetime.datetime.now()
+
+    for attempt in (1, 2):
+        try:
+            id = con.execute(
+                """
+                INSERT INTO examples (created_at, example, response_words, tags)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT DO NOTHING
+                RETURNING id
+                """,
+                (current_datetime, example, response_word, tag)
+            ).fetchone()
+
+        except sqlite3.OperationalError as error:
+            if "no such table" in str(error) and attempt == 1:
+                create_table_examples_on_the_web()
+                continue
+            raise
+        except sqlite3.Error:
+            raise
+        else:
+            con.commit()
+            return id
+    return None
+
+
+async def save_to_cache_examples_on_the_web(example, response_word, tag):
+    logger.debug("STARTING to cache examples on the web...")
+    try:
+        result = insert_entry_into_table_examples_on_the_web(example, response_word, tag)
+
+    except sqlite3.Error as error:
+        logger.error(f'{OP.CANCELLED.name} caching "{response_word}": [{error.__class__.__name__}] {error}\n')
+        sys.exit(4)
+
+    else:
+        if result is None:
+            logger.debug(f'{OP.CANCELLED.name} caching, already cached before') # hit ON CONFLICT
+        else:
+            logger.debug(f'{OP.CACHED.name} "{result[0]}"')
+
+#TODO
+def update_table_examples_on_the_web(id, response_word, tag):
+    try:
+        cur = con.execute("UPDATE examples SET response_words = COALESCE(response_words,'') || '; ' || ?, tags = COALESCE(tags,'') || '; ' || ? WHERE id = ?", (response_word, tag, id))
+        rowcount = cur.rowcount
     except sqlite3.Error:
         raise
     else:
         con.commit()
-        return res_word
+        return rowcount
+    return None
+
+#TODO
+#def check_example_in_table_examples_on_the_web(response_word):
+#    try:
+#        cur = con.execute(
+#            """
+#            SELECT * FROM examples WHERE ',' || COALESCE(response_words, '') || ',' LIKE '%,' || ? || ',%';
+#            """,
+#            (response_word)
+#        )
+#    except sqlite3.OperationalError as error:
+#        if "no such table" in str(error):
+#            create_table()
+#        else:
+#            raise
+#    except sqlite3.Error:
+#        raise
+#    else:
+#        return cur.fetchone()
+
+#TODO
+#async def check_cache_examples_on_the_web(response_word):
+#    logger.debug(f'{OP.SEARCHING.name} "{response_word}" in cache')
+#
+#    try:
+#        data = check_word_in_table(input_word, req_url)
+#    except sqlite3.Error as error:
+#        logger.error(f'{OP.CANCELLED.name} searching "{input_word}" in cache: [{error.__class__.__name__}] {error}\n')
+#        sys.exit(4)
+#    else:
+#        # considering user might input plural nouns, or verbs with tenses
+#        if data is None:
+#            if "s" != input_word[-1]:
+#                return None
+#            else:
+#                data = check_word_in_table(input_word[:-1], req_url)
+#                if data is None:
+#                    if "es" != input_word[-2:]:
+#                        return None
+#                    else:
+#                        data = check_word_in_table(input_word[:-2], req_url)
+#                        if data is None:
+#                            return None
+#        return data[0]
+
 
 
 def check_word_in_table(word, request_url):
@@ -230,7 +346,7 @@ async def get_cache(response_url):
 
 
 async def save_to_cache(input_word, response_word, response_url, response_text):
-    logger.debug("STARTING to save to cache...")
+    logger.debug("STARTING to cache word entries...")
     try:
         result = insert_entry_into_table(input_word, response_word, response_url, response_text)
 

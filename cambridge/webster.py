@@ -100,51 +100,88 @@ async def fresh_run(session, input_word, no_suggestions, req_url):
             await parse_suggestions(suggestions, session, input_word)
         else:
             # NOTE:
-            # Globals aren't safe with python asyncio.
+            # Globals aren't safe with python asyncio, so the following variables have to be made local and passed around across functions and coroutines.
             # Asyncio runs tasks cooperatively on a single thread by default, so simultaneous CPU-level concurrent access to a global from multiple tasks won't occur, but logical race conditions can still happen when tasks interleave at await points.
             response_word = decode_url(res_url).split("/")[-1]
             word_entries = [] # A page may have multiple word entries, e.g. "runaway" as noun, "runaway" as adjective, "run away" as verb
-            word_variants = [] # e.g. busily
-            adj_and_verb_forms = [] # e.g. busier, busiest, busied, busying
-            noun_plural_form = ""
-
-            logger.debug(f"{OP.PARSING.name} {res_url}")
+            word_types = [] # ['verb (1)', 'noun', 'verb (2)', 'abbreviation (1)', 'abbreviation (2)']
+            word_variants_not_nested = [] # [canful, canner]
+            word_forms_not_nested = [] # ['could', 'can', 'cans', 'canned', 'canning']
+            word_forms_nested = [] # [['could', 'can'], ['cans'], ['canned', 'canning'], [], []]
             entries_text = ""
+
             for i, entry in enumerate(entries):
                 logger.debug(f"STARTING to parse and print entry {i + 1}...")
-                word_entry, word_variant, adj_or_verb_forms, noun_plural_form = dictionary_entry(entry)
+                word_entry, word_type, word_variants, word_forms = dictionary_entry(entry)
                 word_entries.append(word_entry)
-                if word_variant:
-                    word_variants.append(word_variant)
-                if adj_or_verb_forms:
-                    adj_and_verb_forms += adj_or_verb_forms
+                if word_type:
+                    word_types.append(word_type)
+                if word_variants:
+                    word_variants_not_nested += word_variants
+                if word_forms:
+                    word_forms_not_nested += word_forms
+                word_forms_nested.append(word_forms)
 
                 text = etree.tostring(entry).decode('utf-8')
                 cleaned_text = remove_extra_spaces(text)
                 entries_text += cleaned_text
 
-            async with asyncio.TaskGroup() as tg:
-                task1 = tg.create_task(save_to_cache(input_word, response_word, res_url, entries_text))
-                task2 = tg.create_task(examples(response_word, word_entries, word_variants, adj_and_verb_forms, noun_plural_form))
-                task3 = tg.create_task(synonyms())
-                task4 = tg.create_task(phrases())
-                task5 = tg.create_task(related_phrases(word_entries))
-                task6 = tg.create_task(nearby_entries())
+            word_types_and_forms = dict(zip(word_types, word_forms_nested)) # {'verb (1)': ['could', 'can'], 'noun': ['cans'], 'verb (2)': ['canned', 'canning'], 'abbreviation (1)': [], 'abbreviation (2)': []}
 
-            print("_______")
+            print("\n_______")
             print("response_word: ", response_word)
             print("word_entries: ", word_entries)
-            print("word_variants: ", word_variants)
-            print("adj_and_verb_forms: ", adj_and_verb_forms)
-            print("noun_plural_form: ", noun_plural_form)
+            print("word_variants_not_nested: ", word_variants_not_nested)
+            print("word_types: ", word_types)
+            print("word_forms_not_nested: ", word_forms_not_nested)
+            print("word_forms_nested: ", word_forms_nested)
+            print("word_types_and_forms: ", word_types_and_forms)
+
+            # _______
+            # response_word:  can
+            # word_entries:  ['can', 'can', 'can', 'can', 'can']
+            # word_variants_not_nested:  ['canful', 'canner']
+            # word_types:  ['verb (1)', 'noun', 'verb (2)', 'abbreviation (1)', 'abbreviation (2)']
+            # word_forms_not_nested:  ['could', 'can', 'cans', 'canned', 'canning']
+            # word_forms_nested:  [['could', 'can'], ['cans'], ['canned', 'canning'], [], []]
+            # word_types_and_forms:  {'verb (1)': ['could', 'can'], 'noun': ['cans'], 'verb (2)': ['canned', 'canning'], 'abbreviation (1)': [], 'abbreviation (2)': []}
+
+            async with asyncio.TaskGroup() as tg:
+                task1 = tg.create_task(save_to_cache(input_word, response_word, res_url, entries_text))
+                task2 = tg.create_task(examples(tg, response_word, set(word_entries), word_variants_not_nested, word_forms_not_nested))
+                task3 = tg.create_task(synonyms())
+                task4 = tg.create_task(phrases())
+                task5 = tg.create_task(related_phrases(set(word_entries)))
+                task6 = tg.create_task(nearby_entries())
+
+            # A BUG IN PYTHON:
+            # If the above prints are put here, coroutine examples() modified variable `word_variants_not_nested` outside of examples(), making its value = ['canful', 'canner', 'could', 'cans', 'canned', 'canning']
+            # print("\n_______")
+            # print("response_word: ", response_word)
+            # print("word_entries: ", word_entries)
+            # print("word_variants_not_nested: ", word_variants_not_nested)
+            # print("word_types: ", word_types)
+            # print("word_forms_not_nested: ", word_forms_not_nested)
+            # print("word_forms_nested: ", word_forms_nested)
+            # print("word_types_and_forms: ", word_types_and_forms)
+
+            # _______
+            # response_word:  can
+            # word_entries:  ['can', 'can', 'can', 'can', 'can']
+            # word_variants_not_nested:  ['canful', 'canner', 'could', 'cans', 'canned', 'canning']
+            # word_types:  ['verb (1)', 'noun', 'verb (2)', 'abbreviation (1)', 'abbreviation (2)']
+            # word_forms_not_nested:  ['could', 'can', 'cans', 'canned', 'canning']
+            # word_forms_nested:  [['could', 'can'], ['cans'], ['canned', 'canning'], [], []]
+            # word_types_and_forms:  {'verb (1)': ['could', 'can'], 'noun': ['cans'], 'verb (2)': ['canned', 'canning'], 'abbreviation (1)': [], 'abbreviation (2)': []}
+
 
 
 def dictionary_entry(node):
     print()
     word_entry = ""
-    word_variant = ""
-    adj_or_verb_forms = []
-    noun_plural_form = ""
+    word_type = ""
+    word_variants = []
+    word_forms = []
 
     for elm in node.iterchildren():
         elm_attr = elm.get("class")
@@ -168,8 +205,8 @@ def dictionary_entry(node):
                                     end = "" if j.getnext() is None else " "
                                     print(num, end=end)
                                 elif j.tag == "h2":
-                                    type_name = " ".join(list(j.itertext()))
-                                    c_print(f"#[bold {w_col.eh_word_type}]{type_name}", end="")
+                                    word_type = " ".join(list(j.itertext()))
+                                    c_print(f"#[bold {w_col.eh_word_type}]{word_type}", end="")
 
                             print()
                         # Print the pronounciation. e.g. val·ue |ˈval-(ˌ)yü|"""
@@ -199,7 +236,7 @@ def dictionary_entry(node):
         elif elm_attr == "row headword-row header-ins":
             children = elm.getchildren()[0].getchildren()[0]
             if "ins" in children.attrib["class"]:
-                noun_plural_form, adj_or_verb_forms = print_class_ins(children)
+                word_forms = print_class_ins(children)
                 print()
 
         # Print word variants. e.g. premise variants or less commonly premiss
@@ -218,7 +255,7 @@ def dictionary_entry(node):
                     attr = e.get("class")
                     if attr is not None:
                         if e.tag == "span" and "fw-bold ure" in attr:
-                            word_variant = e.text
+                            word_variants.append(e.text)
                             c_print(f"#[bold {w_col.wf}]{e.text}", end = " ")
 
                         elif e.tag == "span" and "fw-bold fl" in attr:
@@ -301,13 +338,13 @@ def dictionary_entry(node):
                     print_meaning_content(i.text.upper(), end="")
             print()
 
-    # print("_______from entry")
-    # print("word_entry: ", word_entry)
-    # print("word_variant: ", word_variant)
-    # print("adj_or_verb_forms: ", adj_or_verb_forms)
-    # print("noun_plural_form: ", noun_plural_form)
+    print("\n_______from entry")
+    print("word_entry: ", word_entry)
+    print("word_type: ", word_type)
+    print("word_variants: ", word_variants)
+    print("word_forms: ", word_forms)
 
-    return word_entry, word_variant, adj_or_verb_forms, noun_plural_form
+    return word_entry, word_type, word_variants, word_forms
 
 
 async def parse_suggestions(suggestions, session, input_word):
@@ -320,37 +357,35 @@ async def parse_suggestions(suggestions, session, input_word):
         await search_webster(session, select_word, False, False, None)
 
 
-async def print_example(example, tag, word_entries, word_variants, adj_and_verb_forms, noun_plural_form):
+async def print_example(num, example, tags, response_word, word_entries):
+    logger.debug(f"STARTING to print #{num} example...")
     c_print(f"\n#[{w_col.accessory}]|", end="")
     example = example.split()
-    tags = tag.split(",")
     for word in example:
         end = "" if word == example[-1] else " "
-        if word in tags and (word in word_entries or word in word_variants or word in adj_and_verb_forms or word in noun_plural_form):
+        if response_word in word or word in tags or word in word_entries:
             c_print(f"#[{w_col.eg_word} bold]{word}", end=end)
         else:
             c_print(f"#[{w_col.eg_sentence}]{word}", end=end)
 
 
-async def examples(response_word, word_entries, word_variants, adj_and_verb_forms, noun_plural_form):
-    logger.debug("STARTING to parse and print examples...")
+async def examples(tg, response_word, word_entries, word_variants, word_forms):
     nodes = html_tree.xpath('//div[@id="examples"]/div[@class="content-section-body"]/div[contains(@class,"on-web-container")]/div[contains(@class,"on-web")]/span[contains(@class, "sub-content-thread ex-sent sents")]/span[contains(@class, "t has-aq")]')
+    tags = word_variants
+    for f in word_forms:
+        if f not in tags and f != response_word:
+            tags.append(f)
+
+    examples = set()
     if len(nodes) != 0:
         c_print(f"\n#[{w_col.eg_title} bold]Recent Examples on the Web", end="")
         for node in nodes:
-            tag = ""
-            hit = 0
-            for child in node.iterchildren():
-                if child.tag == "em" and hit == 0:
-                    tag += child.text
-                elif child.tag == "em" and hit > 0:
-                    tag += "," + child.text
-                hit += 1
             example = "".join(list(node.itertext()))
-            await print_example(example, tag, word_entries, word_variants, adj_and_verb_forms, noun_plural_form)
-            await save_to_cache_examples_on_the_web(example, response_word, tag)
-        print()
-    logger.debug("DONE parsing and printing examples.")
+            examples.add(example)
+    tags_to_cache = ",".join(tags)
+    for i, example in enumerate(examples):
+        tg.create_task(print_example(i+1, example, tags, response_word, word_entries))
+        tg.create_task(save_to_cache_examples_on_the_web(i+1, example, response_word, tags_to_cache))
 
 
 async def nearby_entries():
@@ -1022,10 +1057,7 @@ def print_class_sgram(node):
 
 
 def print_class_ins(node):
-    """print node whose class name includes ins, such as 'ins', 'vg-ins'."""
-
-    noun_plural_form = ""
-    adj_or_verb_forms = []
+    word_forms = []
     for child in node:
         attr = child.get("class")
         if attr is not None:
@@ -1045,10 +1077,11 @@ def print_class_ins(node):
                 print(child.text, end="")
             elif attr == "if":
                 next_sibling = child.getnext()
-                if child.getprevious() is not None and "il-badge badge mw-badge-gray-100" in child.getprevious().get("class"):
-                    noun_plural_form = child.text
-                else:
-                    adj_or_verb_forms.append(child.text)
+                word_forms.append(child.text)
+                # if child.getprevious() is not None and "il-badge badge mw-badge-gray-100" in child.getprevious().get("class"):
+                #     word_forms.append(child.text)
+                # else:
+                #     word_forms.append(child.text)
                 if next_sibling is None:
                     print_class_if(child.text, has_next_sibling=False)
                 else:
@@ -1062,7 +1095,8 @@ def print_class_ins(node):
             else:
                 c_print(f"#[bold]{child.text}", end="")
 
-    return noun_plural_form, adj_or_verb_forms
+    return word_forms
+
 
 def print_dict_name():
     dict_name = "The Merriam-Webster Dictionary"

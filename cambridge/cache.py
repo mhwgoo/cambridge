@@ -109,12 +109,12 @@ def insert_entry_into_table_examples_on_the_web(example, response_word, tag):
 
     for attempt in (1, 2):
         try:
-            id = con.execute(
+            first_res_word = con.execute(
                 """
                 INSERT INTO examples (created_at, example, response_words, tags)
                 VALUES (?, ?, ?, ?)
                 ON CONFLICT DO NOTHING
-                RETURNING id
+                RETURNING response_words
                 """,
                 (current_datetime, example, response_word, tag)
             ).fetchone()
@@ -128,12 +128,11 @@ def insert_entry_into_table_examples_on_the_web(example, response_word, tag):
             raise
         else:
             con.commit()
-            return id
+            return first_res_word
     return None
 
 
-async def save_to_cache_examples_on_the_web(example, response_word, tag):
-    logger.debug("STARTING to cache examples on the web...")
+async def save_to_cache_examples_on_the_web(num, example, response_word, tag):
     try:
         result = insert_entry_into_table_examples_on_the_web(example, response_word, tag)
 
@@ -142,67 +141,43 @@ async def save_to_cache_examples_on_the_web(example, response_word, tag):
         sys.exit(4)
 
     else:
-        if result is None:
-            logger.debug(f'{OP.CANCELLED.name} caching, already cached before') # hit ON CONFLICT
+        if result is None: # hit ON CONFLICT
+            result = check_word_in_table_examples_on_the_web(example, response_word)
+            if result:
+                logger.debug(f'{OP.CANCELLED.name} caching, already cached #{num} example for "{response_word}" before in the table "examples"')
+            else:
+                update_table_examples_on_the_web(example, response_word, tag)
+                logger.debug(f'Already cached #{num} example before in the table "examples" from other words. Updated the record for "{response_word}"')
         else:
-            logger.debug(f'{OP.CACHED.name} "{result[0]}"')
+            logger.debug(f'{OP.CACHED.name} #{num} example for "{result[0]}" in the table "examples"')
 
-#TODO
-def update_table_examples_on_the_web(id, response_word, tag):
+
+def check_word_in_table_examples_on_the_web(example, response_word):
     try:
-        cur = con.execute("UPDATE examples SET response_words = COALESCE(response_words,'') || '; ' || ?, tags = COALESCE(tags,'') || '; ' || ? WHERE id = ?", (response_word, tag, id))
-        rowcount = cur.rowcount
+        cur = con.execute(
+            "SELECT response_words FROM examples WHERE example = ?",
+            (example),
+        )
+    except sqlite3.Error:
+        raise
+    else:
+        response_words = cur.fetchone()[0].split(",")
+        if response_word in response_words:
+            return True
+        else:
+            return False
+
+
+def update_table_examples_on_the_web(example, response_word, tag):
+    try:
+        cur = con.execute(
+            "UPDATE examples SET response_words = response_words || ',' || ?, tags = tags || ',' || ? WHERE example = ?",
+            (response_word, tag, example),
+        )
     except sqlite3.Error:
         raise
     else:
         con.commit()
-        return rowcount
-    return None
-
-#TODO
-#def check_example_in_table_examples_on_the_web(response_word):
-#    try:
-#        cur = con.execute(
-#            """
-#            SELECT * FROM examples WHERE ',' || COALESCE(response_words, '') || ',' LIKE '%,' || ? || ',%';
-#            """,
-#            (response_word)
-#        )
-#    except sqlite3.OperationalError as error:
-#        if "no such table" in str(error):
-#            create_table()
-#        else:
-#            raise
-#    except sqlite3.Error:
-#        raise
-#    else:
-#        return cur.fetchone()
-
-#TODO
-#async def check_cache_examples_on_the_web(response_word):
-#    logger.debug(f'{OP.SEARCHING.name} "{response_word}" in cache')
-#
-#    try:
-#        data = check_word_in_table(input_word, req_url)
-#    except sqlite3.Error as error:
-#        logger.error(f'{OP.CANCELLED.name} searching "{input_word}" in cache: [{error.__class__.__name__}] {error}\n')
-#        sys.exit(4)
-#    else:
-#        # considering user might input plural nouns, or verbs with tenses
-#        if data is None:
-#            if "s" != input_word[-1]:
-#                return None
-#            else:
-#                data = check_word_in_table(input_word[:-1], req_url)
-#                if data is None:
-#                    if "es" != input_word[-2:]:
-#                        return None
-#                    else:
-#                        data = check_word_in_table(input_word[:-2], req_url)
-#                        if data is None:
-#                            return None
-#        return data[0]
-
 
 
 def check_word_in_table(word, request_url):
@@ -214,6 +189,7 @@ def check_word_in_table(word, request_url):
     except sqlite3.OperationalError as error:
         if "no such table" in str(error):
             create_table()
+            return None
         else:
             raise
     except sqlite3.Error:
@@ -239,6 +215,7 @@ def get_entry_from_table(response_url):
         )
     except sqlite3.Error:
         raise
+
     else:
         return cur.fetchone()
 
@@ -346,7 +323,6 @@ async def get_cache(response_url):
 
 
 async def save_to_cache(input_word, response_word, response_url, response_text):
-    logger.debug("STARTING to cache word entries...")
     try:
         result = insert_entry_into_table(input_word, response_word, response_url, response_text)
 
@@ -365,6 +341,6 @@ async def save_to_cache(input_word, response_word, response_url, response_text):
 
     else:
         if result is None:
-            logger.debug(f'{OP.CANCELLED.name} caching, already cached before') # hit ON CONFLICT
+            logger.debug(f'{OP.CANCELLED.name} caching, already cached before in the table "words"') # hit ON CONFLICT
         else:
-            logger.debug(f'{OP.CACHED.name} "{result[0]}"')
+            logger.debug(f'{OP.CACHED.name} "{result[0]}" in the table "words"')

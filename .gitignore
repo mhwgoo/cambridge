@@ -1,5 +1,6 @@
 cambridge/__pycache__/*
 cambridge/.DS_Store
+cambridge/TAGS
 .DS_Store
 */.ruff_cache/*
 dist/

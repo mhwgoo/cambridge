@@ -154,9 +154,10 @@ async def save_to_cache_examples_on_the_web(num, example, response_word, tag):
 
 def check_word_in_table_examples_on_the_web(example, response_word):
     try:
+        # NOTE: use the form of `(example,)` with one variable, otherwise, python throws `sqlite3.ProgrammingError: Incorrect number of bindings supplied.`
         cur = con.execute(
             "SELECT response_words FROM examples WHERE example = ?",
-            (example),
+            (example,),
         )
     except sqlite3.Error:
         raise
@@ -200,7 +201,6 @@ def check_word_in_table(word, request_url):
 
 def get_entry_from_table(response_url):
     try:
-
         # From https://docs.python.org/2/library/
         # "For the qmark style, parameters must be a sequence whose length must match the number of placeholders, or a ProgrammingError is raised."
         # sqlite3.ProgrammingError: Incorrect number of bindings supplied. The current statement uses 1, and there are 57 supplied.

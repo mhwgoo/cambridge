@@ -105,7 +105,7 @@ async def fresh_run(session, input_word, no_suggestions, req_url):
             response_word = decode_url(res_url).split("/")[-1]
             word_entries = [] # A page may have multiple word entries, e.g. "runaway" as noun, "runaway" as adjective, "run away" as verb
             word_types = [] # ['verb (1)', 'noun', 'verb (2)', 'abbreviation (1)', 'abbreviation (2)']
-            word_variants_not_nested = [] # [canful, canner]
+            word_variants = [] # [canful, canner]
             word_forms_not_nested = [] # ['could', 'can', 'cans', 'canned', 'canning']
             word_forms_nested = [] # [['could', 'can'], ['cans'], ['canned', 'canning'], [], []]
             entries_text = ""
@@ -117,7 +117,7 @@ async def fresh_run(session, input_word, no_suggestions, req_url):
                 if word_type:
                     word_types.append(word_type)
                 if word_variants:
-                    word_variants_not_nested += word_variants
+                    word_variants += word_variants
                 if word_forms:
                     word_forms_not_nested += word_forms
                 word_forms_nested.append(word_forms)
@@ -131,7 +131,7 @@ async def fresh_run(session, input_word, no_suggestions, req_url):
             print("\n_______")
             print("response_word: ", response_word)
             print("word_entries: ", word_entries)
-            print("word_variants_not_nested: ", word_variants_not_nested)
+            print("word_variants: ", word_variants)
             print("word_types: ", word_types)
             print("word_forms_not_nested: ", word_forms_not_nested)
             print("word_forms_nested: ", word_forms_nested)
@@ -140,26 +140,31 @@ async def fresh_run(session, input_word, no_suggestions, req_url):
             # _______
             # response_word:  can
             # word_entries:  ['can', 'can', 'can', 'can', 'can']
-            # word_variants_not_nested:  ['canful', 'canner']
+            # word_variants:  ['canful', 'canner']
             # word_types:  ['verb (1)', 'noun', 'verb (2)', 'abbreviation (1)', 'abbreviation (2)']
             # word_forms_not_nested:  ['could', 'can', 'cans', 'canned', 'canning']
             # word_forms_nested:  [['could', 'can'], ['cans'], ['canned', 'canning'], [], []]
             # word_types_and_forms:  {'verb (1)': ['could', 'can'], 'noun': ['cans'], 'verb (2)': ['canned', 'canning'], 'abbreviation (1)': [], 'abbreviation (2)': []}
 
+            # word_types_and_forms:  {'verb (1)': ['could', 'can'], 'noun': ['cans'], 'verb (2)': ['canned', 'canning']}
+            for wt in word_types:
+                if  "abbreviation" in wt:
+                    del word_types_and_forms[wt]
+
             async with asyncio.TaskGroup() as tg:
                 task1 = tg.create_task(save_to_cache(input_word, response_word, res_url, entries_text))
-                task2 = tg.create_task(examples(tg, response_word, set(word_entries), word_variants_not_nested, word_forms_not_nested))
+                task2 = tg.create_task(examples(tg, response_word, set(word_entries), word_variants, word_forms_not_nested))
                 task3 = tg.create_task(synonyms())
                 task4 = tg.create_task(phrases())
                 task5 = tg.create_task(related_phrases(set(word_entries)))
                 task6 = tg.create_task(nearby_entries())
 
             # A BUG IN PYTHON:
-            # If the above prints are put here, coroutine examples() modified variable `word_variants_not_nested` outside of examples(), making its value = ['canful', 'canner', 'could', 'cans', 'canned', 'canning']
+            # If the above prints are put here, coroutine examples() modified variable `word_variants` outside of examples(), making its value = ['canful', 'canner', 'could', 'cans', 'canned', 'canning']
             # print("\n_______")
             # print("response_word: ", response_word)
             # print("word_entries: ", word_entries)
-            # print("word_variants_not_nested: ", word_variants_not_nested)
+            # print("word_variants: ", word_variants)
             # print("word_types: ", word_types)
             # print("word_forms_not_nested: ", word_forms_not_nested)
             # print("word_forms_nested: ", word_forms_nested)
@@ -168,7 +173,7 @@ async def fresh_run(session, input_word, no_suggestions, req_url):
             # _______
             # response_word:  can
             # word_entries:  ['can', 'can', 'can', 'can', 'can']
-            # word_variants_not_nested:  ['canful', 'canner', 'could', 'cans', 'canned', 'canning']
+            # word_variants:  ['canful', 'canner', 'could', 'cans', 'canned', 'canning']
             # word_types:  ['verb (1)', 'noun', 'verb (2)', 'abbreviation (1)', 'abbreviation (2)']
             # word_forms_not_nested:  ['could', 'can', 'cans', 'canned', 'canning']
             # word_forms_nested:  [['could', 'can'], ['cans'], ['canned', 'canning'], [], []]
@@ -358,12 +363,15 @@ async def parse_suggestions(suggestions, session, input_word):
 
 
 async def print_example(num, example, tags, response_word, word_entries):
-    logger.debug(f"STARTING to print #{num} example...")
+    # logger.debug(f"STARTING to print #{num} example...")
+    if num == 1:
+        c_print(f"\n#[{w_col.eg_title} bold]Recent Examples on the Web", end="")
     c_print(f"\n#[{w_col.accessory}]|", end="")
     example = example.split()
     for word in example:
         end = "" if word == example[-1] else " "
-        if response_word in word or word in tags or word in word_entries:
+        word_lowercase = word.lower()
+        if response_word in word_lowercase or word_lowercase in tags or word_lowercase in word_entries:
             c_print(f"#[{w_col.eg_word} bold]{word}", end=end)
         else:
             c_print(f"#[{w_col.eg_sentence}]{word}", end=end)
@@ -378,7 +386,6 @@ async def examples(tg, response_word, word_entries, word_variants, word_forms):
 
     examples = set()
     if len(nodes) != 0:
-        c_print(f"\n#[{w_col.eg_title} bold]Recent Examples on the Web", end="")
         for node in nodes:
             example = "".join(list(node.itertext()))
             examples.add(example)
@@ -389,7 +396,7 @@ async def examples(tg, response_word, word_entries, word_variants, word_forms):
 
 
 async def nearby_entries():
-    logger.debug("STARTING to parse and print nearby entries...")
+    # logger.debug("STARTING to parse and print nearby entries...")
     nodes = html_tree.xpath('//*[@id="left-content"]/div[@id="nearby-entries"]')
     if len(nodes) != 0:
         print()
@@ -414,11 +421,11 @@ async def nearby_entries():
                         c_print(f"#[{w_col.nearby_word}]{elm.text}", end="\n")
                     elif has_nearby:
                         c_print(f"#[{w_col.nearby_item}]{elm.text}", end="\n")
-    logger.debug("DONE parsing and printing nearby entries.")
+    # logger.debug("DONE parsing and printing nearby entries.")
 
 
 async def synonyms():
-    logger.debug("STARTING to parse and print synonyms...")
+    # logger.debug("STARTING to parse and print synonyms...")
     nodes = html_tree.xpath('//*[@id="left-content"]/div[@id="synonyms"]')
     if len(nodes) != 0:
         print()
@@ -441,11 +448,11 @@ async def synonyms():
                         else:
                             c_print(f"#[{w_col.syn_item}]{syn}", end="\n")
 
-    logger.debug("DONE parsing and printing synonyms.")
+    # logger.debug("DONE parsing and printing synonyms.")
 
 
 async def phrases():
-    logger.debug("STARTING to parse and print phrases...")
+    # logger.debug("STARTING to parse and print phrases...")
     nodes = html_tree.xpath('//*[@id="left-content"]/div[@id="phrases"]')
     if len(nodes) != 0:
         print()
@@ -470,11 +477,11 @@ async def phrases():
                             c_print(f"#[{w_col.ph_item} bold]{i.text}", end="")
                     if child.getnext().get("class") == "vg":
                         print()
-    logger.debug("DONE parsing and printing phrases.")
+    # logger.debug("DONE parsing and printing phrases.")
 
 
 async def related_phrases(word_entries):
-    logger.debug("STARTING to parse and print related phrases...")
+    # logger.debug("STARTING to parse and print related phrases...")
     nodes = html_tree.xpath('//*[@id="left-content"]/div[@id="related-phrases"]')
     if len(nodes) != 0:
         print()
@@ -500,7 +507,7 @@ async def related_phrases(word_entries):
             for index, phrase in enumerate(phrases):
                 text = phrase + ", " if index != len(phrases) -1  else phrase
                 c_print(f"#[{w_col.rph_item}]{text}", end="")
-    logger.debug("DONE parsing and printing related phrases.")
+    # logger.debug("DONE parsing and printing related phrases.")
 
 
 def dtText(node, ancestor_attr, num_label_count):

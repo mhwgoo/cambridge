@@ -105,7 +105,7 @@ async def fresh_run(session, input_word, no_suggestions, req_url):
             response_word = decode_url(res_url).split("/")[-1]
             word_entries = [] # A page may have multiple word entries, e.g. "runaway" as noun, "runaway" as adjective, "run away" as verb
             word_types = [] # ['verb (1)', 'noun', 'verb (2)', 'abbreviation (1)', 'abbreviation (2)']
-            word_variants = [] # [canful, canner]
+            word_variants_not_nested = [] # [canful, canner]
             word_forms_not_nested = [] # ['could', 'can', 'cans', 'canned', 'canning']
             word_forms_nested = [] # [['could', 'can'], ['cans'], ['canned', 'canning'], [], []]
             entries_text = ""
@@ -117,7 +117,7 @@ async def fresh_run(session, input_word, no_suggestions, req_url):
                 if word_type:
                     word_types.append(word_type)
                 if word_variants:
-                    word_variants += word_variants
+                    word_variants_not_nested += word_variants
                 if word_forms:
                     word_forms_not_nested += word_forms
                 word_forms_nested.append(word_forms)
@@ -131,7 +131,7 @@ async def fresh_run(session, input_word, no_suggestions, req_url):
             print("\n_______")
             print("response_word: ", response_word)
             print("word_entries: ", word_entries)
-            print("word_variants: ", word_variants)
+            print("word_variants_not_nested: ", word_variants_not_nested)
             print("word_types: ", word_types)
             print("word_forms_not_nested: ", word_forms_not_nested)
             print("word_forms_nested: ", word_forms_nested)
@@ -140,7 +140,7 @@ async def fresh_run(session, input_word, no_suggestions, req_url):
             # _______
             # response_word:  can
             # word_entries:  ['can', 'can', 'can', 'can', 'can']
-            # word_variants:  ['canful', 'canner']
+            # word_variants_not_nested:  ['canful', 'canner']
             # word_types:  ['verb (1)', 'noun', 'verb (2)', 'abbreviation (1)', 'abbreviation (2)']
             # word_forms_not_nested:  ['could', 'can', 'cans', 'canned', 'canning']
             # word_forms_nested:  [['could', 'can'], ['cans'], ['canned', 'canning'], [], []]
@@ -153,32 +153,11 @@ async def fresh_run(session, input_word, no_suggestions, req_url):
 
             async with asyncio.TaskGroup() as tg:
                 task1 = tg.create_task(save_to_cache(input_word, response_word, res_url, entries_text))
-                task2 = tg.create_task(examples(tg, response_word, set(word_entries), word_variants, word_forms_not_nested))
+                task2 = tg.create_task(examples(tg, response_word, set(word_entries), word_variants_not_nested, word_forms_not_nested))
                 task3 = tg.create_task(synonyms())
                 task4 = tg.create_task(phrases())
                 task5 = tg.create_task(related_phrases(set(word_entries)))
                 task6 = tg.create_task(nearby_entries())
-
-            # A BUG IN PYTHON:
-            # If the above prints are put here, coroutine examples() modified variable `word_variants` outside of examples(), making its value = ['canful', 'canner', 'could', 'cans', 'canned', 'canning']
-            # print("\n_______")
-            # print("response_word: ", response_word)
-            # print("word_entries: ", word_entries)
-            # print("word_variants: ", word_variants)
-            # print("word_types: ", word_types)
-            # print("word_forms_not_nested: ", word_forms_not_nested)
-            # print("word_forms_nested: ", word_forms_nested)
-            # print("word_types_and_forms: ", word_types_and_forms)
-
-            # _______
-            # response_word:  can
-            # word_entries:  ['can', 'can', 'can', 'can', 'can']
-            # word_variants:  ['canful', 'canner', 'could', 'cans', 'canned', 'canning']
-            # word_types:  ['verb (1)', 'noun', 'verb (2)', 'abbreviation (1)', 'abbreviation (2)']
-            # word_forms_not_nested:  ['could', 'can', 'cans', 'canned', 'canning']
-            # word_forms_nested:  [['could', 'can'], ['cans'], ['canned', 'canning'], [], []]
-            # word_types_and_forms:  {'verb (1)': ['could', 'can'], 'noun': ['cans'], 'verb (2)': ['canned', 'canning'], 'abbreviation (1)': [], 'abbreviation (2)': []}
-
 
 
 def dictionary_entry(node):
@@ -362,27 +341,33 @@ async def parse_suggestions(suggestions, session, input_word):
         await search_webster(session, select_word, False, False, None)
 
 
-async def print_example(num, example, tags, response_word, word_entries):
+async def print_example(num, is_last, example, tags, response_word):
     # logger.debug(f"STARTING to print #{num} example...")
     if num == 1:
         c_print(f"\n#[{w_col.eg_title} bold]Recent Examples on the Web", end="")
     c_print(f"\n#[{w_col.accessory}]|", end="")
+
     example = example.split()
     for word in example:
         end = "" if word == example[-1] else " "
         word_lowercase = word.lower()
-        if response_word in word_lowercase or word_lowercase in tags or word_lowercase in word_entries:
+        if response_word in word_lowercase or word_lowercase in tags:
             c_print(f"#[{w_col.eg_word} bold]{word}", end=end)
+        elif  word_lowercase[:-1] in tags: # `word` may contain a punctuation mark.
+            c_print(f"#[{w_col.eg_word} bold]{word[:-1]}#[{w_col.eg_sentence}]{word[-1]}", end=end)
         else:
             c_print(f"#[{w_col.eg_sentence}]{word}", end=end)
 
+    if is_last:
+        print()
 
 async def examples(tg, response_word, word_entries, word_variants, word_forms):
     nodes = html_tree.xpath('//div[@id="examples"]/div[@class="content-section-body"]/div[contains(@class,"on-web-container")]/div[contains(@class,"on-web")]/span[contains(@class, "sub-content-thread ex-sent sents")]/span[contains(@class, "t has-aq")]')
-    tags = word_variants
-    for f in word_forms:
-        if f not in tags and f != response_word:
-            tags.append(f)
+    tags = set()
+    for i in (word_entries, word_variants, word_forms):
+        for j in i:
+            if j != response_word:
+                tags.add(j)
 
     examples = set()
     if len(nodes) != 0:
@@ -391,7 +376,8 @@ async def examples(tg, response_word, word_entries, word_variants, word_forms):
             examples.add(example)
     tags_to_cache = ",".join(tags)
     for i, example in enumerate(examples):
-        tg.create_task(print_example(i+1, example, tags, response_word, word_entries))
+        is_last = True if i == len(examples) -1 else False
+        tg.create_task(print_example(i+1, is_last, example, tags, response_word))
         tg.create_task(save_to_cache_examples_on_the_web(i+1, example, response_word, tags_to_cache))
 
 

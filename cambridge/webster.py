@@ -94,12 +94,8 @@ async def fresh_run(session, input_word, no_suggestions, req_url):
             for e in entries:
                 suggestion = "".join(list(e.getprevious().itertext())).replace("\n\n", " |").strip()
                 meaning = "".join(list(e.itertext())).replace("\n", "").replace("See the full definition", "").strip()
-                portions = (suggestion + meaning).split(" ")
-                suggestion_and_meaning = ""
-                for p in portions:
-                    if p:
-                        suggestion_and_meaning += p + " "
-                suggestions.append(suggestion_and_meaning.strip())
+                suggestion_and_meaning = "".join((suggestion + meaning).split("  "))
+                suggestions.append(suggestion_and_meaning)
             await parse_suggestions(suggestions, session, input_word)
         else:
             # NOTE:
@@ -173,8 +169,7 @@ async def fresh_run(session, input_word, no_suggestions, req_url):
             async with asyncio.TaskGroup() as tg:
                 task1 = tg.create_task(save_to_cache(input_word, response_word, res_url, entries_text))
                 task2 = tg.create_task(examples(tg, html_tree, response_word, set(word_entries), word_variants_not_nested, word_forms_not_nested))
-                task4 = tg.create_task(phrases(html_tree))
-                task5 = tg.create_task(widgets(html_tree, set(word_entries)))
+                task3 = tg.create_task(widgets(html_tree, set(word_entries)))
 
 
 def dictionary_entry(node):
@@ -432,8 +427,19 @@ def print_word_or_phrase(text, last):
     c_print(f"#[{w_col.syn_item}]{text}", end="\n") if last else c_print(f"#[{w_col.syn_item}]{text},", end=" ")
 
 
+def print_phrase(phrase_name, phrase_meaning):
+    indices = [i for i, ch in enumerate(phrase_name) if ch == "["]
+    if not indices:
+        c_print(f"#[{w_col.ph_item}bold]{phrase_name}", end="\n")
+    else:
+        c_print(f"#[{w_col.ph_item}bold]{phrase_name[:indices[0]]}", end="")
+        print_or_badge(phrase_name[indices[0]:])
+        print()
+    print_meaning_content(phrase_meaning)
+
+
 async def widgets(html_tree, word_entries):
-    nodes = html_tree.xpath('//*[@id="left-content"]/div[@id="nearby-entries" or @id="synonyms" or @id="related-phrases"]')
+    nodes = html_tree.xpath('//*[@id="left-content"]/div[@id="phrases" or @id="nearby-entries" or @id="synonyms" or @id="related-phrases"]')
     synonyms = []
     related_phrases = []
     nearby_entries = []
@@ -441,10 +447,27 @@ async def widgets(html_tree, word_entries):
         return
     for node in nodes:
         id_name = node.get("id")
-        if id_name == "nearby-entries":
-            for elm in node.iterdescendants():
-                if elm.tag == "a" and elm.get("class") is not None and "b-link" == elm.get("class"):
-                    nearby_entries.append(elm.text)
+        if id_name == "phrases":
+            children = node.getchildren()[1]
+            for child in children:
+                attr = child.get("class")
+                if attr == "drp":
+                    phrase_name = "".join(list(child.itertext())).strip()
+                    phrase_meaning = ""
+                    next_node = child.getnext()
+                    if next_node.tag == "span" and next_node.get("class") is None:
+                        phrase_name += " [" + "".join(list(next_node.itertext())).strip() + "]"
+                        if next_node.getnext().tag == "div" and next_node.getnext().get("class") == "vg":
+                            for i in next_node.getnext().getchildren():
+                                phrase_meaning += "".join(list(i.itertext())).strip().replace("\n", "") + "\n"
+                                if "  " in phrase_meaning:
+                                    phrase_meaning = "".join(phrase_meaning.split("  "))
+                    elif next_node.tag == "div" and next_node.get("class") == "vg":
+                        for i in next_node.getchildren():
+                            phrase_meaning += "".join(list(i.itertext())).strip().replace("\n", "") + "\n"
+                            if "  " in phrase_meaning:
+                                phrase_meaning = "".join(phrase_meaning.split("  "))
+                    print_phrase(phrase_name, phrase_meaning)
 
         elif id_name == "synonyms":
             for elm in node.iterdescendants():
@@ -458,6 +481,11 @@ async def widgets(html_tree, word_entries):
             for elm in node.iterdescendants():
                 if elm.tag == "a" and elm.get("class") is not None and "pb-4 pr-4 d-block" == elm.get("class"):
                     related_phrases.append("".join(list(elm.itertext())).strip())
+
+        elif id_name == "nearby-entries":
+            for elm in node.iterdescendants():
+                if elm.tag == "a" and elm.get("class") is not None and "b-link" == elm.get("class"):
+                    nearby_entries.append(elm.text)
 
     if synonyms:
         c_print(f"\n#[bold {w_col.syn_title}]Synonyms", end="\n")
@@ -473,35 +501,6 @@ async def widgets(html_tree, word_entries):
         c_print(f"\n#[bold {w_col.nearby_title}]Browse Nearby Words", end="\n")
         for index, text in enumerate(nearby_entries):
             print_word_or_phrase(text, is_last(index, len(nearby_entries)))
-
-
-#TODO add a new table `phrases`
-async def phrases(html_tree):
-    nodes = html_tree.xpath('//*[@id="left-content"]/div[@id="phrases"]')
-    if len(nodes) == 0:
-        return
-    print()
-    for node in nodes:
-        children = node.getchildren()[1]
-        for child in children:
-            try:
-                if child.attrib["class"] == "drp":
-                    if child.getnext().tag == "span":
-                        c_print(f"#[{w_col.ph_item} bold]{child.text}", end="")
-                    else:
-                        c_print(f"#[{w_col.ph_item} bold]{child.text}", end="\n")
-
-                elif child.attrib["class"] == "vg":
-                    vg(child)
-
-            except KeyError:
-                for i in child.getchildren():
-                    if i.attrib["class"] == "vl":
-                        print_or_badge(i.text)
-                    else:
-                        c_print(f"#[{w_col.ph_item} bold]{i.text}", end="")
-                if child.getnext().get("class") == "vg":
-                    print()
 
 
 def dtText(node, ancestor_attr, num_label_count):

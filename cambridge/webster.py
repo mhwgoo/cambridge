@@ -374,26 +374,32 @@ async def parse_suggestions(suggestions, session, input_word):
         await search_webster(session, select_word, False, False, None)
 
 
-async def print_example(num, is_last, example, tags, response_word):
+async def print_example(num, is_last, example, tags, word_entries):
     # logger.debug(f"STARTING to print #{num} example...")
     if num == 1:
         c_print(f"\n#[{w_col.eg_title} bold]Recent Examples on the Web", end="")
     c_print(f"\n#[{w_col.accessory}]|", end="")
 
-    example = example.split()
-    for i, word in enumerate(example):
-        end = "" if word == example[-1] else " "
-        word_lowercase = word.lower()
-        pre_word_lowercase = example[i-1].lower() if i > 0 else ""
-        next_word_lowercase = example[i+1].lower() if i + 1 < len(example) else ""
-        # e.g. "make a dent", "hotspot", "tone", "ghost"
-        to_exclude = ["in", "to"]
-        if response_word in word_lowercase or word_lowercase in tags or (word_lowercase not in to_exclude and (any(word_lowercase in tag for tag in tags if pre_word_lowercase in tag or next_word_lowercase in tag or next_word_lowercase[:-1] in tag))):
-            c_print(f"#[{w_col.eg_word} bold]{word}", end=end)
-        elif not word_lowercase[-1].isalpha() and (word_lowercase[:-1] in tags or any(word_lowercase[:-1] in tag for tag in tags if len(tag.split())>1)):
-            c_print(f"#[{w_col.eg_word} bold]{word[:-1]}#[{w_col.eg_sentence}]{word[-1]}", end=end)
-        else:
-            c_print(f"#[{w_col.eg_sentence}]{word}", end=end)
+    for word_entry in word_entries:
+        example = example.split()
+        example_len = len(example)
+        word_num = len(word_entry.split())
+
+        # e.g. "make a dent", "blue blood", "hotspot", "tone", "ghost"
+        i = 0
+        while i < example_len:
+            end = "" if i == example_len - 1 else " "
+            example_range = " ".join(example[i : i + word_num])
+            example_range_lowercase = example_range.lower()
+            if word_entry in example_range_lowercase or example_range_lowercase in tags:
+                if not example_range[-1].isalpha():
+                    c_print(f"#[{w_col.eg_word} bold]{example_range[:-1]}#[{w_col.eg_sentence}]{example_range[-1]}", end=end)
+                else:
+                    c_print(f"#[{w_col.eg_word} bold]{example_range}", end=end)
+                i = i + word_num
+            else:
+                c_print(f"#[{w_col.eg_sentence}]{example[i]}", end=end)
+                i = i + 1
 
     if is_last:
         print()
@@ -419,7 +425,7 @@ async def examples(tg, html_tree, response_word, word_entries, word_variants, wo
     tags_to_cache = ",".join(tags)
     length = len(examples)
     for i, example in enumerate(examples):
-        tg.create_task(print_example(i+1, is_last(i, length), example, tags, response_word))
+        tg.create_task(print_example(i+1, is_last(i, length), example, tags, word_entries))
         tg.create_task(save_to_cache_examples_on_the_web(i+1, example, response_word, tags_to_cache))
 
 

@@ -41,6 +41,22 @@ def create_table_examples_on_the_web():
         UNIQUE(example))"""
     )
 
+def create_mw_widgets():
+    con.execute(
+        """CREATE TABLE IF NOT EXISTS examples (
+        "id" INTEGER PRIMARY KEY,
+        "response_word" TEXT UNIQUE NOT NULL,
+        "phrases" TEXT,
+        "synonyms" TEXT,
+        "antonyms" TEXT,
+        "related_phrases" TEXT,
+        "nearby_entries" TEXT NOT NULL,
+        "reserved_1" TEXT,
+        "reserved_2" TEXT,
+        "reserved_3" TEXT,
+        UNIQUE(response_word))"""
+    )
+
 
 # About sqlite3 context manager (from sqlite3 — DB-API 2.0 interface for SQLite databases):
 # "A Connection object can be used as a context manager that automatically commits or rolls back open transactions

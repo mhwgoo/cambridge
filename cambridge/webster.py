@@ -105,6 +105,7 @@ async def fresh_run(session, input_word, no_suggestions, req_url):
             word_entries = [] # A page may have multiple word entries, e.g. "runaway" as noun, "runaway" as adjective, "run away" as verb
             word_types = [] # ['verb (1)', 'noun', 'verb (2)', 'abbreviation (1)', 'abbreviation (2)']
             word_variants_not_nested = [] # [canful, canner]
+            word_variants_nested = []
             word_forms_not_nested = [] # ['could', 'can', 'cans', 'canned', 'canning']
             word_forms_nested = [] # [['could', 'can'], ['cans'], ['canned', 'canning'], [], []]
             entries_text = ""
@@ -117,6 +118,8 @@ async def fresh_run(session, input_word, no_suggestions, req_url):
                     word_types.append(word_type)
                 if word_variants:
                     word_variants_not_nested += word_variants
+                word_variants_nested.append(word_variants)
+
                 if word_forms:
                     word_forms_not_nested += word_forms
                 word_forms_nested.append(word_forms)
@@ -142,12 +145,15 @@ async def fresh_run(session, input_word, no_suggestions, req_url):
                 entries_text += cleaned_text
 
             word_types_and_forms = dict(zip(word_types, word_forms_nested)) # {'verb (1)': ['could', 'can'], 'noun': ['cans'], 'verb (2)': ['canned', 'canning'], 'abbreviation (1)': [], 'abbreviation (2)': []}
+            word_types_and_variants = dict(zip(word_types, word_variants_nested))
 
             print("\n_______")
             print("response_word: ", response_word)
             print("word_entries: ", word_entries)
-            print("word_variants_not_nested: ", word_variants_not_nested)
             print("word_types: ", word_types)
+            print("word_variants_not_nested: ", word_variants_not_nested)
+            print("word_variants_nested: ", word_variants_nested)
+            print("word_types_and_variants: ", word_types_and_variants)
             print("word_forms_not_nested: ", word_forms_not_nested)
             print("word_forms_nested: ", word_forms_nested)
             print("word_types_and_forms: ", word_types_and_forms)
@@ -165,6 +171,7 @@ async def fresh_run(session, input_word, no_suggestions, req_url):
             for wt in word_types:
                 if  "abbreviation" in wt:
                     del word_types_and_forms[wt]
+                    del word_types_and_variants[wt]
 
             async with asyncio.TaskGroup() as tg:
                 task1 = tg.create_task(save_to_cache(input_word, response_word, res_url, entries_text))
@@ -431,29 +438,38 @@ async def examples(tg, html_tree, response_word, word_entries, word_variants, wo
 
 async def print_word_or_phrase(title, text):
     c_print(f"\n#[bold {w_col.syn_title}]{title}", end="\n")
-    c_print(f"#[{w_col.syn_item}]{text}", end="\n")
+    if title.lower() == "synonyms":
+        if "[" == text[0]:
+            subtexts = text.split(", [")
+            for i, subtext in enumerate(subtexts):
+                if i == 0:
+                    c_print(f"#[{w_col.syn_item}]{subtext}", end="\n")
+                else:
+                    c_print(f"#[{w_col.syn_item}][{subtext}", end="\n")
 
+    else:
+        c_print(f"#[{w_col.syn_item}]{text}", end="\n")
 
 async def print_phrase(phrases):
     phrases = phrases.split(";")
     for phrase in phrases:
-        phrase_name, phrase_meaning = phrase.split("\n")
-        names = phrase_name.split("[")
-        if len(names) == 1:
-            c_print(f"\n#[{w_col.ph_item}bold]{names[0]}", end="\n")
-        else:
-            c_print(f"\n#[{w_col.ph_item}bold]{names[0]}", end="")
-            print_or_badge("[" + names[1], end="\n")
-
-        phrase_meaning_clean = ""
-        for i in phrase_meaning:
-            if i.isdigit() and i == "1":
-                continue
-            elif i.isdigit() and i != "1":
-                phrase_meaning_clean += "\n"
+        subphrases = phrase.split(":")
+        for i, subphrase in enumerate(subphrases):
+            if i == 0:
+                names = subphrase.split("[")
+                c_print(f"\n#[{w_col.ph_item}bold]{names[0].replace("—used", " -> used")}", end="")
+                if len(names) > 1:
+                    print_or_badge("[" + names[1])
             else:
-                phrase_meaning_clean += i
-        c_print(f"#[{w_col.meaning_content}]{phrase_meaning_clean}", end="")
+                if "|" not in subphrase:
+                    c_print(f"\n#[{w_col.meaning_content}]:{subphrase}", end="")
+                else:
+                    parts = subphrase.split("|")
+                    for i, part in enumerate(parts):
+                        if i == 0:
+                            c_print(f"\n#[{w_col.meaning_content}]:{part}", end="")
+                        else:
+                            c_print(f"\n#[{w_col.meaning_sentence}]|{part}", end="")
     print()
 
 
@@ -470,33 +486,39 @@ async def widgets(tg, html_tree, word_entries):
         if id_name == "phrases":
             children = node.getchildren()[1]
             for child in children:
+                phrase_name = ""
+                phrase_meaning = ""
                 attr = child.get("class")
                 if attr == "drp":
-                    phrase_name = "".join(list(child.itertext())).strip()
-                    phrase_meaning = ""
-                    next_node = child.getnext()
-                    if next_node.tag == "span" and next_node.get("class") is None:
-                        phrase_name += " [" + "".join(list(next_node.itertext())).strip() + "]"
-                        if next_node.getnext().tag == "div" and next_node.getnext().get("class") == "vg":
-                            for i in next_node.getnext().getchildren():
-                                phrase_meaning += "".join(list(i.itertext())).strip().replace("\n", "")
-                                if "  " in phrase_meaning:
-                                    phrase_meaning = "".join(phrase_meaning.split("  "))
-                    elif next_node.tag == "div" and next_node.get("class") == "vg":
-                        for i in next_node.getchildren():
-                            phrase_meaning += "".join(list(i.itertext())).strip().replace("\n", "")
+                    phrase_name += "".join(list(child.itertext())).strip()
+                elif child.tag == "span" and attr is None:
+                    phrase_name += " [" + "".join(list(child.itertext())).strip() + "]"
+                elif child.tag == "div" and attr == "vg":
+                    for elm in child.iterdescendants():
+                        if elm.tag == "span" and elm.get("class") is not None and ("dtText" == elm.get("class") or "un" == elm.get("class")):
+                            phrase_meaning += "".join(list(elm.itertext())).strip()
+                            elm_next = elm.getnext()
+                            if elm_next is not None and elm_next.get("class") is not None and elm_next.get("class") == "sub-content-thread mb-3":
+                                phrase_example = "|" + "".join(list(elm_next.itertext())).strip()
+                                phrase_meaning += phrase_example
                             if "  " in phrase_meaning:
                                 phrase_meaning = "".join(phrase_meaning.split("  "))
-
-                    phrases += phrase_name + "\n" + phrase_meaning + ";"
+                    phrase_meaning += ";"
+                phrases += phrase_name + phrase_meaning
 
         elif id_name == "synonyms":
-            for elm in node.iterdescendants():
-                if elm.tag == "a" and elm.get("lang") is not None and "en" == elm.get("lang"):
-                    text = "".join(list(elm.itertext())).strip()
-                    if "  " in text:
-                        text = "".join(text.split("  "))
-                    synonyms += text + ", "
+            for child in node:
+                if child.get("class") is not None and child.get("class") == "content-section-body":
+                    for elm in child:
+                        if elm.tag == "ul":
+                            elm_pre = elm.getprevious()
+                            if elm_pre is not None and elm_pre.tag == "p":
+                                synonyms += "[" + elm_pre.text + "] "
+                            for li in elm:
+                                text = "".join(list(li.getchildren()[0].itertext())).strip()
+                                if "  " in text:
+                                    text = "".join(text.split("  "))
+                                synonyms += text + ", "
 
         elif id_name == "related-phrases":
             for elm in node.iterdescendants():

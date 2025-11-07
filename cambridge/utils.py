@@ -7,6 +7,7 @@ from fake_user_agent import aio_user_agent # type: ignore
 
 from .log import logger
 from .console import c_print
+from . import color
 
 from typing import Optional, Literal
 Initiator = Literal["wod_calendar", "spell_check", "cache_list", "redirect_list"]
@@ -37,6 +38,10 @@ class DICT(Enum):
 
 def get_dict_name_by_url(url):
     return DICT.CAMBRIDGE.name if DICT.CAMBRIDGE.name.lower() in url else DICT.MERRIAM_WEBSTER.name
+
+
+def print_dict_name(dict_name):
+    c_print(f"#[{color.dict_name}]{dict_name}", justify="right")
 
 
 def quit_on_error(path, error, op):
@@ -111,6 +116,17 @@ def replace_all(string):
 
 def remove_extra_spaces(text):
     return ' '.join(text.split())
+
+
+def get_clean_text_from_fat_node(node):
+    text = "".join(list(node.itertext())).strip()
+    if "  " in text:
+        text = "".join(text.split("  "))
+    return text
+
+
+def is_last (index, length):
+    return True if index == length -1 else False
 
 
 def parse_response_url(url):

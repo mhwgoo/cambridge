@@ -41,16 +41,17 @@ def create_table_examples_on_the_web():
         UNIQUE(example))"""
     )
 
-def create_mw_widgets():
+
+def create_table_metadata_mw():
     con.execute(
-        """CREATE TABLE IF NOT EXISTS examples (
+        """CREATE TABLE IF NOT EXISTS metadata_mw (
         "id" INTEGER PRIMARY KEY,
         "response_word" TEXT UNIQUE NOT NULL,
         "phrases" TEXT,
         "synonyms" TEXT,
         "antonyms" TEXT,
         "related_phrases" TEXT,
-        "nearby_entries" TEXT NOT NULL,
+        "nearby_entries" TEXT,
         "reserved_1" TEXT,
         "reserved_2" TEXT,
         "reserved_3" TEXT,
@@ -148,6 +149,67 @@ def insert_entry_into_table_examples_on_the_web(example, response_word, tag):
     return None
 
 
+def insert_entry_into_table_metadata_mw(response_word, phrases, synonyms, antonyms, related_phrases, nearby_entries, reserved_1="", reserved_2="", reserved_3=""):
+    import datetime
+    current_datetime = datetime.datetime.now()
+
+    for attempt in (1, 2):
+        try:
+            res_word = con.execute(
+                """
+                INSERT INTO metadata_mw (response_word, phrases, synonyms, antonyms, related_phrases, nearby_entries, reserved_1, reserved_2, reserved_3)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT DO NOTHING
+                RETURNING response_word
+                """,
+                (response_word, phrases, synonyms, antonyms, related_phrases, nearby_entries, reserved_1, reserved_2, reserved_3)
+            ).fetchone()
+
+        except sqlite3.OperationalError as error:
+            if "no such table" in str(error) and attempt == 1:
+                create_table_metadata_mw()
+                continue
+            raise
+        except sqlite3.Error:
+            raise
+        else:
+            con.commit()
+            return res_word
+    return None
+
+
+async def save_to_cache_metadata_mw(response_word, phrases, synonyms, antonyms, related_phrases, nearby_entries):
+    try:
+        result = insert_entry_into_table_metadata_mw(response_word, phrases, synonyms, antonyms, related_phrases, nearby_entries, "", "", "")
+
+    except sqlite3.Error as error:
+        logger.error(f'{OP.CANCELLED.name} caching "{response_word}": [{error.__class__.__name__}] {error}\n')
+        sys.exit(4)
+
+    else:
+        if result is None: # hit ON CONFLICT
+            logger.debug(f'{OP.CANCELLED.name} caching metadata, already cached before') # hit ON CONFLICT
+        else:
+            logger.debug(f'{OP.CACHED.name} "{result[0]}" in the table "metadata_mw"')
+
+
+def get_entry_from_metadata_mw(response_word):
+    try:
+        cur = con.execute(
+            "SELECT response_word, phrases, synonyms, antonyms, related_phrases, nearby_entries FROM metadata_mw WHERE response_word = ?",
+            (response_word,),
+        )
+    except sqlite3.Error:
+        raise
+
+    else:
+        return cur.fetchone()
+
+
+async def get_cache_metadata_mw(response_word):
+    return get_entry_from_metadata_mw(response_word)
+
+
 async def save_to_cache_examples_on_the_web(num, example, response_word, tag):
     try:
         result = insert_entry_into_table_examples_on_the_web(example, response_word, tag)
@@ -160,10 +222,10 @@ async def save_to_cache_examples_on_the_web(num, example, response_word, tag):
         if result is None: # hit ON CONFLICT
             result = check_word_in_table_examples_on_the_web(example, response_word)
             if result:
-                logger.debug(f'{OP.CANCELLED.name} caching, already cached #{num} example for "{response_word}" before in the table "examples"')
+                logger.debug(f'{OP.CANCELLED.name} caching, already cached #{num} example for "{response_word}" before')
             else:
                 update_table_examples_on_the_web(example, response_word, tag)
-                logger.debug(f'Already cached #{num} example before in the table "examples" from other words. Updated the record for "{response_word}"')
+                logger.debug(f'Already cached #{num} example before from other words. Updated the record for "{response_word}"')
         else:
             logger.debug(f'{OP.CACHED.name} #{num} example for "{result[0]}" in the table "examples"')
 
@@ -357,6 +419,6 @@ async def save_to_cache(input_word, response_word, response_url, response_text):
 
     else:
         if result is None:
-            logger.debug(f'{OP.CANCELLED.name} caching, already cached before in the table "words"') # hit ON CONFLICT
+            logger.debug(f'{OP.CANCELLED.name} caching, already cached before') # hit ON CONFLICT
         else:
             logger.debug(f'{OP.CACHED.name} "{result[0]}" in the table "words"')

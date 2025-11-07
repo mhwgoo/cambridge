@@ -3,11 +3,11 @@ import asyncio
 from lxml import etree # type: ignore
 
 from .console import c_print
-from .utils import fetch, get_request_url, decode_url, OP, DICT, has_tool, get_suggestion, get_suggestion_by_fzf, get_wod_selection, get_wod_selection_by_fzf, quit_on_no_result, cancel_on_error, cancel_on_error_without_retry, remove_extra_spaces
+from .utils import fetch, get_request_url, decode_url, OP, DICT, has_tool, get_suggestion, get_suggestion_by_fzf, get_wod_selection, get_wod_selection_by_fzf, quit_on_no_result, cancel_on_error, cancel_on_error_without_retry, remove_extra_spaces, is_last, get_clean_text_from_fat_node
 from .log import logger
-from .cache import check_cache, save_to_cache, get_cache, save_to_cache_examples_on_the_web
+from .cache import check_cache, save_to_cache, get_cache, save_to_cache_examples_on_the_web, save_to_cache_metadata_mw, get_cache_metadata_mw
 from . import camb
-from . import color as w_col
+from . import color
 
 WEBSTER_BASE_URL = "https://www.merriam-webster.com"
 WEBSTER_DICT_BASE_URL = WEBSTER_BASE_URL + "/dictionary/"
@@ -17,48 +17,52 @@ WEBSTER_WORD_OF_THE_DAY_URL_CALENDAR = WEBSTER_BASE_URL + "/word-of-the-day/cale
 
 parser = etree.HTMLParser(remove_blank_text=True, remove_comments=True, remove_pis=True)
 
-async def search_webster(session, input_word, is_fresh=False, no_suggestions=False, req_url=None):
+async def search_webster(tg, session, input_word, is_fresh=False, no_suggestions=False, req_url=None):
     if req_url is None:
         req_url = get_request_url(WEBSTER_DICT_BASE_URL, input_word, DICT.MERRIAM_WEBSTER.name)
 
     if is_fresh:
-        await fresh_run(session, input_word, no_suggestions, req_url)
+        tg.create_task(fresh_run(tg, session, input_word, no_suggestions, req_url))
     else:
-        res_url = await check_cache(input_word, req_url)
-        if res_url is None:
+        response_url = await check_cache(input_word, req_url)
+        if response_url is None:
             logger.debug(f'{OP.NOT_FOUND.name} "{input_word}" in cache')
-            await fresh_run(session, input_word, no_suggestions, req_url)
-        elif DICT.CAMBRIDGE.name.lower() in res_url:
-            await camb.cache_run(res_url)
+            tg.create_task(fresh_run(tg, session, input_word, no_suggestions, req_url))
+        elif DICT.CAMBRIDGE.name.lower() in response_url:
+            tg.create_task(camb.cache_run(response_url))
         else:
-            await cache_run(res_url)
+            tg.create_task(cache_run(tg, response_url))
 
 
-async def cache_run(res_url_from_cache):
-    res_word, res_text = await get_cache(res_url_from_cache)
-    logger.debug(f'{OP.FOUND.name} "{res_word}" from {DICT.MERRIAM_WEBSTER.name} in cache')
-    logger.debug(f"{OP.PARSING.name} {res_url_from_cache}")
-    html_tree = etree.HTML(res_text, parser)
+#TODO examples
+async def cache_run(tg, response_url_from_cache):
+    response_word, response_text = await get_cache(response_url_from_cache)
+    logger.debug(f'{OP.FOUND.name} "{response_word}" from {DICT.MERRIAM_WEBSTER.name} in cache')
+    logger.debug(f"{OP.PARSING.name} {response_url_from_cache}")
+    html_tree = etree.HTML(response_text, parser)
     entries = html_tree.xpath('//div[contains(@id, "dictionary-entry")]')
     for entry in entries:
         dictionary_entry(entry)
 
-    c_print(f'\n#[#757575]{OP.FOUND.name} "{res_word}" from {DICT.MERRIAM_WEBSTER.name} in cache. You can add "-f" to fetch the {DICT.CAMBRIDGE.name} dictionary')
+    meta_data = await get_cache_metadata_mw(response_word)
+    if meta_data is not None:
+        tg.create_task(metadata(tg, meta_data, None))
+    c_print(f'\n#[#757575]{OP.FOUND.name} "{response_word}" from {DICT.MERRIAM_WEBSTER.name} in cache. You can add "-f" to fetch the {DICT.CAMBRIDGE.name} dictionary')
 
 
-async def fresh_run(session, input_word, no_suggestions, req_url):
+async def fresh_run(tg, session, input_word, no_suggestions, req_url):
     response = await fetch(session, req_url)
     status = response.status
     if status != 404 and status != 200:
         print(f"Got unexpected status {status} from {req_url}")
         sys.exit(2)
 
-    res_url = str(response.real_url)
-    res_text = None
+    response_url = str(response.real_url)
+    response_text = None
     attempt = 0
     while True:
         try:
-            res_text = await response.text()
+            response_text = await response.text()
         except asyncio.TimeoutError as error:
             attempt = cancel_on_error(req_url, error, attempt, OP.FETCHING.name)
             continue
@@ -70,22 +74,22 @@ async def fresh_run(session, input_word, no_suggestions, req_url):
         else:
             break
 
-    if res_text is None:
+    if response_text is None:
         print(f"UNABLE to get the document from {req_url}, perhaps due to unstable network. Please try again.")
         sys.exit(2)
 
-    html_tree = etree.HTML(res_text, parser)
+    html_tree = etree.HTML(response_text, parser)
 
     if status == 404:
         if no_suggestions:
             sys.exit(-1)
-        logger.debug(f'{OP.NOT_FOUND.name} "{input_word}" at {res_url}')
-        logger.debug(f"{OP.PARSING.name} out suggestions at {res_url}")
+        logger.debug(f'{OP.NOT_FOUND.name} "{input_word}" at {response_url}')
+        logger.debug(f"{OP.PARSING.name} out suggestions at {response_url}")
         suggestions = html_tree.xpath('//div[@class="row m-0"][1]/p[@class="col-6 col-md-4 spelling-suggestion-col "]/a/text()')
-        await parse_suggestions(suggestions, session, input_word)
+        tg.create_task(parse_suggestions(suggestions, session, input_word))
 
     elif status == 200:
-        logger.debug(f'{OP.FOUND.name} "{input_word}" in {DICT.MERRIAM_WEBSTER.name} at {res_url}')
+        logger.debug(f'{OP.FOUND.name} "{input_word}" in {DICT.MERRIAM_WEBSTER.name} at {response_url}')
         entries = html_tree.xpath('//*[@id="left-content"]/div[contains(@id, "-entry") and (@class!= "entry-word-section-container-supplemental" or not(@class))]')
         if len(entries) == 0:
             quit_on_no_result(DICT.MERRIAM_WEBSTER.name, is_spellcheck=True)
@@ -96,19 +100,25 @@ async def fresh_run(session, input_word, no_suggestions, req_url):
                 meaning = "".join(list(e.itertext())).replace("\n", "").replace("See the full definition", "").strip()
                 suggestion_and_meaning = "".join((suggestion + meaning).split("  "))
                 suggestions.append(suggestion_and_meaning)
-            await parse_suggestions(suggestions, session, input_word)
+            tg.create_task(parse_suggestions(suggestions, session, input_word))
         else:
             # NOTE:
             # Globals aren't safe with python asyncio, so the following variables have to be made local and passed around across functions and coroutines.
             # Asyncio runs tasks cooperatively on a single thread by default, so simultaneous CPU-level concurrent access to a global from multiple tasks won't occur, but logical race conditions can still happen when tasks interleave at await points.
-            response_word = decode_url(res_url).split("/")[-1]
+            response_word = decode_url(response_url).split("/")[-1]
             word_entries = [] # A page may have multiple word entries, e.g. "runaway" as noun, "runaway" as adjective, "run away" as verb
-            word_types = [] # ['verb (1)', 'noun', 'verb (2)', 'abbreviation (1)', 'abbreviation (2)']
-            word_variants_not_nested = [] # [canful, canner]
+            word_types = []
+            word_variants_not_nested = []
             word_variants_nested = []
-            word_forms_not_nested = [] # ['could', 'can', 'cans', 'canned', 'canning']
-            word_forms_nested = [] # [['could', 'can'], ['cans'], ['canned', 'canning'], [], []]
+            word_forms_not_nested = []
+            word_forms_nested = []
             entries_text = ""
+            phrases = ""
+            synonyms = ""
+            antonyms = ""
+            related_phrases = ""
+            nearby_entries = ""
+            meta_data = (response_word, phrases, synonyms, antonyms, related_phrases, nearby_entries)
 
             for i, entry in enumerate(entries):
                 logger.debug(f"STARTING to parse and print entry {i + 1}...")
@@ -144,39 +154,34 @@ async def fresh_run(session, input_word, no_suggestions, req_url):
                 cleaned_text = remove_extra_spaces(text)
                 entries_text += cleaned_text
 
-            word_types_and_forms = dict(zip(word_types, word_forms_nested)) # {'verb (1)': ['could', 'can'], 'noun': ['cans'], 'verb (2)': ['canned', 'canning'], 'abbreviation (1)': [], 'abbreviation (2)': []}
+            word_types_and_forms = dict(zip(word_types, word_forms_nested))
             word_types_and_variants = dict(zip(word_types, word_variants_nested))
 
-            print("\n_______")
-            print("response_word: ", response_word)
-            print("word_entries: ", word_entries)
-            print("word_types: ", word_types)
-            print("word_variants_not_nested: ", word_variants_not_nested)
-            print("word_variants_nested: ", word_variants_nested)
-            print("word_types_and_variants: ", word_types_and_variants)
-            print("word_forms_not_nested: ", word_forms_not_nested)
-            print("word_forms_nested: ", word_forms_nested)
-            print("word_types_and_forms: ", word_types_and_forms)
-
-            # _______
-            # response_word:  can
-            # word_entries:  ['can', 'can', 'can', 'can', 'can']
-            # word_variants_not_nested:  ['canful', 'canner']
-            # word_types:  ['verb (1)', 'noun', 'verb (2)', 'abbreviation (1)', 'abbreviation (2)']
-            # word_forms_not_nested:  ['could', 'can', 'cans', 'canned', 'canning']
-            # word_forms_nested:  [['could', 'can'], ['cans'], ['canned', 'canning'], [], []]
-            # word_types_and_forms:  {'verb (1)': ['could', 'can'], 'noun': ['cans'], 'verb (2)': ['canned', 'canning'], 'abbreviation (1)': [], 'abbreviation (2)': []}
-
-            # word_types_and_forms:  {'verb (1)': ['could', 'can'], 'noun': ['cans'], 'verb (2)': ['canned', 'canning']}
             for wt in word_types:
                 if  "abbreviation" in wt:
                     del word_types_and_forms[wt]
                     del word_types_and_variants[wt]
 
-            async with asyncio.TaskGroup() as tg:
-                task1 = tg.create_task(save_to_cache(input_word, response_word, res_url, entries_text))
-                task2 = tg.create_task(examples(tg, html_tree, response_word, set(word_entries), word_variants_not_nested, word_forms_not_nested))
-                task3 = tg.create_task(widgets(tg, html_tree, set(word_entries)))
+            tg.create_task(metadata(tg, meta_data, html_tree))
+            tg.create_task(examples(tg, html_tree, response_word, set(word_entries), word_variants_not_nested, word_forms_not_nested))
+            tg.create_task(save_to_cache(input_word, response_word, response_url, entries_text))
+
+            print("\n_______")
+            print("response_word: ", response_word)
+            print("word_entries: ", word_entries)
+            print(f"word_variants_not_nested: {word_variants_not_nested} || word_variants_nested: {word_variants_nested}")
+            print(f"word_forms_not_nested: {word_forms_not_nested} || word_forms_nested: {word_forms_nested}")
+            print("word_types: ", word_types)
+            print("word_types_and_variants: ", word_types_and_variants)
+            print("word_types_and_forms: ", word_types_and_forms)
+            # _______
+            # response_word:  can
+            # word_entries:  ['can', 'can', 'can', 'can', 'can']
+            # word_variants_not_nested: ['canful', 'canner', 'Canad'] || word_variants_nested: [[], ['canful'], ['canner'], [], ['Canad']]
+            # word_forms_not_nested: ['could', 'can', 'cans', 'canned', 'canning'] || word_forms_nested: [['could', 'can'], ['cans'], ['canned', 'canning'], [], []]
+            # word_types:  ['verb (1)', 'noun', 'verb (2)', 'abbreviation (1)', 'abbreviation (2)']
+            # word_types_and_variants:  {'verb (1)': [], 'noun': ['canful'], 'verb (2)': ['canner']}
+            # word_types_and_forms:  {'verb (1)': ['could', 'can'], 'noun': ['cans'], 'verb (2)': ['canned', 'canning']}
 
 
 def dictionary_entry(node):
@@ -199,17 +204,17 @@ def dictionary_entry(node):
                         if "entry-header-content" in i.attrib["class"]:
                             for j in i.iterchildren():
                                 if j.tag == "h1" or j.tag == "p":
-                                    word = "".join(list(j.itertext()))
-                                    word_entry = word.strip().lower()
+                                    word = get_clean_text_from_fat_node(j)
+                                    word_entry = word.lower()
                                     end = "" if j.getnext() is None else " "
-                                    c_print(f"#[{w_col.eh_h1_word} bold]{word}", end=end)
+                                    c_print(f"#[{color.eh_h1_word} bold]{word}", end=end)
                                 elif j.tag == "span":
                                     num = " ".join(list(j.itertext()))
                                     end = "" if j.getnext() is None else " "
                                     print(num, end=end)
                                 elif j.tag == "h2":
                                     word_type = " ".join(list(j.itertext()))
-                                    c_print(f"#[bold {w_col.eh_word_type}]{word_type}", end="")
+                                    c_print(f"#[bold {color.eh_word_type}]{word_type}", end="")
 
                             print()
                         # Print the pronounciation. e.g. val·ue |ˈval-(ˌ)yü|"""
@@ -274,7 +279,7 @@ def dictionary_entry(node):
                     if attr is not None:
                         if e.tag == "span" and "fw-bold ure" in attr:
                             word_variants.append(e.text)
-                            c_print(f"#[bold {w_col.wf}]{e.text}", end = " ")
+                            c_print(f"#[bold {color.wf}]{e.text}", end = " ")
 
                         elif e.tag == "span" and "fw-bold fl" in attr:
                             e_next = e.getnext()
@@ -284,7 +289,7 @@ def dictionary_entry(node):
                                 end = " "
                             else:
                                 end = ""
-                            c_print(f"#[{w_col.eh_word_type}]{e.text}", end=end)
+                            c_print(f"#[{color.eh_word_type}]{e.text}", end=end)
 
                         elif "ins" in attr:
                             print("", end="")
@@ -337,9 +342,9 @@ def dictionary_entry(node):
                 if not text:
                     continue
                 if text == "see also":
-                    c_print(f"#[bold {w_col.dxnls_content}]{text.upper()}", end = " ")
+                    c_print(f"#[bold {color.dxnls_content}]{text.upper()}", end = " ")
                 elif text == "compare":
-                    c_print(f"#[bold {w_col.dxnls_content}]{text.upper()}", end = " ")
+                    c_print(f"#[bold {color.dxnls_content}]{text.upper()}", end = " ")
                 elif text == ",":
                     print_meaning_content(text, end=" ")
                 else:
@@ -359,11 +364,11 @@ def dictionary_entry(node):
                     print_meaning_content(i.text.upper(), end="")
             print()
 
-    print("\n_______from entry")
-    print("word_entry: ", word_entry)
-    print("word_type: ", word_type)
-    print("word_variants: ", word_variants)
-    print("word_forms: ", word_forms)
+    # print("\n_______from entry")
+    # print("word_entry: ", word_entry)
+    # print("word_type: ", word_type)
+    # print("word_variants: ", word_variants)
+    # print("word_forms: ", word_forms)
 
     return word_entry, word_type, word_variants, word_forms
 
@@ -384,8 +389,8 @@ async def parse_suggestions(suggestions, session, input_word):
 async def print_example(num, is_last, example, tags, word_entries):
     # logger.debug(f"STARTING to print #{num} example...")
     if num == 1:
-        c_print(f"\n#[{w_col.eg_title} bold]Recent Examples on the Web", end="")
-    c_print(f"\n#[{w_col.accessory}]|", end="")
+        c_print(f"\n#[{color.eg_title} bold]Recent Examples on the Web", end="")
+    c_print(f"\n#[{color.accessory}]|", end="")
 
     for word_entry in word_entries:
         example = example.split()
@@ -400,20 +405,16 @@ async def print_example(num, is_last, example, tags, word_entries):
             example_range_lowercase = example_range.lower()
             if word_entry in example_range_lowercase or example_range_lowercase in tags:
                 if not example_range[-1].isalpha():
-                    c_print(f"#[{w_col.eg_word} bold]{example_range[:-1]}#[{w_col.eg_sentence}]{example_range[-1]}", end=end)
+                    c_print(f"#[{color.eg_word} bold]{example_range[:-1]}#[{color.eg_sentence}]{example_range[-1]}", end=end)
                 else:
-                    c_print(f"#[{w_col.eg_word} bold]{example_range}", end=end)
+                    c_print(f"#[{color.eg_word} bold]{example_range}", end=end)
                 i = i + word_num
             else:
-                c_print(f"#[{w_col.eg_sentence}]{example[i]}", end=end)
+                c_print(f"#[{color.eg_sentence}]{example[i]}", end=end)
                 i = i + 1
 
     if is_last:
         print()
-
-
-def is_last (index, length):
-    return True if index == length -1 else False
 
 
 async def examples(tg, html_tree, response_word, word_entries, word_variants, word_forms):
@@ -436,108 +437,116 @@ async def examples(tg, html_tree, response_word, word_entries, word_variants, wo
         tg.create_task(save_to_cache_examples_on_the_web(i+1, example, response_word, tags_to_cache))
 
 
-async def print_word_or_phrase(title, text):
-    c_print(f"\n#[bold {w_col.syn_title}]{title}", end="\n")
-    if title.lower() == "synonyms":
-        if "[" == text[0]:
-            subtexts = text.split(", [")
-            for i, subtext in enumerate(subtexts):
+async def print_metadata(title, text):
+    if title == "Phrases":
+        phrases = text.split("#")
+        for phrase in phrases:
+            subphrases = phrase.split(":")
+            # FIMEME "fish to fry"
+            for i, subphrase in enumerate(subphrases):
                 if i == 0:
-                    c_print(f"#[{w_col.syn_item}]{subtext}", end="\n")
+                    names = subphrase.split("[")
+                    c_print(f"\n#[{color.ph_item}bold]{names[0].replace("—used", " -> used")}", end="")
+                    if len(names) > 1:
+                        print_or_badge("[" + names[1])
                 else:
-                    c_print(f"#[{w_col.syn_item}][{subtext}", end="\n")
+                    if "|" not in subphrase:
+                        c_print(f"\n#[{color.meaning_content}]:{subphrase}", end="")
+                    else:
+                        parts = subphrase.split("|")
+                        for i, part in enumerate(parts):
+                            if i == 0:
+                                c_print(f"\n#[{color.meaning_content}]:{part}", end="")
+                            else:
+                                c_print(f"\n#[{color.meaning_sentence}]|{part}", end="")
+        print("", end="\n")
 
     else:
-        c_print(f"#[{w_col.syn_item}]{text}", end="\n")
-
-async def print_phrase(phrases):
-    phrases = phrases.split(";")
-    for phrase in phrases:
-        subphrases = phrase.split(":")
-        for i, subphrase in enumerate(subphrases):
-            if i == 0:
-                names = subphrase.split("[")
-                c_print(f"\n#[{w_col.ph_item}bold]{names[0].replace("—used", " -> used")}", end="")
-                if len(names) > 1:
-                    print_or_badge("[" + names[1])
-            else:
-                if "|" not in subphrase:
-                    c_print(f"\n#[{w_col.meaning_content}]:{subphrase}", end="")
-                else:
-                    parts = subphrase.split("|")
-                    for i, part in enumerate(parts):
-                        if i == 0:
-                            c_print(f"\n#[{w_col.meaning_content}]:{part}", end="")
-                        else:
-                            c_print(f"\n#[{w_col.meaning_sentence}]|{part}", end="")
-    print()
+        c_print(f"#[bold {color.syn_title}]{title}", end="\n")
+        if title.lower() == "synonyms" and "[" == text[0]:
+           subtexts = text.split(", [")
+           for i, subtext in enumerate(subtexts):
+               if i == 0:
+                   c_print(f"#[{color.syn_item}]{subtext}", end="\n")
+               else:
+                   c_print(f"#[{color.syn_item}][{subtext}", end="\n")
+        else:
+            c_print(f"#[{color.syn_item}]{text}", end="\n")
 
 
-async def widgets(tg, html_tree, word_entries):
-    nodes = html_tree.xpath('//*[@id="left-content"]/div[@id="phrases" or @id="nearby-entries" or @id="synonyms" or @id="related-phrases"]')
-    phrases = ""
-    synonyms = ""
-    related_phrases = ""
-    nearby_entries = ""
-    if len(nodes) == 0:
-        return
-    for node in nodes:
-        id_name = node.get("id")
-        if id_name == "phrases":
-            children = node.getchildren()[1]
-            for child in children:
-                phrase_name = ""
-                phrase_meaning = ""
-                attr = child.get("class")
-                if attr == "drp":
-                    phrase_name += "".join(list(child.itertext())).strip()
-                elif child.tag == "span" and attr is None:
-                    phrase_name += " [" + "".join(list(child.itertext())).strip() + "]"
-                elif child.tag == "div" and attr == "vg":
-                    for elm in child.iterdescendants():
-                        if elm.tag == "span" and elm.get("class") is not None and ("dtText" == elm.get("class") or "un" == elm.get("class")):
-                            phrase_meaning += "".join(list(elm.itertext())).strip()
-                            elm_next = elm.getnext()
-                            if elm_next is not None and elm_next.get("class") is not None and elm_next.get("class") == "sub-content-thread mb-3":
-                                phrase_example = "|" + "".join(list(elm_next.itertext())).strip()
-                                phrase_meaning += phrase_example
-                            if "  " in phrase_meaning:
-                                phrase_meaning = "".join(phrase_meaning.split("  "))
-                    phrase_meaning += ";"
-                phrases += phrase_name + phrase_meaning
+async def metadata(tg, meta_data, html_tree=None):
+    response_word, phrases, synonyms, antonyms, related_phrases, nearby_entries = meta_data
+    if html_tree is not None:
+        nodes = html_tree.xpath('//*[@id="left-content"]/div[@id="phrases" or @id="nearby-entries" or @id="synonyms" or @id="related-phrases"]')
+        if len(nodes) == 0:
+            return
+        for node in nodes:
+            id_name = node.get("id")
+            if id_name == "phrases":
+                children = node.getchildren()[1]
+                for child in children:
+                    phrase_name = ""
+                    phrase_meaning = ""
+                    attr = child.get("class")
+                    if attr == "drp":
+                        phrase_name += "".join(list(child.itertext())).strip()
+                    elif child.tag == "span" and attr is None:
+                        phrase_name += " [" + "".join(list(child.itertext())).strip() + "]"
+                    elif child.tag == "div" and attr == "vg":
+                        for elm in child.iterdescendants():
+                            if elm.tag == "span" and elm.get("class") is not None and ("dtText" == elm.get("class") or "un" == elm.get("class")):
+                                phrase_meaning += "".join(list(elm.itertext())).strip()
+                                elm_next = elm.getnext()
+                                if elm_next is not None and elm_next.get("class") is not None and elm_next.get("class") == "sub-content-thread mb-3":
+                                    phrase_example = "|" + "".join(list(elm_next.itertext())).strip()
+                                    phrase_meaning += phrase_example
+                                if "  " in phrase_meaning:
+                                    phrase_meaning = "".join(phrase_meaning.split("  "))
+                        phrase_meaning += "#"
+                    phrases += phrase_name + phrase_meaning
+                phrases = phrases.strip("#")
 
-        elif id_name == "synonyms":
-            for child in node:
-                if child.get("class") is not None and child.get("class") == "content-section-body":
-                    for elm in child:
-                        if elm.tag == "ul":
-                            elm_pre = elm.getprevious()
-                            if elm_pre is not None and elm_pre.tag == "p":
-                                synonyms += "[" + elm_pre.text + "] "
-                            for li in elm:
-                                text = "".join(list(li.getchildren()[0].itertext())).strip()
-                                if "  " in text:
-                                    text = "".join(text.split("  "))
-                                synonyms += text + ", "
+            elif id_name == "synonyms":
+                for child in node:
+                    if child.get("class") is not None and child.get("class") == "content-section-body":
+                        for elm in child:
+                            if elm.tag == "ul":
+                                elm_pre = elm.getprevious()
+                                if elm_pre is not None and elm_pre.tag == "p":
+                                    synonyms += "[" + elm_pre.text + "] "
+                                for li in elm:
+                                    text = "".join(list(li.itertext())).strip()
+                                    if "  " in text:
+                                        text = "".join(text.split("  "))
+                                    synonyms += text + ", "
+                synonyms = synonyms.strip(", ")
 
-        elif id_name == "related-phrases":
-            for elm in node.iterdescendants():
-                if elm.tag == "a" and elm.get("class") is not None and "pb-4 pr-4 d-block" == elm.get("class"):
-                    related_phrases += "".join(list(elm.itertext())).strip() + ", "
+            elif id_name == "related-phrases":
+                for elm in node.iterdescendants():
+                    if elm.tag == "a" and elm.get("class") is not None and "pb-4 pr-4 d-block" == elm.get("class"):
+                        related_phrases += "".join(list(elm.itertext())).strip() + ", "
+                related_phrases = related_phrases.strip(", ")
 
-        elif id_name == "nearby-entries":
-            for elm in node.iterdescendants():
-                if elm.tag == "a" and elm.get("class") is not None and "b-link" == elm.get("class"):
-                    nearby_entries += elm.text + ", "
+            elif id_name == "nearby-entries":
+                for elm in node.iterdescendants():
+                    if elm.tag == "a" and elm.get("class") is not None and "b-link" == elm.get("class"):
+                        nearby_entries += elm.text + ", "
+                nearby_entries = nearby_entries.strip(", ")
+
+        tg.create_task(save_to_cache_metadata_mw(response_word, phrases, synonyms, antonyms, related_phrases, nearby_entries))
 
     if phrases:
-        await print_phrase(phrases.strip(";"))
+        phrase_title = "Phrases"
+        tg.create_task(print_metadata(phrase_title, phrases))
     if synonyms:
-        await print_word_or_phrase("Synonyms", synonyms.strip(", "))
+        synonyms_title = "Synonyms"
+        tg.create_task(print_metadata(synonyms_title, synonyms))
     if related_phrases:
-        await print_word_or_phrase(f"Phrases Containing {list(word_entries)[0]}", related_phrases.strip(", "))
+        related_phrases_title = f"Phrases Containing {response_word}"
+        tg.create_task(print_metadata(related_phrases_title, related_phrases))
     if nearby_entries:
-        await print_word_or_phrase("Browse Nearby Words", nearby_entries.strip(", "))
+        nearby_entries_title = "Browse Nearby Words"
+        tg.create_task(print_metadata(nearby_entries_title, nearby_entries))
 
 
 def dtText(node, ancestor_attr, num_label_count):
@@ -579,7 +588,6 @@ def dtText(node, ancestor_attr, num_label_count):
                 print_meaning_content(text_new, end="")
             #elif index == len(texts) - 1:
             #    text = text[:-1] if text[-1] == " " else text
-            #    print("$$$$$$")
             #    print_meaning_content(text, end="") # e.g. creative
             else:
                 print_meaning_content(text, end="")
@@ -588,7 +596,7 @@ def dtText(node, ancestor_attr, num_label_count):
 def print_mw(text, nospace, tag):
     end = "" if nospace else " "
     bold = "" if tag == "normal" else "bold"
-    c_print(f"#[{w_col.meaning_sentence}{bold}]{text}", end=end)
+    c_print(f"#[{color.meaning_sentence}{bold}]{text}", end=end)
 
 
 def get_word_cases(node):
@@ -626,7 +634,7 @@ def ex_sent(node, ancestor_attr, num_label_count):
     if num_label_count == 2:
         print(" ", end="")
 
-    c_print(f"#[{w_col.accessory}]|", end="")
+    c_print(f"#[{color.accessory}]|", end="")
 
     hl_words = get_word_faces(node)[0]
     ems = get_word_faces(node)[1]
@@ -649,7 +657,7 @@ def ex_sent(node, ancestor_attr, num_label_count):
             elif t in ems:
                 if index != 0 and texts[index - 1].endswith(" "):
                     print("", end = " ")
-                c_print(f"#[{w_col.meaning_sentence} bold]{text}", end = "")
+                c_print(f"#[{color.meaning_sentence} bold]{text}", end = "")
                 if index != (count - 1) and texts[index + 1] != " " and texts[index + 1].startswith(" ") :
                     print("", end = " ")
             else:
@@ -719,7 +727,7 @@ def unText_simple(node, ancestor_attr, has_badge=True):
         print()
         format_basedon_ancestor(ancestor_attr, prefix="")
 
-    prefix = f"#[{w_col.meaning_arrow}]->"
+    prefix = f"#[{color.meaning_arrow}]->"
     suffix = " "
 
     node_pre = node.getprevious()
@@ -737,11 +745,11 @@ def unText_simple(node, ancestor_attr, has_badge=True):
         if bold:
             for index, t in enumerate(text_list):
                 if t in bold:
-                    # TODO "/" should only reset the current effect (bold), not including w_col.meaning_arrow
-                    text_list[index] = f"#[bold]{t}#[/bold]#[{w_col.meaning_arrow}]"
+                    # TODO "/" should only reset the current effect (bold), not including color.meaning_arrow
+                    text_list[index] = f"#[bold]{t}#[/bold]#[{color.meaning_arrow}]"
 
     text = "".join(text_list).strip()
-    c_print(f"#[{w_col.meaning_arrow}]{text}", end="")
+    c_print(f"#[{color.meaning_arrow}]{text}", end="")
 
 
 def sense(node, attr, parent_attr, ancestor_attr, num_label_count):
@@ -760,13 +768,13 @@ def sense(node, attr, parent_attr, ancestor_attr, num_label_count):
 
         node_prev = node.getprevious()
         if "has-subnum" in ancestor_attr and node_prev is None and "sb-0" in parent_attr:
-            c_print(f"#[bold {w_col.meaning_letter}]{sn}", end = " ")
+            c_print(f"#[bold {color.meaning_letter}]{sn}", end = " ")
         elif "has-subnum" in ancestor_attr and (node_prev is not None or parent_attr != "pseq no-subnum"):
             if num_label_count == 2:
                 print(" ", end="")
-            c_print(f"  #[bold {w_col.meaning_letter}]{sn}", end = " ")
+            c_print(f"  #[bold {color.meaning_letter}]{sn}", end = " ")
         else:
-            c_print(f"#[bold {w_col.meaning_letter}]{sn}", end = " ")
+            c_print(f"#[bold {color.meaning_letter}]{sn}", end = " ")
 
         sense_content = children[1] # class "sense-content w-100"
 
@@ -775,22 +783,22 @@ def sense(node, attr, parent_attr, ancestor_attr, num_label_count):
         sn = children[0].getchildren()[0].text
 
         if "has-subnum" in ancestor_attr and "sb-0" in parent_attr:
-            c_print(f"#[bold {w_col.meaning_letter}]{sn}", end = " ")
+            c_print(f"#[bold {color.meaning_letter}]{sn}", end = " ")
         else:
             if "letter-only" in ancestor_attr:
                 if "sb-0" not in parent_attr:
                     print("  ", end="")
-                c_print(f"#[bold {w_col.meaning_letter}]{sn}", end = " ")
+                c_print(f"#[bold {color.meaning_letter}]{sn}", end = " ")
             else:
                 if num_label_count == 2 and sn == "a":
                     if "sb-0 sb-entry" != ancestor_attr:
-                        c_print(f"   #[bold {w_col.meaning_letter}]{sn}", end = " ")
+                        c_print(f"   #[bold {color.meaning_letter}]{sn}", end = " ")
                     else:
-                        c_print(f"#[bold {w_col.meaning_letter}]{sn}", end = " ")
+                        c_print(f"#[bold {color.meaning_letter}]{sn}", end = " ")
                 elif num_label_count == 2:
-                    c_print(f"   #[bold {w_col.meaning_letter}]{sn}", end = " ")
+                    c_print(f"   #[bold {color.meaning_letter}]{sn}", end = " ")
                 else:
-                    c_print(f"  #[bold {w_col.meaning_letter}]{sn}", end = " ")
+                    c_print(f"  #[bold {color.meaning_letter}]{sn}", end = " ")
 
         if node.tag == "span": # e.g. "knife and fork, track intransitive verb 2"
             # Intentionally take out this part from tags(), don't merge in later.
@@ -956,7 +964,7 @@ def vg_sseq_entry_item(node):
         attr = child.attrib["class"]
         # print number label if any
         if attr == "vg-sseq-entry-item-label":
-            c_print(f"#[bold {w_col.meaning_num}]{child.text}", end=" ")
+            c_print(f"#[bold {color.meaning_num}]{child.text}", end=" ")
             num_label_count = len(child.text) # important! making sure two-digit numbering and things under it can vertically align properly.
 
         # print meaning content
@@ -1009,22 +1017,22 @@ def vg(node):
 
 
 def print_meaning_badge(text, end=""):
-    c_print(f"#[{w_col.meaning_badge}]{text}", end=end)
+    c_print(f"#[{color.meaning_badge}]{text}", end=end)
 
 
 def print_header_badge(text, end=" "):
-    c_print(f"#[{w_col.meaning_badge}]{text}", end=end)
+    c_print(f"#[{color.meaning_badge}]{text}", end=end)
 
 
 def print_meaning_keyword(text, end=" "):
-    c_print(f"#[bold {w_col.meaning_keyword}]{text}", end=end)
+    c_print(f"#[bold {color.meaning_keyword}]{text}", end=end)
 
 
 def print_meaning_content(text, end=""):
     if text == ": ":
-        c_print(f"#[{w_col.meaning_content} bold]{text}", end=end)
+        c_print(f"#[{color.meaning_content} bold]{text}", end=end)
     else:
-        c_print(f"#[{w_col.meaning_content}]{text}", end=end)
+        c_print(f"#[{color.meaning_content}]{text}", end=end)
 
 
 def format_basedon_ancestor(ancestor_attr, prefix="", suffix=""):
@@ -1055,7 +1063,7 @@ def print_pron(node, header=False, end=""):
 
 
 def print_or_badge(text, end=""):
-    c_print(f"#[{w_col.or_badge}]{text}", end = end)
+    c_print(f"#[{color.or_badge}]{text}", end = end)
 
 
 def print_class_if(text, before_semicolon=False, before_il=False, has_next_sibling=True):
@@ -1121,29 +1129,24 @@ def print_class_ins(node):
     return word_forms
 
 
-def print_dict_name():
-    dict_name = "The Merriam-Webster Dictionary"
-    c_print(f"#[{w_col.dict_name}]{dict_name}", justify="right")
-
-
 # --- Word of the Day --- #
 def print_wod_header(node):
     for elm in node.iterdescendants():
         attr = elm.get("class")
         if attr == "w-a-title":
             for c in elm.iterchildren():
-                c_print(f"#[{w_col.wod_title} bold]{c.text}", end="")
+                c_print(f"#[{color.wod_title} bold]{c.text}", end="")
             print()
 
         elif attr == "word-header-txt":
             c_print(f"#[bold]{elm.text}")
 
         elif attr == "main-attr":
-            c_print(f"#[{w_col.wod_type}]{elm.text}", end="")
+            c_print(f"#[{color.wod_type}]{elm.text}", end="")
             print(" | ", end="")
 
         elif attr == "word-syllables":
-            c_print(f"#[{w_col.wod_syllables}]{elm.text}")
+            c_print(f"#[{color.wod_syllables}]{elm.text}")
 
 
 def print_wod_p(node):
@@ -1180,13 +1183,13 @@ def print_wod_def(node):
         if tag == "h2":
             text = elm.text.strip("\n").strip()
             if text:
-                c_print(f"\n#[{w_col.wod_subtitle} bold]{text}")
+                c_print(f"\n#[{color.wod_subtitle} bold]{text}")
             children = list(elm.iterchildren())
             if children:
                 child = children[0]
                 tail = child.tail.strip("\n").strip()
-                c_print(f"#[{w_col.wod_subtitle} bold]{child.text}", end=" ")
-                c_print(f"#[{w_col.wod_subtitle} bold]{tail}", end="\n")
+                c_print(f"#[{color.wod_subtitle} bold]{child.text}", end=" ")
+                c_print(f"#[{color.wod_subtitle} bold]{tail}", end="\n")
 
         elif tag == "p":
             print_wod_p(elm)
@@ -1201,14 +1204,14 @@ def print_wod_dyk(node):
         tag = elm.tag
 
         if tag == "h2":
-            c_print(f"\n#[{w_col.wod_subtitle} bold]{elm.text}")
+            c_print(f"\n#[{color.wod_subtitle} bold]{elm.text}")
 
         elif tag == "p":
             print_wod_p(elm)
 
 
-def parse_and_print_wod(res_url, res_text):
-    logger.debug(f"{OP.PARSING.name} {res_url}")
+def parse_and_print_wod(response_url, response_text):
+    logger.debug(f"{OP.PARSING.name} {response_url}")
 
     s = """
     //*[@class="article-header-container wod-article-header"] |
@@ -1216,8 +1219,8 @@ def parse_and_print_wod(res_url, res_text):
     //*[@class="did-you-know-wrapper"]
     """
 
-    nodes = etree.HTML(res_text, parser).xpath(s)
-    logger.debug(f"{OP.PRINTING.name} the parsed result of {res_url}")
+    nodes = etree.HTML(response_text, parser).xpath(s)
+    logger.debug(f"{OP.PRINTING.name} the parsed result of {response_url}")
 
     print()
     for node in nodes:
@@ -1234,11 +1237,11 @@ def parse_and_print_wod(res_url, res_text):
     print()
 
 
-async def parse_and_print_wod_calendar(session, res_url, res_text):
-    logger.debug(f"{OP.PARSING.name} {res_url}")
+async def parse_and_print_wod_calendar(session, response_url, response_text):
+    logger.debug(f"{OP.PARSING.name} {response_url}")
 
-    nodes = etree.HTML(res_text, parser).xpath("//li/h2/a")
-    logger.debug(f"{OP.PRINTING.name} the parsed result of {res_url}")
+    nodes = etree.HTML(response_text, parser).xpath("//li/h2/a")
+    logger.debug(f"{OP.PRINTING.name} the parsed result of {response_url}")
 
     data = {}
     for node in nodes:

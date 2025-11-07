@@ -18,36 +18,36 @@ CAMBRIDGE_SPELLCHECK_URL = CAMBRIDGE_URL + "/spellcheck/english/?q="
 CAMBRIDGE_SPELLCHECK_URL_CN = CAMBRIDGE_URL + "/spellcheck/english-chinese-simplified/?q="
 
 
-async def search_cambridge(session, input_word, is_fresh=False, is_ch=False, no_suggestions=False, req_url=None):
+async def search_cambridge(tg, session, input_word, is_fresh=False, is_ch=False, no_suggestions=False, req_url=None):
     if req_url is None:
         url = CAMBRIDGE_CN_SEARCH_URL if is_ch else CAMBRIDGE_EN_SEARCH_URL
         req_url = get_request_url(url, input_word, DICT.CAMBRIDGE.name)
 
     if is_fresh:
-        await fresh_run(session, input_word, is_ch, no_suggestions, req_url)
+        tg.create_task(fresh_run(tg, session, input_word, is_ch, no_suggestions, req_url))
     else:
         res_url = await check_cache(input_word, req_url)
         if res_url is None:
             logger.debug(f'{OP.NOT_FOUND.name} "{input_word}" in cache')
-            await fresh_run(session, input_word, is_ch, no_suggestions, req_url)
+            tg.create_task(fresh_run(tg, session, input_word, is_ch, no_suggestions, req_url))
         elif DICT.CAMBRIDGE.name.lower() not in res_url:
-            await webster.cache_run(res_url)
+            tg.create_task(webster.cache_run(tg, res_url))
         else:
-            await cache_run(res_url)
+            tg.create_task(cache_run(tg, res_url))
 
 
-async def cache_run(res_url_from_cache):
+async def cache_run(tg, res_url_from_cache):
     res_word, res_text = await get_cache(res_url_from_cache)
     logger.debug(f'{OP.FOUND.name} "{res_word}" from {DICT.CAMBRIDGE.name} in cache')
     logger.debug(f"{OP.PARSING.name} {res_url_from_cache}")
 
     soup = BeautifulSoup(res_text, "lxml")
     first_dict = soup.find("div", "pr dictionary") or soup.find("div", "pr di superentry")
-    await parse_and_print(first_dict, res_url_from_cache, new_line=False)
+    tg.create(parse_and_print(first_dict, res_url_from_cache, new_line=False))
     c_print(f'\n#[#757575]{OP.FOUND.name} "{res_word}" from {DICT.CAMBRIDGE.name} in cache. You can add "-f -w" to fetch the {DICT.MERRIAM_WEBSTER.name} dictionary')
 
 
-async def fresh_run(session, input_word, is_ch, no_suggestions, req_url):
+async def fresh_run(tg, session, input_word, is_ch, no_suggestions, req_url):
         response = await fetch(session, req_url)
         res_url = str(response.real_url)
 
@@ -94,10 +94,10 @@ async def fresh_run(session, input_word, is_ch, no_suggestions, req_url):
                 select_word = get_suggestion_by_fzf(suggestions, DICT.CAMBRIDGE.name) if has_tool("fzf") else get_suggestion(suggestions, DICT.CAMBRIDGE.name)
                 if select_word == "":
                     logger.debug(f'{OP.SWITCHED.name} to {DICT.MERRIAM_WEBSTER.name}')
-                    await webster.search_webster(session, input_word, True, no_suggestions, None) # type: ignore
+                    tg.create_task(webster.search_webster(tg, session, input_word, True, no_suggestions, None)) # type: ignore)
                 else:
                     logger.debug(f'{OP.SELECTED.name} "{select_word}"')
-                    await search_cambridge(session, select_word, False, False, no_suggestions, None)
+                    tg.create_task(search_cambridge(tg, session, select_word, False, False, no_suggestions, None))
 
         else:
             res_url = parse_response_url(res_url)
@@ -124,9 +124,8 @@ async def fresh_run(session, input_word, is_ch, no_suggestions, req_url):
                     quit_on_no_result(DICT.CAMBRIDGE.name, is_spellcheck=False)
 
                 logger.debug(f'{OP.FOUND.name} "{input_word}" in {DICT.CAMBRIDGE.name} at {res_url}')
-                async with asyncio.TaskGroup() as tg:
-                    task1 = tg.create_task(parse_and_print(first_dict, res_url, new_line=True))
-                    task2 = tg.create_task(cache(soup, first_dict, input_word, res_url))
+                tg.create_task(parse_and_print(first_dict, res_url, new_line=True))
+                tg.create_task(cache(tg, soup, first_dict, input_word, res_url))
 
 
 async def parse_and_print(first_dict, res_url, new_line=True):
@@ -142,14 +141,14 @@ async def parse_and_print(first_dict, res_url, new_line=True):
         print()
 
 
-async def cache(soup, first_dict, input_word, res_url):
+async def cache(tg, soup, first_dict, input_word, res_url):
     res_word = input_word
     result = soup.find("b", "tb ttn").text # type: ignore
     if len(result) != 0:
         res_word = result
 
     clean_text = remove_extra_spaces(str(first_dict))
-    await save_to_cache(input_word, res_word, res_url, clean_text)
+    tg.create_task(save_to_cache(input_word, res_word, res_url, clean_text))
 
 
 def parse_dict_head(block):

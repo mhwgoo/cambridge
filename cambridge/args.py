@@ -232,27 +232,25 @@ async def search_word(args):
         print("You didn't input any word or phrase.")
         sys.exit(3)
 
-    tasks = []
-    if args.search:
-        cambridge_words = " ".join(args.search)
-        for w in cambridge_words.split(","):
-            i = w.strip(".").strip()
-            if i:
-                tasks.append(search_cambridge(args.session, i, args.fresh, False, args.nosuggestions, None))
-    if args.webster:
-        webster_words = " ".join(args.webster)
-        for w in webster_words.split(","):
-            i = w.strip(".").strip()
-            if i:
-                tasks.append(search_webster(args.session, i, args.fresh, args.nosuggestions, None))
-    if args.chinese:
-        words = " ".join(args.chinese)
-        for w in words.split(","):
-            i = w.strip(".").strip()
-            if i:
-                tasks.append(search_cambridge(args.session, i, args.fresh, True, args.nosuggestions, None))
-
-    await asyncio.gather(*tasks)
+    async with asyncio.TaskGroup() as tg:
+       if args.search:
+           cambridge_words = " ".join(args.search)
+           for w in cambridge_words.split(","):
+               i = w.strip(".").strip()
+               if i:
+                   tg.create_task(search_cambridge(tg, args.session, i, args.fresh, False, args.nosuggestions, None))
+       if args.webster:
+           webster_words = " ".join(args.webster)
+           for w in webster_words.split(","):
+               i = w.strip(".").strip()
+               if i:
+                   tg.create_task(search_webster(tg, args.session, i, args.fresh, args.nosuggestions, None))
+       if args.chinese:
+           words = " ".join(args.chinese)
+           for w in words.split(","):
+               i = w.strip(".").strip()
+               if i:
+                   tg.create_task(search_cambridge(tg, args.session, i, args.fresh, True, args.nosuggestions, None))
 
 
 async def wod(args):

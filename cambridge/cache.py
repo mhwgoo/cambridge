@@ -179,6 +179,7 @@ def insert_entry_into_table_metadata_mw(response_word, phrases, synonyms, antony
 
 
 async def save_to_cache_metadata_mw(response_word, phrases, synonyms, antonyms, related_phrases, nearby_entries):
+    logger.debug(f"STARTING to save metadata...")
     try:
         result = insert_entry_into_table_metadata_mw(response_word, phrases, synonyms, antonyms, related_phrases, nearby_entries, "", "", "")
 
@@ -188,7 +189,7 @@ async def save_to_cache_metadata_mw(response_word, phrases, synonyms, antonyms, 
 
     else:
         if result is None: # hit ON CONFLICT
-            logger.debug(f'{OP.CANCELLED.name} caching metadata, already cached before') # hit ON CONFLICT
+            logger.debug(f'{OP.CANCELLED.name} caching metadata, already cached before')
         else:
             logger.debug(f'{OP.CACHED.name} "{result[0]}" in the table "metadata_mw"')
 
@@ -211,6 +212,7 @@ async def get_cache_metadata_mw(response_word):
 
 
 async def save_to_cache_examples_on_the_web(num, example, response_word, tag):
+    logger.debug(f"STARTING to save examples...")
     try:
         result = insert_entry_into_table_examples_on_the_web(example, response_word, tag)
 
@@ -401,6 +403,7 @@ async def get_cache(response_url):
 
 
 async def save_to_cache(input_word, response_word, response_url, response_text):
+    logger.debug(f"STARTING to save entries...")
     try:
         result = insert_entry_into_table(input_word, response_word, response_url, response_text)
 
@@ -418,7 +421,7 @@ async def save_to_cache(input_word, response_word, response_url, response_text):
         sys.exit(4)
 
     else:
-        if result is None:
-            logger.debug(f'{OP.CANCELLED.name} caching, already cached before') # hit ON CONFLICT
+        if result is None: # hit ON CONFLICT
+            logger.debug(f'{OP.CANCELLED.name} caching, already cached before')
         else:
             logger.debug(f'{OP.CACHED.name} "{result[0]}" in the table "words"')

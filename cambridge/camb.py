@@ -39,7 +39,7 @@ async def search_cambridge(tg, session, input_word, is_fresh=False, is_ch=False,
 async def cache_run(tg, res_url_from_cache):
     res_word, res_text = await get_cache(res_url_from_cache)
     logger.debug(f'{OP.FOUND.name} "{res_word}" from {DICT.CAMBRIDGE.name} in cache')
-    logger.debug(f"{OP.PARSING.name} {res_url_from_cache}")
+    logger.debug(f"{OP.PARSING.name} text cached from {res_url_from_cache}")
 
     soup = BeautifulSoup(res_text, "lxml")
     first_dict = soup.find("div", "pr dictionary") or soup.find("div", "pr di superentry")
@@ -129,10 +129,9 @@ async def fresh_run(tg, session, input_word, is_ch, no_suggestions, req_url):
 
 
 async def parse_and_print(first_dict, res_url, new_line=True):
-    logger.debug(f"{OP.PARSING.name} {res_url}")
+    logger.debug(f"STARTING to parse and print entry from {res_url}...")
     nodes = first_dict.find_all("div", ["pr entry-body__el", "entry-body__el clrd js-share-holder", "pr idiom-block"]) # type: ignore
 
-    logger.debug(f"{OP.PRINTING.name} the parsed result of {res_url}")
     for node in nodes:
         parse_dict_head(node)
         parse_dict_body(node)

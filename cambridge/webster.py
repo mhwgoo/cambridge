@@ -38,15 +38,23 @@ async def search_webster(tg, session, input_word, is_fresh=False, no_suggestions
 async def cache_run(tg, response_url_from_cache):
     response_word, response_text = await get_cache(response_url_from_cache)
     logger.debug(f'{OP.FOUND.name} "{response_word}" from {DICT.MERRIAM_WEBSTER.name} in cache')
-    logger.debug(f"{OP.PARSING.name} {response_url_from_cache}")
+    logger.debug(f"{OP.PARSING.name} text cached from {response_url_from_cache}")
     html_tree = etree.HTML(response_text, parser)
     entries = html_tree.xpath('//div[contains(@id, "dictionary-entry")]')
-    for entry in entries:
-        dictionary_entry(entry)
+    for i, entry in enumerate(entries):
+        dictionary_entry(i, entry)
 
     meta_data = await get_cache_metadata_mw(response_word)
     if meta_data is not None:
         tg.create_task(metadata(tg, meta_data, None))
+    else:
+        phrases = ""
+        synonyms = ""
+        antonyms = ""
+        related_phrases = ""
+        nearby_entries = ""
+        meta_data = (response_word, phrases, synonyms, antonyms, related_phrases, nearby_entries)
+        tg.create_task(metadata(tg, meta_data, html_tree))
     c_print(f'\n#[#757575]{OP.FOUND.name} "{response_word}" from {DICT.MERRIAM_WEBSTER.name} in cache. You can add "-f" to fetch the {DICT.CAMBRIDGE.name} dictionary')
 
 
@@ -121,8 +129,7 @@ async def fresh_run(tg, session, input_word, no_suggestions, req_url):
             meta_data = (response_word, phrases, synonyms, antonyms, related_phrases, nearby_entries)
 
             for i, entry in enumerate(entries):
-                logger.debug(f"STARTING to parse and print entry {i + 1}...")
-                word_entry, word_type, word_variants, word_forms = dictionary_entry(entry)
+                word_entry, word_type, word_variants, word_forms = dictionary_entry(i, entry)
                 word_entries.append(word_entry)
                 if word_type:
                     word_types.append(word_type)
@@ -184,7 +191,8 @@ async def fresh_run(tg, session, input_word, no_suggestions, req_url):
             # word_types_and_forms:  {'verb (1)': ['could', 'can'], 'noun': ['cans'], 'verb (2)': ['canned', 'canning']}
 
 
-def dictionary_entry(node):
+def dictionary_entry(num, node):
+    logger.debug(f"STARTING to parse and print entry {num + 1}...")
     print()
     word_entry = ""
     word_type = ""
@@ -418,6 +426,7 @@ async def print_example(num, is_last, example, tags, word_entries):
 
 
 async def examples(tg, html_tree, response_word, word_entries, word_variants, word_forms):
+    logger.debug(f"STARTING to parse examples...")
     nodes = html_tree.xpath('//div[@id="examples"]/div[@class="content-section-body"]/div[contains(@class,"on-web-container")]/div[contains(@class,"on-web")]/span[contains(@class, "sub-content-thread ex-sent sents")]/span[contains(@class, "t has-aq")]')
     tags = set()
     for i in (word_entries, word_variants, word_forms):
@@ -438,6 +447,7 @@ async def examples(tg, html_tree, response_word, word_entries, word_variants, wo
 
 
 async def print_metadata(title, text):
+    logger.debug(f'STARTING to print metadata about "{title}"...')
     if title == "Phrases":
         phrases = text.split("#")
         for phrase in phrases:
@@ -477,6 +487,7 @@ async def print_metadata(title, text):
 async def metadata(tg, meta_data, html_tree=None):
     response_word, phrases, synonyms, antonyms, related_phrases, nearby_entries = meta_data
     if html_tree is not None:
+        logger.debug(f"STARTING to parse metadata...")
         nodes = html_tree.xpath('//*[@id="left-content"]/div[@id="phrases" or @id="nearby-entries" or @id="synonyms" or @id="related-phrases"]')
         if len(nodes) == 0:
             return

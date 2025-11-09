@@ -38,13 +38,13 @@ async def search_cambridge(tg, session, input_word, is_fresh=False, is_ch=False,
 
 async def cache_run(tg, res_url_from_cache):
     res_word, res_text = await get_cache(res_url_from_cache)
+    c_print(f'\n#[#757575]{OP.FOUND.name} "{res_word}" from {DICT.CAMBRIDGE.name} in cache. You can add "-f -w" to fetch the {DICT.MERRIAM_WEBSTER.name} dictionary')
     logger.debug(f'{OP.FOUND.name} "{res_word}" from {DICT.CAMBRIDGE.name} in cache')
     logger.debug(f"{OP.PARSING.name} text cached from {res_url_from_cache}")
 
     soup = BeautifulSoup(res_text, "lxml")
     first_dict = soup.find("div", "pr dictionary") or soup.find("div", "pr di superentry")
-    tg.create(parse_and_print(first_dict, res_url_from_cache, new_line=False))
-    c_print(f'\n#[#757575]{OP.FOUND.name} "{res_word}" from {DICT.CAMBRIDGE.name} in cache. You can add "-f -w" to fetch the {DICT.MERRIAM_WEBSTER.name} dictionary')
+    tg.create_task(parse_and_print(first_dict, res_url_from_cache, new_line=False))
 
 
 async def fresh_run(tg, session, input_word, is_ch, no_suggestions, req_url):

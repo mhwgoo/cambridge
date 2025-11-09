@@ -28,15 +28,17 @@ async def search_webster(tg, session, input_word, is_fresh=False, no_suggestions
         if response_url is None:
             logger.debug(f'{OP.NOT_FOUND.name} "{input_word}" in cache')
             tg.create_task(fresh_run(tg, session, input_word, no_suggestions, req_url))
-        elif DICT.CAMBRIDGE.name.lower() in response_url:
-            tg.create_task(camb.cache_run(response_url))
         else:
-            tg.create_task(cache_run(tg, response_url))
+            if DICT.CAMBRIDGE.name.lower() in response_url:
+                tg.create_task(camb.cache_run(response_url))
+            else:
+                tg.create_task(cache_run(tg, response_url))
 
 
 #TODO examples
 async def cache_run(tg, response_url_from_cache):
     response_word, response_text = await get_cache(response_url_from_cache)
+    c_print(f'#[#757575]{OP.FOUND.name} "{response_word}" from {DICT.MERRIAM_WEBSTER.name} in cache. You can add "-f" to fetch the {DICT.CAMBRIDGE.name} dictionary')
     logger.debug(f'{OP.FOUND.name} "{response_word}" from {DICT.MERRIAM_WEBSTER.name} in cache')
     logger.debug(f"{OP.PARSING.name} text cached from {response_url_from_cache}")
     html_tree = etree.HTML(response_text, parser)
@@ -55,7 +57,6 @@ async def cache_run(tg, response_url_from_cache):
         nearby_entries = ""
         meta_data = (response_word, phrases, synonyms, antonyms, related_phrases, nearby_entries)
         tg.create_task(metadata(tg, meta_data, html_tree))
-    c_print(f'\n#[#757575]{OP.FOUND.name} "{response_word}" from {DICT.MERRIAM_WEBSTER.name} in cache. You can add "-f" to fetch the {DICT.CAMBRIDGE.name} dictionary')
 
 
 async def fresh_run(tg, session, input_word, no_suggestions, req_url):
@@ -94,7 +95,7 @@ async def fresh_run(tg, session, input_word, no_suggestions, req_url):
         logger.debug(f'{OP.NOT_FOUND.name} "{input_word}" at {response_url}')
         logger.debug(f"{OP.PARSING.name} out suggestions at {response_url}")
         suggestions = html_tree.xpath('//div[@class="row m-0"][1]/p[@class="col-6 col-md-4 spelling-suggestion-col "]/a/text()')
-        tg.create_task(parse_suggestions(suggestions, session, input_word))
+        tg.create_task(parse_suggestions(tg, suggestions, session, input_word))
 
     elif status == 200:
         logger.debug(f'{OP.FOUND.name} "{input_word}" in {DICT.MERRIAM_WEBSTER.name} at {response_url}')
@@ -108,7 +109,7 @@ async def fresh_run(tg, session, input_word, no_suggestions, req_url):
                 meaning = "".join(list(e.itertext())).replace("\n", "").replace("See the full definition", "").strip()
                 suggestion_and_meaning = "".join((suggestion + meaning).split("  "))
                 suggestions.append(suggestion_and_meaning)
-            tg.create_task(parse_suggestions(suggestions, session, input_word))
+            tg.create_task(parse_suggestions(tg, suggestions, session, input_word))
         else:
             # NOTE:
             # Globals aren't safe with python asyncio, so the following variables have to be made local and passed around across functions and coroutines.
@@ -381,17 +382,17 @@ def dictionary_entry(num, node):
     return word_entry, word_type, word_variants, word_forms
 
 
-async def parse_suggestions(suggestions, session, input_word):
+async def parse_suggestions(tg, suggestions, session, input_word):
     select_word = get_suggestion_by_fzf(suggestions, DICT.MERRIAM_WEBSTER.name) if has_tool("fzf") else get_suggestion(suggestions, DICT.MERRIAM_WEBSTER.name)
     if "|" in select_word:
         select_word = select_word.split("|")[0].strip()
 
     if select_word == "":
         logger.debug(f'{OP.SWITCHED.name} to {DICT.CAMBRIDGE.name}')
-        await camb.search_cambridge(session, input_word, True, False, False, None)
+        tg.create_task(camb.search_cambridge(tg, session, input_word, True, False, False, None))
     else:
         logger.debug(f'{OP.SELECTED.name} "{select_word}"')
-        await search_webster(session, select_word, False, False, None)
+        tg.create_task(search_webster(tg, session, select_word, False, False, None))
 
 
 async def print_example(num, is_last, example, tags, word_entries):
@@ -400,12 +401,12 @@ async def print_example(num, is_last, example, tags, word_entries):
         c_print(f"\n#[{color.eg_title} bold]Recent Examples on the Web", end="")
     c_print(f"\n#[{color.accessory}]|", end="")
 
-    for word_entry in word_entries:
-        example = example.split()
-        example_len = len(example)
-        word_num = len(word_entry.split())
+    example = example.split()
+    example_len = len(example)
 
-        # e.g. "make a dent", "blue blood", "hotspot", "tone", "ghost"
+    #FIXME
+    for word_entry in word_entries: # e.g. "make a dent", "blue blood", "hotspot", "tone", "ghost", "tongue-in-cheek", "tongue in cheek"
+        word_num = len(word_entry.split())
         i = 0
         while i < example_len:
             end = "" if i == example_len - 1 else " "

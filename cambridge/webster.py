@@ -5,7 +5,7 @@ from lxml import etree # type: ignore
 from .console import c_print
 from .utils import fetch, get_request_url, decode_url, OP, DICT, has_tool, get_suggestion, get_suggestion_by_fzf, get_wod_selection, get_wod_selection_by_fzf, quit_on_no_result, cancel_on_error, cancel_on_error_without_retry, remove_extra_spaces, is_last, get_clean_text_from_fat_node
 from .log import logger
-from .cache import check_cache, save_to_cache, get_cache, save_to_cache_examples_on_the_web, save_to_cache_metadata_mw, get_cache_metadata_mw
+from .cache import check_cache, save_to_cache, get_cache, save_to_cache_examples, save_to_cache_metadata_mw, get_cache_metadata_mw
 from . import camb
 from . import color
 
@@ -111,9 +111,9 @@ async def fresh_run(tg, session, input_word, no_suggestions, req_url):
                 suggestions.append(suggestion_and_meaning)
             tg.create_task(parse_suggestions(tg, suggestions, session, input_word))
         else:
-            # NOTE:
             # Globals aren't safe with python asyncio, so the following variables have to be made local and passed around across functions and coroutines.
             # Asyncio runs tasks cooperatively on a single thread by default, so simultaneous CPU-level concurrent access to a global from multiple tasks won't occur, but logical race conditions can still happen when tasks interleave at await points.
+
             response_word = decode_url(response_url).split("/")[-1]
             word_entries = [] # A page may have multiple word entries, e.g. "runaway" as noun, "runaway" as adjective, "run away" as verb
             word_types = []
@@ -171,7 +171,7 @@ async def fresh_run(tg, session, input_word, no_suggestions, req_url):
                     del word_types_and_variants[wt]
 
             tg.create_task(metadata(tg, meta_data, html_tree))
-            tg.create_task(examples(tg, html_tree, response_word, set(word_entries), word_variants_not_nested, word_forms_not_nested))
+            tg.create_task(examples(tg, response_word, set(word_entries), word_variants_not_nested, word_forms_not_nested, html_tree))
             tg.create_task(save_to_cache(input_word, response_word, response_url, entries_text))
 
             print("\n_______")
@@ -396,7 +396,7 @@ async def parse_suggestions(tg, suggestions, session, input_word):
 
 
 async def print_example(num, is_last, example, tags, word_entries):
-    # logger.debug(f"STARTING to print #{num} example...")
+    # logger.debug(f"{OP.PRINTING.name} #{num} example...")
     if num == 1:
         c_print(f"\n#[{color.eg_title} bold]Recent Examples on the Web", end="")
     c_print(f"\n#[{color.accessory}]|", end="")
@@ -427,24 +427,26 @@ async def print_example(num, is_last, example, tags, word_entries):
 
 
 async def examples(tg, html_tree, response_word, word_entries, word_variants, word_forms):
-    logger.debug(f"STARTING to parse examples...")
-    nodes = html_tree.xpath('//div[@id="examples"]/div[@class="content-section-body"]/div[contains(@class,"on-web-container")]/div[contains(@class,"on-web")]/span[contains(@class, "sub-content-thread ex-sent sents")]/span[contains(@class, "t has-aq")]')
+    examples = set()
+    if html_tree is not None:
+        logger.debug(f"{OP.PARSING.name} examples for {response_word}")
+        nodes = html_tree.xpath('//div[@id="examples"]/div[@class="content-section-body"]/div[contains(@class,"on-web-container")]/div[contains(@class,"on-web")]/span[contains(@class, "sub-content-thread ex-sent sents")]/span[contains(@class, "t has-aq")]')
+        if len(nodes) != 0:
+            for node in nodes:
+                example = "".join(list(node.itertext()))
+                examples.add(example)
+
     tags = set()
     for i in (word_entries, word_variants, word_forms):
         for j in i:
             if j != response_word:
                 tags.add(j)
 
-    examples = set()
-    if len(nodes) != 0:
-        for node in nodes:
-            example = "".join(list(node.itertext()))
-            examples.add(example)
     tags_to_cache = ",".join(tags)
     length = len(examples)
     for i, example in enumerate(examples):
         tg.create_task(print_example(i+1, is_last(i, length), example, tags, word_entries))
-        tg.create_task(save_to_cache_examples_on_the_web(i+1, example, response_word, tags_to_cache))
+        tg.create_task(save_to_cache_examples(i+1, example, response_word, tags_to_cache))
 
 
 async def print_metadata(title, text):

@@ -11,13 +11,12 @@ DB = str(dir / "cambridge.db")
 
 con = sqlite3.connect(DB, detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
 
-
-# NOTE Python sqslite3 syntax suger is bitter.
-
 # The following functions suffixed with _table are simply DB operations and not complicated by higher level business logics
 # The following functions suffixed with _cache are wrappers of functions suffixed with _table
 
-
+# Up to version 3.14.1, `response_word` was stored with the first element of word_entries (i.e. the first entry in the HTML).
+# Now `response_word` is a term parsed from `response_url`, consistent with `response_url`, and can be used for constructing a valid url.
+# For the case that the HTML content is about "rough" while the `response_word` is "Rough around the edges", the field for defining and later checking what the content is actually about is `word_entries` that has been stored in the table with `metadata` in the table name.
 def create_table():
     con.execute(
         """CREATE TABLE IF NOT EXISTS words (
@@ -25,20 +24,8 @@ def create_table():
         "response_word" TEXT NOT NULL,
         "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         "response_url" TEXT UNIQUE NOT NULL,
-        "response_text" TEXT NOT NULL,
-        UNIQUE(response_url))"""
-    )
-
-
-def create_table_examples_on_the_web():
-    con.execute(
-        """CREATE TABLE IF NOT EXISTS examples (
-        "id" INTEGER PRIMARY KEY,
-        "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        "example" TEXT UNIQUE NOT NULL,
-        "response_words" TEXT NOT NULL,
-        "tags" TEXT NOT NULL,
-        UNIQUE(example))"""
+        "response_text" TEXT NOT NULL)
+        """
     )
 
 
@@ -46,7 +33,11 @@ def create_table_metadata_mw():
     con.execute(
         """CREATE TABLE IF NOT EXISTS metadata_mw (
         "id" INTEGER PRIMARY KEY,
-        "response_word" TEXT UNIQUE NOT NULL,
+        "word_id" INTEGER NOT NULL,
+        "word_entries" TEXT UNIQUE NOT NULL,
+        "word_types" TEXT,
+        "word_variants" TEXT,
+        "word_forms" TEXT,
         "phrases" TEXT,
         "synonyms" TEXT,
         "antonyms" TEXT,
@@ -55,22 +46,33 @@ def create_table_metadata_mw():
         "reserved_1" TEXT,
         "reserved_2" TEXT,
         "reserved_3" TEXT,
-        UNIQUE(response_word))"""
+        FOREIGN KEY(word_id) REFERENCES words(response_url) ON DELETE CASCADE)
+        """
     )
 
 
-# About sqlite3 context manager (from sqlite3 — DB-API 2.0 interface for SQLite databases):
+def create_table_examples():
+    con.execute(
+        """CREATE TABLE IF NOT EXISTS examples (
+        "id" INTEGER PRIMARY KEY,
+        "response_words" TEXT,
+        "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        "example" TEXT UNIQUE NOT NULL,
+        """
+    )
+
+# ABOUT SQLITE3 CONTEXT MANAGER (from sqlite3 — DB-API 2.0 interface for SQLite databases):
 # "A Connection object can be used as a context manager that automatically commits or rolls back open transactions
 # when leaving the body of the context manager. If the body of the with statement finishes without exceptions, the transaction is committed."
 # "Connection object used as context manager **ONLY** commits or rollbacks transactions, so the connection object should be closed manually."
-# NOTE Assuming a context manager is designed in the first place for automatic close operation is wrong in the case of sqlite connection object.
+# Assuming a context manager is designed in the first place for automatic close operation is wrong in the case of sqlite connection object.
 
-# About how to use sqlite3 "RETURN" primitive in Python:
-# According to 1, Python autocommits if you use context manager and when the code leaves the with block, and you later fetchone(), RETURN won't work and you will get:
+# ABOUT HOW TO USE SQLITE3 "RETURN" PRIMITIVE:
+# Python autocommits if you use context manager and when the code leaves the with block, and you later fetchone(), RETURN won't work and you will get:
 # OperationalError: cannot commit transaction - SQL statements in progress
-# According to sqlite3 docs, only after SQLITE_DONE, the RETURN starts to work.
-# Then the code is dead with the context manager: COMMIT (when leaving with block) depends on RETURN, RETURN depends on SQLITE_DONE, SQLITE_DONE happens after COMMIT
-# NOTE Don't use a connection as context manager when RETURN is needed.
+# According to sqlite3 docs, only after SQLITE_DONE, the RETURN starts to work. Then the code is dead with the context manager:
+# COMMIT (when leaving with block) depends on RETURN, RETURN depends on SQLITE_DONE, SQLITE_DONE happens after COMMIT
+# Don't use a connection as context manager when RETURN is needed.
 
 # After digging deep into cpython/modules/_sqlite/cursor.c, Python deals with sqlite3 step SQLITE_DONE within fetchone(),
 # fetchone() first, then manual COMMIT, and RETURN will work.
@@ -120,7 +122,7 @@ def insert_entry_into_table(input_word, response_word, url, text):
     return None
 
 
-def insert_entry_into_table_examples_on_the_web(example, response_word, tag):
+def insert_entry_into_table_examples(example, response_word, tag):
     import datetime
     current_datetime = datetime.datetime.now()
 
@@ -138,7 +140,7 @@ def insert_entry_into_table_examples_on_the_web(example, response_word, tag):
 
         except sqlite3.OperationalError as error:
             if "no such table" in str(error) and attempt == 1:
-                create_table_examples_on_the_web()
+                create_table_examples()
                 continue
             raise
         except sqlite3.Error:
@@ -211,10 +213,28 @@ async def get_cache_metadata_mw(response_word):
     return get_entry_from_metadata_mw(response_word)
 
 
-async def save_to_cache_examples_on_the_web(num, example, response_word, tag):
+# TODO
+# async def get_cache_examples(response_word):
+#     return get_entry_from_examples(response_word)
+
+
+# def get_entry_from_examples(response_word):
+#     try:
+#         cur = con.execute(
+#             "SELECT example, response_words, tags FROM examples WHERE response_word = ?",
+#             (response_word,),
+#         )
+#     except sqlite3.Error:
+#         raise
+
+#     else:
+#         return cur.fetchone()
+
+
+async def save_to_cache_examples(num, example, response_word, tag):
     logger.debug(f"STARTING to save examples...")
     try:
-        result = insert_entry_into_table_examples_on_the_web(example, response_word, tag)
+        result = insert_entry_into_table_examples(example, response_word, tag)
 
     except sqlite3.Error as error:
         logger.error(f'{OP.CANCELLED.name} caching "{response_word}": [{error.__class__.__name__}] {error}\n')
@@ -222,17 +242,17 @@ async def save_to_cache_examples_on_the_web(num, example, response_word, tag):
 
     else:
         if result is None: # hit ON CONFLICT
-            result = check_word_in_table_examples_on_the_web(example, response_word)
+            result = check_word_in_table_examples(example, response_word)
             if result:
                 logger.debug(f'{OP.CANCELLED.name} caching, already cached #{num} example for "{response_word}" before')
             else:
-                update_table_examples_on_the_web(example, response_word, tag)
+                update_table_examples(example, response_word, tag)
                 logger.debug(f'Already cached #{num} example before from other words. Updated the record for "{response_word}"')
         else:
             logger.debug(f'{OP.CACHED.name} #{num} example for "{result[0]}" in the table "examples"')
 
 
-def check_word_in_table_examples_on_the_web(example, response_word):
+def check_word_in_table_examples(example, response_word):
     try:
         # NOTE: use the form of `(example,)` with one variable, otherwise, python throws `sqlite3.ProgrammingError: Incorrect number of bindings supplied.`
         cur = con.execute(
@@ -249,7 +269,7 @@ def check_word_in_table_examples_on_the_web(example, response_word):
             return False
 
 
-def update_table_examples_on_the_web(example, response_word, tag):
+def update_table_examples(example, response_word, tag):
     try:
         cur = con.execute(
             "UPDATE examples SET response_words = response_words || ',' || ?, tags = tags || ',' || ? WHERE example = ?",

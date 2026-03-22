@@ -1,8 +1,8 @@
-cambridge/__pycache__/*
-cambridge/.DS_Store
-cambridge/TAGS
+__pycache__/*
 .DS_Store
-*/.ruff_cache/*
+TAGS
+.DS_Store
+.ruff_cache/*
 dist/
 venv/
-bugs/
+backlog/

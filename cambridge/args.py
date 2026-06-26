@@ -226,7 +226,7 @@ async def list_words(args):
     else:
         sys.exit()
 
-
+# Note: A new alternative to create and run tasks concurrently and wait for their completion is asyncio.TaskGroup. TaskGroup provides stronger safety guarantees than gather for scheduling a nesting of subtasks: if a task (or a subtask, a task scheduled by a task) raises an exception, TaskGroup will, while gather will not, cancel the remaining scheduled tasks). And asyncio.run() to run the top-level entry point main() function may not be needed.
 async def search_word(args):
     if not args.search and not args.webster and not args.chinese:
         print("You didn't input any word or phrase.")

@@ -1,6 +1,8 @@
 # Cambridge
 `cambridge` is a terminal version of Cambridge Dictionary, whose source is from https://dictionary.cambridge.org; also supports the Merriam-Webster Dictionary as backup.
 
+[NOTE] Both Cambridge and Merriam-Webster have implemented cloudflare mechanism in 2026, and I have simulated human action with Playwright to work around it. Although worked, it takes about 5 secs to receive the html document, which defeats the whole purpose of speed uping word searching and language learning process. Therefore I have to pause this process until I find as fast a way as when there was no cloudflare. Or If you know how, please kindly offer your help. Thanks.
+
 ## Screenshots
 #### Look up words/phrases in Cambridge Dictionary (screenshot on DARK terminal background)
 ![look up a word in Cambridge Dictionary](/screenshots/cambridge.png)

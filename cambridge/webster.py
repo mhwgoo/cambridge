@@ -1,4 +1,5 @@
 import sys
+import time, random
 import asyncio
 from lxml import etree # type: ignore
 
@@ -52,26 +53,82 @@ async def cache_run(res_url_from_cache):
 async def fresh_run(session, input_word, no_suggestions, req_url):
     response = await fetch(session, req_url)
     status = response.status
-    if status != 404 and status != 200:
-        print(f"Got unexpected status {status} from {req_url}")
-        sys.exit(2)
-
     res_url = str(response.real_url)
     res_text = None
-    attempt = 0
-    while True:
-        try:
-            res_text = await response.text()
-        except asyncio.TimeoutError as error:
-            attempt = cancel_on_error(req_url, error, attempt, OP.FETCHING.name)
-            continue
-        # There is also a scenario that in the process of cancelling, while is still looping, leading to run coroutine with a closed session.
-        # If session is closed, and you go on connecting, ClientConnectionError will be throwed.
-        except Exception as error:
-            cancel_on_error_without_retry(req_url, error, OP.FETCHING.name)
-            break
-        else:
-            break
+
+    if status == 403:
+        from playwright.async_api import async_playwright, Playwright
+        async with async_playwright() as pw:
+            print("\n=> Got human check. Browser automation starting, wait a few seconds...")
+            browser = await pw.chromium.launch(headless=True, args=[
+                "--disable-blink-features=AutomationControlled",
+                "--window-size=1366,768"
+            ])
+            context = await browser.new_context(
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
+                viewport={"width":1366,"height":768}
+            )
+            page = await context.new_page()
+            try:
+                await page.goto(res_url, timeout=60000)
+            except Exception as error:
+                print(str(error))
+                sys.exit(1)
+
+            iframe_el = None
+            for i in range(1000):
+                try:
+                    iframe_el = await page.query_selector("iframe")
+                except Exception as error:
+                    print(str(error))
+                    sys.exit(1)
+
+                if iframe_el is not None:
+                    print(f"Got iframe at [{i}]")
+                    break
+                time.sleep(0.25)
+
+            if iframe_el:
+                src = await iframe_el.get_attribute("src") or ""
+                if "cloudflare" in src or "cf" in src:
+                    print("Got cloudfare")
+                print("=> Human mouse click simulating...")
+                box = await iframe_el.bounding_box()
+                if not box:
+                    await browser.close(); raise SystemExit("No iframe box")
+                cx = box["x"] + box["width"]/2
+                cy = box["y"] + box["height"]/2
+                sx = cx + random.uniform(-120, 120)
+                sy = cy + random.uniform(-60, 60)
+                steps=10
+                for i in range(steps):
+                    t = (i + 1) / steps
+                    ix = sx + (cx - sx) * t + random.uniform(-1, 1)
+                    iy = sy + (cy - sy) * t + random.uniform(-1, 1)
+                    await page.mouse.move(ix, iy)
+                    time.sleep(random.uniform(0.01, 0.04))
+                time.sleep(random.uniform(0.03, 0.12))
+                await page.mouse.click(cx, cy, delay=int(random.uniform(20, 80)))
+                await page.wait_for_timeout(9000)
+                res_text = await page.content()
+            else:
+                print(f"iframe not found")
+
+    else:
+        attempt = 0
+        while True:
+            try:
+                res_text = await response.text()
+            except asyncio.TimeoutError as error:
+                attempt = cancel_on_error(req_url, error, attempt, OP.FETCHING.name)
+                continue
+            # There is also a scenario that in the process of cancelling, while is still looping, leading to run coroutine with a closed session.
+            # If session is closed, and you go on connecting, ClientConnectionError will be throwed.
+            except Exception as error:
+                cancel_on_error_without_retry(req_url, error, OP.FETCHING.name)
+                break
+            else:
+                break
 
     if res_text is None:
         print(f"UNABLE to get the document from {req_url}, perhaps due to unstable network. Please try again.")
@@ -79,44 +136,45 @@ async def fresh_run(session, input_word, no_suggestions, req_url):
 
     global html_tree
     html_tree = etree.HTML(res_text, parser)
+    entries = html_tree.xpath('//*[@id="left-content"]/div[contains(@id, "-entry") and (@class!= "entry-word-section-container-supplemental" or not(@class))]')
 
-    if status == 404:
+    if len(entries) == 0:
         if no_suggestions:
             sys.exit(-1)
-        logger.debug(f'{OP.NOT_FOUND.name} "{input_word}" at {res_url}')
-        logger.debug(f"{OP.PARSING.name} out suggestions at {res_url}")
-        suggestions = html_tree.xpath('//div[@class="row m-0"][1]/p[@class="col-6 col-md-4 spelling-suggestion-col "]/a/text()')
-        await parse_suggestions(suggestions, session, input_word)
+        suggestions = html_tree.xpath('//*[@class="col-6 col-md-4 spelling-suggestion-col "]/a/text()')
+        if len(suggestions) != 0:
+            logger.debug(f'{OP.NOT_FOUND.name} "{input_word}" at {res_url}')
+            logger.debug(f"{OP.PARSING.name} out suggestions at {res_url}")
+            await parse_suggestions(suggestions, session, input_word)
+            exit(0)
 
-    elif status == 200:
-        logger.debug(f'{OP.FOUND.name} "{input_word}" in {DICT.MERRIAM_WEBSTER.name} at {res_url}')
-        entries = html_tree.xpath('//*[@id="left-content"]/div[contains(@id, "-entry") and (@class!= "entry-word-section-container-supplemental" or not(@class))]')
-        if len(entries) == 0:
-            quit_on_no_result(DICT.MERRIAM_WEBSTER.name, is_spellcheck=True)
-        elif entries[0].get("class") is None:
+    else:
+        if entries[0].get("class") is None:
             suggestions = []
             for e in entries:
                 suggestion = e.getprevious().getchildren()[0].getchildren()[0].getchildren()[0].text
                 suggestions.append(suggestion)
             await parse_suggestions(suggestions, session, input_word)
-        else:
-            logger.debug(f"{OP.PARSING.name} {res_url}")
-            entries_text = ""
-            for i, entry in enumerate(entries):
-                logger.debug(f"STARTING to parse and print entry {i + 1}...")
-                dictionary_entry(entry)
-                text = etree.tostring(entry).decode('utf-8')
-                cleaned_text = remove_extra_spaces(text)
-                entries_text += cleaned_text
+            exit(0)
 
-            res_word = decode_url(res_url).split("/")[-1]
-            async with asyncio.TaskGroup() as tg:
-                 task1 = tg.create_task(save_to_cache(input_word, res_word, res_url, entries_text))
-                 task2 = tg.create_task(examples())
-                 task3 = tg.create_task(synonyms())
-                 task4 = tg.create_task(phrases())
-                 task5 = tg.create_task(related_phrases())
-                 task6 = tg.create_task(nearby_entries())
+        logger.debug(f'{OP.FOUND.name} "{input_word}" in {DICT.MERRIAM_WEBSTER.name} at {res_url}')
+        logger.debug(f"{OP.PARSING.name} {res_url}")
+        entries_text = ""
+        for i, entry in enumerate(entries):
+            logger.debug(f"STARTING to parse and print entry {i + 1}...")
+            dictionary_entry(entry)
+            text = etree.tostring(entry).decode('utf-8')
+            cleaned_text = remove_extra_spaces(text)
+            entries_text += cleaned_text
+
+        res_word = decode_url(res_url).split("/")[-1]
+        async with asyncio.TaskGroup() as tg:
+             task1 = tg.create_task(save_to_cache(input_word, res_word, res_url, entries_text))
+             task2 = tg.create_task(examples())
+             task3 = tg.create_task(synonyms())
+             task4 = tg.create_task(phrases())
+             task5 = tg.create_task(related_phrases())
+             task6 = tg.create_task(nearby_entries())
 
 
 def dictionary_entry(node):
@@ -224,7 +282,7 @@ async def nearby_entries():
     logger.debug("DONE parsing and printing nearby entries.")
 
 
-async def synonyms():
+async def synonyms(): # worship
     logger.debug("STARTING to parse and print synonyms...")
     nodes = html_tree.xpath('//*[@id="left-content"]/div[@id="synonyms"]')
     if len(nodes) != 0:

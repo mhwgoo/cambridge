@@ -1,5 +1,4 @@
 import sys
-import time, random
 import asyncio
 from lxml import etree # type: ignore
 
@@ -16,9 +15,8 @@ WEBSTER_DICT_BASE_URL = WEBSTER_BASE_URL + "/dictionary/"
 WEBSTER_WORD_OF_THE_DAY_URL = WEBSTER_BASE_URL + "/word-of-the-day"
 WEBSTER_WORD_OF_THE_DAY_URL_CALENDAR = WEBSTER_BASE_URL + "/word-of-the-day/calendar"
 
-parser = etree.HTMLParser(remove_blank_text=True, remove_comments=True, remove_pis=True)
-html_tree = None
-word_entries = [] # A page may have multiple word entries, e.g. "runaway" as noun, "runaway" as adjective, "run away" as verb
+parser = etree.HTMLParser(remove_comments=True)
+word_entries = []    # A page may have multiple word entries, e.g. "runaway" as noun, "runaway" as adjective, "run away" as verb
 
 async def search_webster(session, input_word, is_fresh=False, no_suggestions=False, req_url=None):
     if req_url is None:
@@ -41,331 +39,260 @@ async def cache_run(res_url_from_cache):
     res_word, res_text = await get_cache(res_url_from_cache)
     logger.debug(f'{OP.FOUND.name} "{res_word}" from {DICT.MERRIAM_WEBSTER.name} in cache')
     logger.debug(f"{OP.PARSING.name} {res_url_from_cache}")
-    global html_tree
-    html_tree = etree.HTML(res_text, parser)
-    entries = html_tree.xpath('//div[contains(@id, "dictionary-entry")]')
-    for entry in entries:
-        dictionary_entry(entry)
-
+    first_dict = etree.HTML(res_text, parser)
+    await parse_and_print(first_dict, res_url_from_cache, new_line=False)
     c_print(f'\n#[#757575]{OP.FOUND.name} "{res_word}" from {DICT.MERRIAM_WEBSTER.name} in cache. You can add "-f" to fetch the {DICT.CAMBRIDGE.name} dictionary')
 
 
 async def fresh_run(session, input_word, no_suggestions, req_url):
     response = await fetch(session, req_url)
-    status = response.status
     res_url = str(response.real_url)
+    status = response.status
     res_text = None
+    attempt = 0
+    while True:
+        try:
+            res_text = await response.text()
+        except asyncio.TimeoutError as error:
+            attempt = cancel_on_error(req_url, error, attempt, OP.FETCHING.name)
+            continue
+        # There is also a scenario that in the process of cancelling, while is still looping, leading to run coroutine with a closed session.
+        # If session is closed, and you go on connecting, ClientConnectionError will be throwed.
+        except Exception as error:
+            cancel_on_error_without_retry(req_url, error, OP.FETCHING.name)
+            break
+        else:
+            break
 
-    if status == 403:
-        from playwright.async_api import async_playwright, Playwright
-        async with async_playwright() as pw:
-            print("\n=> Got human check. Browser automation starting, wait a few seconds...")
-            browser = await pw.chromium.launch(headless=True, args=[
-                "--disable-blink-features=AutomationControlled",
-                "--window-size=1366,768"
-            ])
-            context = await browser.new_context(
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
-                viewport={"width":1366,"height":768}
-            )
-            page = await context.new_page()
-            try:
-                await page.goto(res_url, timeout=60000)
-            except Exception as error:
-                print(str(error))
-                sys.exit(1)
-
-            iframe_el = None
-            for i in range(1000):
-                try:
-                    iframe_el = await page.query_selector("iframe")
-                except Exception as error:
-                    print(str(error))
-                    sys.exit(1)
-
-                if iframe_el is not None:
-                    print(f"Got iframe at [{i}]")
-                    break
-                time.sleep(0.25)
-
-            if iframe_el:
-                src = await iframe_el.get_attribute("src") or ""
-                if "cloudflare" in src or "cf" in src:
-                    print("Got cloudfare")
-                print("=> Human mouse click simulating...")
-                box = await iframe_el.bounding_box()
-                if not box:
-                    await browser.close(); raise SystemExit("No iframe box")
-                cx = box["x"] + box["width"]/2
-                cy = box["y"] + box["height"]/2
-                sx = cx + random.uniform(-120, 120)
-                sy = cy + random.uniform(-60, 60)
-                steps=10
-                for i in range(steps):
-                    t = (i + 1) / steps
-                    ix = sx + (cx - sx) * t + random.uniform(-1, 1)
-                    iy = sy + (cy - sy) * t + random.uniform(-1, 1)
-                    await page.mouse.move(ix, iy)
-                    time.sleep(random.uniform(0.01, 0.04))
-                time.sleep(random.uniform(0.03, 0.12))
-                await page.mouse.click(cx, cy, delay=int(random.uniform(20, 80)))
-                await page.wait_for_timeout(9000)
-                res_text = await page.content()
-            else:
-                print(f"iframe not found")
-
-    else:
-        attempt = 0
-        while True:
-            try:
-                res_text = await response.text()
-            except asyncio.TimeoutError as error:
-                attempt = cancel_on_error(req_url, error, attempt, OP.FETCHING.name)
-                continue
-            # There is also a scenario that in the process of cancelling, while is still looping, leading to run coroutine with a closed session.
-            # If session is closed, and you go on connecting, ClientConnectionError will be throwed.
-            except Exception as error:
-                cancel_on_error_without_retry(req_url, error, OP.FETCHING.name)
-                break
-            else:
-                break
-
-    if res_text is None:
-        print(f"UNABLE to get the document from {req_url}, perhaps due to unstable network. Please try again.")
-        sys.exit(2)
-
-    global html_tree
-    html_tree = etree.HTML(res_text, parser)
-    entries = html_tree.xpath('//*[@id="left-content"]/div[contains(@id, "-entry") and (@class!= "entry-word-section-container-supplemental" or not(@class))]')
-
-    if len(entries) == 0:
-        if no_suggestions:
-            sys.exit(-1)
-        suggestions = html_tree.xpath('//*[@class="col-6 col-md-4 spelling-suggestion-col "]/a/text()')
-        if len(suggestions) != 0:
+    if res_text is not None:
+        tree = etree.HTML(res_text, parser)
+        if status == 404:
             logger.debug(f'{OP.NOT_FOUND.name} "{input_word}" at {res_url}')
+
+            if no_suggestions:
+                sys.exit(-1)
+
             logger.debug(f"{OP.PARSING.name} out suggestions at {res_url}")
-            await parse_suggestions(suggestions, session, input_word)
-            exit(0)
+            suggestions = tree.xpath('//div[@class="row m-0"][1]/p[@class="col-6 col-md-4 spelling-suggestion-col "]/a/text()')
+            if len(suggestions) == 0:
+                quit_on_no_result(DICT.MERRIAM_WEBSTER.name, is_spellcheck=True)
 
-    else:
-        if entries[0].get("class") is None:
-            suggestions = []
-            for e in entries:
-                suggestion = e.getprevious().getchildren()[0].getchildren()[0].getchildren()[0].text
-                suggestions.append(suggestion)
-            await parse_suggestions(suggestions, session, input_word)
-            exit(0)
+            logger.debug(f"{OP.PRINTING.name} out suggestions at {res_url}")
+            select_word = get_suggestion_by_fzf(suggestions, DICT.MERRIAM_WEBSTER.name) if has_tool("fzf") else get_suggestion(suggestions, DICT.MERRIAM_WEBSTER.name)
+            if select_word == "":
+                logger.debug(f'{OP.SWITCHED.name} to {DICT.CAMBRIDGE.name}')
+                await camb.search_cambridge(session, input_word, True, False, no_suggestions, None)
+            else:
+                logger.debug(f'{OP.SELECTED.name} "{select_word}"')
+                await search_webster(session, select_word, False, no_suggestions, None)
 
-        logger.debug(f'{OP.FOUND.name} "{input_word}" in {DICT.MERRIAM_WEBSTER.name} at {res_url}')
-        logger.debug(f"{OP.PARSING.name} {res_url}")
-        entries_text = ""
-        for i, entry in enumerate(entries):
-            logger.debug(f"STARTING to parse and print entry {i + 1}...")
-            dictionary_entry(entry)
-            text = etree.tostring(entry).decode('utf-8')
-            cleaned_text = remove_extra_spaces(text)
-            entries_text += cleaned_text
+        elif status == 200 and tree.xpath('//p[contains(@class,"partial")]'):
+            input_word = decode_url(res_url).split("/")[-1]
+            suggestions = tree.xpath('//h2[@class="hword"]/text() | //h2[@class="hword"]/span/text()')
+            logger.debug(f"{OP.PRINTING.name} out suggestions at {res_url}")
+            select_word = get_suggestion_by_fzf(suggestions, DICT.MERRIAM_WEBSTER.name) if has_tool("fzf") else get_suggestion(suggestions, DICT.MERRIAM_WEBSTER.name)
+            if select_word == "":
+                logger.debug(f'{OP.SWITCHED.name} to {DICT.CAMBRIDGE.name}')
+                await camb.search_cambridge(session, input_word, True, False, no_suggestions, None)
+            else:
+                logger.debug(f'{OP.SELECTED.name} "{select_word}"')
+                await search_webster(session, select_word, False, no_suggestions, None)
 
-        res_word = decode_url(res_url).split("/")[-1]
-        async with asyncio.TaskGroup() as tg:
-             task1 = tg.create_task(save_to_cache(input_word, res_word, res_url, entries_text))
-             task2 = tg.create_task(examples())
-             task3 = tg.create_task(synonyms())
-             task4 = tg.create_task(phrases())
-             task5 = tg.create_task(related_phrases())
-             task6 = tg.create_task(nearby_entries())
+        elif status == 200:
+            logger.debug(f'{OP.FOUND.name} "{input_word}" in {DICT.MERRIAM_WEBSTER.name} at {res_url}')
+
+            first_dict = tree.xpath('//*[@id="left-content"]')[0]
+            if first_dict is None:
+                quit_on_no_result(DICT.MERRIAM_WEBSTER.name, is_spellcheck=False)
+
+            async with asyncio.TaskGroup() as tg:
+                task1 = tg.create_task(parse_and_print(first_dict, res_url, new_line=True))
+                task2 = tg.create_task(cache(first_dict, input_word, res_url))
+
+        else:
+            print(f'Something went wrong when fetching {req_url} with STATUS: {status}')
+            sys.exit(2)
 
 
-def dictionary_entry(node):
+async def parse_and_print(first_dict, res_url, new_line=True):
+    logger.debug(f"{OP.PARSING.name} {res_url}")
+
+    search_pattern = """
+    //*[@id="left-content"]/div[contains(@id, "-entry")] |
+    //*[@id="left-content"]/div[@id="phrases"] |
+    //*[@id="left-content"]/div[@id="synonyms"] |
+    //*[@id="left-content"]/div[@id="examples"]/div[@class="content-section-body"]/div[contains(@class,"on-web-container")]/div[contains(@class,"on-web")] |
+    //*[@id="left-content"]/div[@id="related-phrases"] |
+    //*[@id="left-content"]/div[@id="nearby-entries"]
+    """
+    nodes = first_dict.xpath(search_pattern)
+
+    logger.debug(f"{OP.PRINTING.name} the parsed result of {res_url}")
+    for node in nodes:
+        try:
+            attr = node.attrib["id"]
+        except KeyError:
+            attr = node.attrib["class"]
+
+        if "-entry" in attr:
+            dictionary_entry(node)
+
+        elif attr == "phrases":
+            phrases(node)
+
+        elif attr == "nearby-entries":
+            nearby_entries(node)
+
+        elif attr == "synonyms":
+            synonyms(node)
+
+        elif "on-web" in attr:
+            examples(node)
+
+        elif attr == "related-phrases":
+            related_phrases(node)
+
+    if new_line:
+        print()
+
+
+async def cache(first_dict, input_word, res_url):
+    res_word = input_word
+
+    # Response word within res_url is not same with what apppears on the web page. e.g. "set in stone"
+    result = first_dict.xpath('//*[@id="left-content"]/div[contains(@id, "-entry-1")]/div[1]/div/div[1]/h1/text()') \
+        or first_dict.xpath('//*[@id="left-content"]/div[contains(@id, "-entry-1")]/div[1]/div/div/h1/span/text()')
+    if len(result) != 0:
+        res_word = result[0]
+
+    clean_text = remove_extra_spaces(etree.tostring(first_dict).decode('utf-8'))
+    await save_to_cache(input_word, res_word, res_url, clean_text)
+
+
+def examples(node):
     print()
-    for elm in node.iterchildren():
-        elm_attr = elm.get("class")
-        if elm_attr is not None:
-            if "row entry-header" in elm_attr:
-                row_entry_header(elm)
 
-            elif elm_attr == "row headword-row header-ins":
-                row_headword_row_header_ins(elm)
+    for child in node.iterchildren():
+        child_class = child.get("class")
+        if "ex-header" in child_class:
+            c_print(f"#[{w_col.eg_title} bold]{child.text}", end="")
 
-            elif elm_attr == "row headword-row header-vrs":
-                row_headword_row_header_vrs(elm)
+        elif "function-label-header" == child_class:
+            print(f"\n{child.text}", end="")
 
-            elif elm_attr == "vg":
-                vg(elm)
+        elif "sub-content-thread ex-sent sents" == child_class:
+            for c in child:
+                c_child = c.get("class")
+                if "t has-aq" == c_child:
+                    ems = []
+                    for i in c.iterchildren():
+                        if i.tag == "em":
+                            ems.append(i.text)
 
-            elif "entry-uros" in elm_attr:
-                for i in elm.iterchildren():
-                    entry_uros(i)
-                    print()
+                    c_print(f"\n#[{w_col.accessory}]|", end="")
+                    for t in c.itertext():
+                        if t in ems:
+                            c_print(f"#[{w_col.eg_word} bold]{t}", end="")
+                        else:
+                            c_print(f"#[{w_col.eg_sentence}]{t}", end="")
 
-            elif elm_attr == "dxnls":
-                dxnls(elm)
 
-            elif elm_attr == "mt-3":
-                badge = elm.getchildren()[0] # class "lbs badge mw-badge-gray-100 text-start text-wrap d-inline"
-                print_header_badge(badge.text, end="\n")
+def nearby_entries(node):
+    print()
 
-            elif elm_attr == "cxl-ref":
-                for i in elm.iterdescendants():
-                    i_attr = i.get("class")
-                    if i.tag == "span" and i_attr == "cxl":
-                        print_meaning_badge(i.text, end=" ")
-                    elif i.tag == "span" and i_attr == "text-uppercase":
-                        print_meaning_content(i.text.upper(), end="")
+    for elm in node.iterdescendants():
+        try:
+            has_title = (elm.tag == "h2")
+            has_word = (elm.tag == "div" or elm.tag == "span") and (elm.attrib["class"] == "b-link hw-text fw-bold")
+            has_nearby = (elm.tag == "a") and (elm.attrib["class"] == "b-link")
+            has_em = (elm.tag == "em")
+        except KeyError:
+            continue
+        else:
+            if has_title and "Browse Nearby" in elm.text:
+                c_print(f"\n#[bold {w_col.nearby_title}]{elm.text}", end="\n")
+            elif has_title and "Dictionary Entries Near" in elm.text:
+                c_print(f"\n#[bold {w_col.nearby_title}]{elm.text}", end="")
+            elif has_em:
+                word = "".join(list(elm.itertext()))
+                c_print(f"#[bold {w_col.nearby_em}]{word}", end="\n")
+            elif has_word:
+                c_print(f"#[{w_col.nearby_word}]{elm.text}", end="\n")
+            elif has_nearby:
+                c_print(f"#[{w_col.nearby_item}]{elm.text}", end="\n")
+
+
+def synonyms(node):
+    print()
+
+    for elm in node.iterdescendants():
+        if elm.tag == "h2":
+            c_print(f"#[bold {w_col.syn_title}]{elm.text}", end="\n")
+
+        if elm.tag == "p" and elm.attrib["class"] == "function-label":
+            print(elm.text)
+
+        if elm.tag == "ul":
+            children = elm.getchildren()
+            total_num = len(children)
+
+            for index, child in enumerate(children):
+                syn = "".join(list(child.itertext())).strip()
+                if index != (total_num - 1):
+                    c_print(f"#[{w_col.syn_item}]{syn},", end=" ")
+                else:
+                    c_print(f"#[{w_col.syn_item}]{syn}", end="\n")
+
+
+def phrases(node):
+    print()
+    children = node.getchildren()[1]
+    for child in children:
+        try:
+            if child.attrib["class"] == "drp":
+                if child.getnext().tag == "span":
+                    c_print(f"#[{w_col.ph_item} bold]{child.text}", end="")
+                else:
+                    c_print(f"#[{w_col.ph_item} bold]{child.text}", end="\n")
+
+            elif child.attrib["class"] == "vg":
+                vg(child)
+
+        except KeyError:
+            for i in child.getchildren():
+                if i.attrib["class"] == "vl":
+                    print_or_badge(i.text)
+                else:
+                    c_print(f"#[{w_col.ph_item} bold]{i.text}", end="")
+            if child.getnext().get("class") == "vg":
                 print()
 
 
-async def parse_suggestions(suggestions, session, input_word):
-    select_word = get_suggestion_by_fzf(suggestions, DICT.MERRIAM_WEBSTER.name) if has_tool("fzf") else get_suggestion(suggestions, DICT.MERRIAM_WEBSTER.name)
-    if select_word == "":
-        logger.debug(f'{OP.SWITCHED.name} to {DICT.CAMBRIDGE.name}')
-        await camb.search_cambridge(session, input_word, True, False, False, None)
-    else:
-        logger.debug(f'{OP.SELECTED.name} "{select_word}"')
-        await search_webster(session, select_word, False, False, None)
+def related_phrases(node):
+    print()
 
+    children = node.getchildren()
 
-def print_example(example, tags):
-    c_print(f"\n#[{w_col.accessory}]|", end="")
-    for t in example.itertext():
-        if t in tags:
-            c_print(f"#[{w_col.eg_word} bold]{t}", end="")
-        else:
-            c_print(f"#[{w_col.eg_sentence}]{t}", end="")
+    title = children[1]
+    texts = list(title.itertext())
 
+    for t in texts:
+        if t.strip():
+            if t.lower() in word_entries:
+                c_print(f"#[{w_col.rph_em} bold]{t}", end="\n")
+            else:
+                c_print(f"#[{w_col.rph_title} bold]{t}", end="")
 
-async def examples():
-    logger.debug("STARTING to parse and print examples...")
-    nodes = html_tree.xpath('//div[@id="examples"]/div[@class="content-section-body"]/div[contains(@class,"on-web-container")]/div[contains(@class,"on-web")]/span[contains(@class, "sub-content-thread ex-sent sents")]/span[contains(@class, "t has-aq")]')
-    if len(nodes) != 0:
-        tags = []
-        for node in nodes:
-            for child in node.iterchildren():
-                if child.tag == "em":
-                    tags.append(child.text)
-
-        c_print(f"\n#[{w_col.eg_title} bold]Recent Examples on the Web", end="")
-        for node in nodes:
-            print_example(node, tags)
-
-        print()
-    logger.debug("DONE parsing and printing examples.")
-
-
-async def nearby_entries():
-    logger.debug("STARTING to parse and print nearby entries...")
-    nodes = html_tree.xpath('//*[@id="left-content"]/div[@id="nearby-entries"]')
-    if len(nodes) != 0:
-        print()
-        for node in nodes:
-            for elm in node.iterdescendants():
-                try:
-                    has_title = (elm.tag == "h2")
-                    has_word = (elm.tag == "div" or elm.tag == "span") and (elm.attrib["class"] == "b-link hw-text fw-bold")
-                    has_nearby = (elm.tag == "a") and (elm.attrib["class"] == "b-link")
-                    has_em = (elm.tag == "em")
-                except KeyError:
-                    continue
-                else:
-                    if has_title and "Browse Nearby" in elm.text:
-                        c_print(f"\n#[bold {w_col.nearby_title}]{elm.text}", end="\n")
-                    elif has_title and "Dictionary Entries Near" in elm.text:
-                        c_print(f"\n#[bold {w_col.nearby_title}]{elm.text}", end="")
-                    elif has_em:
-                        word = "".join(list(elm.itertext()))
-                        c_print(f"#[bold {w_col.nearby_em}]{word}", end="\n")
-                    elif has_word:
-                        c_print(f"#[{w_col.nearby_word}]{elm.text}", end="\n")
-                    elif has_nearby:
-                        c_print(f"#[{w_col.nearby_item}]{elm.text}", end="\n")
-    logger.debug("DONE parsing and printing nearby entries.")
-
-
-async def synonyms(): # worship
-    logger.debug("STARTING to parse and print synonyms...")
-    nodes = html_tree.xpath('//*[@id="left-content"]/div[@id="synonyms"]')
-    if len(nodes) != 0:
-        print()
-        for node in nodes:
-            for elm in node.iterdescendants():
-                if elm.tag == "h2":
-                    c_print(f"#[bold {w_col.syn_title}]{elm.text}", end="\n")
-
-                if elm.tag == "p" and elm.attrib["class"] == "function-label":
-                    print(elm.text)
-
-                if elm.tag == "ul":
-                    children = elm.getchildren()
-                    total_num = len(children)
-
-                    for index, child in enumerate(children):
-                        syn = "".join(list(child.itertext())).strip()
-                        if index != (total_num - 1):
-                            c_print(f"#[{w_col.syn_item}]{syn},", end=" ")
-                        else:
-                            c_print(f"#[{w_col.syn_item}]{syn}", end="\n")
-
-    logger.debug("DONE parsing and printing synonyms.")
-
-
-async def phrases():
-    logger.debug("STARTING to parse and print phrases...")
-    nodes = html_tree.xpath('//*[@id="left-content"]/div[@id="phrases"]')
-    if len(nodes) != 0:
-        print()
-        for node in nodes:
-            children = node.getchildren()[1]
-            for child in children:
-                try:
-                    if child.attrib["class"] == "drp":
-                        if child.getnext().tag == "span":
-                            c_print(f"#[{w_col.ph_item} bold]{child.text}", end="")
-                        else:
-                            c_print(f"#[{w_col.ph_item} bold]{child.text}", end="\n")
-
-                    elif child.attrib["class"] == "vg":
-                        vg(child)
-
-                except KeyError:
-                    for i in child.getchildren():
-                        if i.attrib["class"] == "vl":
-                            print_or_badge(i.text)
-                        else:
-                            c_print(f"#[{w_col.ph_item} bold]{i.text}", end="")
-                    if child.getnext().get("class") == "vg":
-                        print()
-    logger.debug("DONE parsing and printing phrases.")
-
-
-async def related_phrases():
-    logger.debug("STARTING to parse and print related phrases...")
-    nodes = html_tree.xpath('//*[@id="left-content"]/div[@id="related-phrases"]')
-    if len(nodes) != 0:
-        print()
-        for node in nodes:
-            children = node.getchildren()
-            title = children[1]
-            texts = list(title.itertext())
-
-            for t in texts:
-                if t.strip():
-                    if t.lower() in word_entries:
-                        c_print(f"#[{w_col.rph_em} bold]{t}", end="\n")
-                    else:
-                        c_print(f"#[{w_col.rph_title} bold]{t}", end="")
-
-            pr_sec = children[2]
-            phrases = []
-            for i in pr_sec.iterdescendants():
-                if i.tag == "li" and "related-phrases-list-item" in i.get("class"):
-                    ts = "". join(list(i.itertext())).strip("\n").strip()
-                    if ts not in phrases:
-                        phrases.append(ts)
-            for index, phrase in enumerate(phrases):
-                text = phrase + ", " if index != len(phrases) -1  else phrase
-                c_print(f"#[{w_col.rph_item}]{text}", end="")
-    logger.debug("DONE parsing and printing related phrases.")
+    pr_sec = children[2]
+    phrases = []
+    for i in pr_sec.iterdescendants():
+        if i.tag == "li" and "related-phrases-list-item" in i.get("class"):
+            ts = "". join(list(i.itertext())).strip("\n").strip()
+            if ts not in phrases:
+                phrases.append(ts)
+    for index, phrase in enumerate(phrases):
+        text = phrase + ", " if index != len(phrases) -1  else phrase
+        c_print(f"#[{w_col.rph_item}]{text}", end="")
 
 
 def dtText(node, ancestor_attr, num_label_count):
@@ -562,7 +489,7 @@ def unText_simple(node, ancestor_attr, has_badge=True):
         if bold:
             for index, t in enumerate(text_list):
                 if t in bold:
-                    # TODO "/" should only reset the current effect (bold), not including w_col.meaning_arrow
+                    #TODO "/" should only reset the current effect (bold), not including w_col.meaning_arrow
                     text_list[index] = f"#[bold]{t}#[/bold]#[{w_col.meaning_arrow}]"
 
     text = "".join(text_list).strip()
@@ -639,10 +566,8 @@ def sense(node, attr, parent_attr, ancestor_attr, num_label_count):
                             print_meaning_badge(c.text.strip(), end=" ")
                         elif c_attr == "va":
                             print_class_va(c.text)
-                        elif c.tag == "span" and "prons-entries-list-inline" in c_attr:
-                            for x in c:
-                                if x.tag == "a":
-                                    print_pron(x, False)
+                        elif "prons-entries-list" in c_attr:
+                            print_pron(c)
                             print()
         else:
             sense_content = children[1]
@@ -763,8 +688,8 @@ def tags(node, ancestor_attr, num_label_count):
             elif elm_attr == "unText":
                 unText_simple(elm, ancestor_attr, has_badge)
 
-            elif elm.tag == "a" and "play-pron-v2" in elm_attr:
-                print_pron(elm, False)
+            elif "prons-entries-list" in elm_attr and parent_attr is None:
+                print_pron(elm)
 
             elif elm_attr == "sn sense-2":
                 no_print = True
@@ -850,8 +775,8 @@ def entry_header_content(node):
             print(num, end=end)
 
         elif elm.tag == "h2":
-            type_name = " ".join(list(elm.itertext()))
-            c_print(f"#[bold {w_col.eh_word_type}]{type_name}", end="")
+            type = " ".join(list(elm.itertext()))
+            c_print(f"#[bold {w_col.eh_word_type}]{type}", end="")
 
     print()
 
@@ -864,23 +789,10 @@ def entry_attr(node):
             for i in elm.iterchildren():
                 if i.tag == "span" and i.attrib["class"] == "word-syllables-entry":
                     syllables = i.text
-                    if i.getnext() is not None:
-                        print(f"{syllables}", end=" ")
-                    else:
-                        print(f"{syllables}", end="\n")
+                    print(f"{syllables}", end=" ")
 
                 elif i.tag == "span" and "prons-entries-list-inline" in i.attrib["class"]:
-                    for x in i:
-                        if x.tag == "a" and x.getnext() is None:
-                            print_pron(x, True)
-                            print()
-                        elif x.tag == "a":
-                            print_pron(x, True)
-                            print(" " , end="")
-                        elif x.getnext() is None:
-                            print("".join(list(x.itertext())).strip(), end="\n")
-                        else:
-                            print("".join(list(x.itertext())).strip(), end=" ")
+                    print_pron(i, True)
 
 
 def row_entry_header(node):
@@ -932,8 +844,8 @@ def entry_uros(node):
                     if sub_attr is not None and "sub-content-thread" in sub_attr:
                         sub_content_thread(i, "")
 
-            elif elm.tag == "a" and "play-pron-v2" in attr:
-                print_pron(elm, False)
+            elif "prons-entries-list" in attr:
+                print_pron(elm)
 
             elif "vrs" in attr:
                 # can't get css element ::before.content like "variants" in the word "duel"
@@ -980,8 +892,8 @@ def print_vrs(node):
                                 print_class_va(i.text, end=end)
                         else:
                             print_class_va(child.text, end=end)
-                    elif child.tag == "a" and "play-pron-v2" in attr:
-                        print_pron(child, False)
+                    elif "prons-entries-list" in attr:
+                        print_pron(child)
                     else:
                         continue
 
@@ -1012,6 +924,47 @@ def dxnls(node):
             print_meaning_content(text, end="")
 
     print()
+
+
+def dictionary_entry(node):
+    """Print one entry of the word and its attributes like plural types, pronounciations, tenses, etc."""
+
+    print()
+    for elm in node.iterchildren():
+        elm_attr = elm.get("class")
+        if elm_attr is not None:
+            if "row entry-header" in elm_attr:
+                row_entry_header(elm)
+
+            elif elm_attr == "row headword-row header-ins":
+                row_headword_row_header_ins(elm)
+
+            elif elm_attr == "row headword-row header-vrs":
+                row_headword_row_header_vrs(elm)
+
+            elif elm_attr == "vg":
+                vg(elm)
+
+            elif "entry-uros" in elm_attr:
+                for i in elm.iterchildren():
+                    entry_uros(i)
+                    print()
+
+            elif elm_attr == "dxnls":
+                dxnls(elm)
+
+            elif elm_attr == "mt-3":
+                badge = elm.getchildren()[0] # class "lbs badge mw-badge-gray-100 text-start text-wrap d-inline"
+                print_header_badge(badge.text, end="\n")
+
+            elif elm_attr == "cxl-ref":
+                for i in elm.iterdescendants():
+                    i_attr = i.get("class")
+                    if i.tag == "span" and i_attr == "cxl":
+                        print_meaning_badge(i.text, end=" ")
+                    elif i.tag == "span" and i_attr == "text-uppercase":
+                        print_meaning_content(i.text.upper(), end="")
+                print()
 
 
 def print_meaning_badge(text, end=""):
@@ -1050,10 +1003,48 @@ def format_basedon_ancestor(ancestor_attr, prefix="", suffix=""):
 
 
 def print_pron(node, header=False):
-    if header:
-        print(f"|{node.text.strip()}|", end="")
-    else:
-        print(f"{node.text}", end="")
+    sibling = node.getnext()
+    before_semicolon = ((sibling is not None) and (sibling.get("class") == "sep-semicolon"))
+    before_or = ((sibling is not None) and (sibling.get("class") == "il "))
+
+    prons = []
+    for text in node.itertext():
+        text = text.strip("\n").strip()
+        if text and len(text) > 1:
+            prons.append(text)
+
+    if "US" in prons[0] or "Canadian" in prons[0] or "British" in prons[0]:
+        prons = prons[1:]
+
+    count = len(prons)
+    if count == 1:
+        if sibling is None:
+            if header:
+                print(f"|{prons[0]}|", end="\n") # e.g. fortissimo 1 of 2
+            else:
+                print(f"|{prons[0]}|", end="")   # e.g. fortissimo 2 of 2
+        else:
+            if before_semicolon or before_or:
+                print(f"|{prons[0]}|", end="")
+            else:
+                print(f"|{prons[0]}|", end=" ")
+    if count > 1:
+        for index, pron in enumerate(prons):
+            if index == 0:
+                print(f"|{pron}|", end=" ")
+            elif index == count - 1:
+                if sibling is not None and sibling.get("class") != "sep-semicolon":
+                    c_print(f"#[{w_col.eh_word_syllables}]{pron}", end=" ")
+                else:
+                    if header:
+                        c_print(f"#[{w_col.eh_word_syllables}]{pron}", end="\n")
+                    else:
+                        c_print(f"#[{w_col.eh_word_syllables}]{pron}", end="")
+            elif pron == "," or pron == ";":
+                continue
+            else:
+                text = pron + ", "
+                c_print(f"#[{w_col.eh_word_syllables}]{text}", end="")
 
 
 def print_or_badge(text):
@@ -1088,12 +1079,7 @@ def print_class_ins(node):
                 print_header_badge(child.text.strip(), end=" ") # e.g. "natalism"
             elif attr == "prt-a":
                 for c in child:
-                    if c.tag == "a":
-                        print_pron(c, False)
-                    elif c.getnext() is None:
-                        print("".join(list(c.itertext())).strip(), end="\n")
-                    else:
-                        print("".join(list(c.itertext())).strip(), end=" ")
+                    print_pron(c)
             elif attr == "il ":
                 print_or_badge(child.text)
             elif attr == "sep-semicolon":

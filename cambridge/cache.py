@@ -230,7 +230,6 @@ async def get_cache(response_url):
 
 
 async def save_to_cache(input_word, response_word, response_url, response_text):
-    logger.debug("STARTING to save to cache...")
     try:
         result = insert_entry_into_table(input_word, response_word, response_url, response_text)
 

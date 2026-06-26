@@ -71,31 +71,12 @@ def cancel_on_error_without_retry(path, error, op):
 
 async def fetch(session, url):
     attempt = 0
-    # ua = await aio_user_agent()
-    # ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
-    # logger.debug(f"Got User-Agent: {ua}")
-    # logger.debug(f"{OP.FETCHING.name} {url}")
-    headers = {
-        "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-        "accept-encoding": "gzip, deflate, br, zstd",
-        "accept-language": "en-US,en;q=0.9",
-        "cache-control": "max-age=0",
-        "priority": "u=0, i",
-        "sec-ch-ua": '"Not=A?Brand";v="24", "Chromium";v="140"',
-        "sec-ch-ua-mobile": "?0",
-        "sec-ch-ua-platform": '"macOS"',
-        "sec-fetch-dest": "document",
-        "sec-fetch-mode": "navigate",
-        "sec-fetch-site": "same-origin",
-        "sec-fetch-user": "?1",
-        "upgrade-insecure-requests": "1",
-        "cookie": "mw-qxqz=0198cad1-f44b-77a7-9c43-eb363a9e269e; user-data=%7B%22is_logged_in%22%3Afalse%7D; usprivacy=1YNY; cf_clearance=S9cb7w2VeHhzBcR7FjaJd8daoD.XoBsJa5luuTcRSbs-1782097051-1.2.1.1-2jBDJMuq1r_i6fs4w8fSe8C_7esvxPhTYQ3RIJCfJiCsjfeRynytzm583nHXAP1i7QALS.6wLmtiHkRM933NG5tE2RorKV1w95TiKjyCYQ.jCD.sRCycK.t6ucP5HU6iXGBty1Pv8vxgP7zneXZeE20YfAf4B.Eyf0v5OZln5e63HqVvP.4dTeY7aZKJ8T5e1o5Bl8oW5YCViIy9eXRXpJbcb9U0Bs4jsSIfEgpr8_0vZhi9sfQpOdgszP8RPUQWvRw5TnYaZ.G10BhnjOGBMLF18smeAnO20PUZOgmneTm_YvftrZq.VGGvAeLU21h6vz9bVmj_NFBjwm8qyEFoxBpchU1UpKVdX.1Od5MB8aR.P0R7bgJGGqvmdRnFbxZScpbQEWlJCxgnkzyO287QTN2tMNrRK7huVse01aADeDN3aQ866Y36x0nNqqX5unOcXHVXddVMxduDDc_vjkIRefbear13GfFaT_aV5S2XEpfVprd7ySZFKg74oM2BUAV1; __cf_bm=XrFPh27BFBg92vVMwUN5gWfHkVLbuq.pl91OHt4xgW4-1782358502.765888-1.0.1.1-eH8gnEy.JaePyNQBgTCcVUX73t9hAPqPSuIX3Dt4EIgDCM5W76p6PV08UMpghmce3GpP6H2v1zzuRua5ZdResF37JjTGMID9APUQpWPXgOJgUgQFgmGgg_QifxabaTrk; pvc=1",
-        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
-    }
-
+    ua = await aio_user_agent()
+    logger.debug(f"Got User-Agent: {ua}")
+    logger.debug(f"{OP.FETCHING.name} {url}")
     while True:
         try:
-            resp = await session.get(url, headers=headers, timeout=5, ssl=False)
+            resp = await session.get(url, headers={"User-Agent": ua}, timeout=5, ssl=False)
         except asyncio.TimeoutError as error:
             attempt = cancel_on_error(url, error, attempt, OP.FETCHING.name)
             continue
@@ -191,9 +172,9 @@ def has_tool(name):
 def get_suggestion_notice(dict_name, has_fzf):
     flip_dict = DICT.MERRIAM_WEBSTER.name if (dict_name == DICT.CAMBRIDGE.name) else DICT.CAMBRIDGE.name
     if has_fzf:
-        return f"[ENTER] to print the selected suggestion's meaning; Any [NUMBER] to switch to {flip_dict}; TYPE a new word to search; [ESC] to quit out."
+        return f"[ENTER] to print the selected suggestion's meaning; Any [NUMBER] to switch to {flip_dict}, or a new word to search; [ESC] to quit out."
     else:
-        return f"[ENTER] to switch to {flip_dict}; [NUMBER] to print the selected suggestion's meaning; TYPE a new word to search; Any Other [KEY] to quit out: "
+        return f"[ENTER] to switch to {flip_dict}; [NUMBER] to print the selected suggestion's meaning, or a new word to search; Any Other [KEY] to quit out: "
 
 
 def get_suggestion(suggestions, dict_name):
@@ -231,7 +212,7 @@ def get_wod_selection(data):
     title = DICT.MERRIAM_WEBSTER.name + " Calendar of Word of the Day"
     c_print(title + (int(len(title)/2))*" ", justify="center")
     list_items(data, "wod_calendar")
-    notice =  "INPUT one word of day from above to print the meaning; TYPE a new word; [ANY OTHER KEY] to quit out: "
+    notice =  "Type one word of day from above to print the meaning; Input a new word; [ANY OTHER KEY] to quit out: "
     print(notice, end="")
     return input("")
 
@@ -254,7 +235,7 @@ def get_cache_selection(data, method):
     title = "List of Cache" + f" ({method})"
     c_print(title + (int(len(title)/2))*" ", justify="center")
     list_items(data, "cache_list")
-    notice =  "INPUT one word from above to print the meaning; TYPE a new word; [ANY OTHER KEY] to quit out: "
+    notice =  "Type one word from above to print the meaning; Input a new word; [ANY OTHER KEY] to quit out: "
     print(notice, end="")
     return input("")
 
